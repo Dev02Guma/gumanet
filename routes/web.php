@@ -56,8 +56,11 @@ Route::get('/articulos','inventario_controller@getArticulos');
 Route::get('/objBodega/{articulo}','inventario_controller@getBodegaInventario');
 Route::get('/objPrecios/{articulo}','inventario_controller@getPreciosArticulos');
 Route::get('/objCostos/{articulo}','inventario_controller@getCostosArticulos');
+Route::get('/objMargen/{articulo}','inventario_controller@getMargenArticulos');
 Route::get('/objOtros/{articulo}','inventario_controller@getOtrosArticulos');
 Route::get('/objBonificado/{articulo}','inventario_controller@getArtBonificados');
+Route::get('/objIndicadores/{articulo}','inventario_controller@objIndicadores');
+
 Route::post('/transacciones','inventario_controller@transaccionesDetalle');
 Route::post('/lotes','inventario_controller@getLotesArticulo');
 Route::get('/liqMeses/{valor}','inventario_controller@liquidacionMeses');
@@ -65,6 +68,8 @@ Route::get('/desInventario/{tipo}/{valor}', 'inventario_controller@descargarInve
 Route::get('/invCompleto', 'inventario_controller@inventarioCompleto');
 Route::get('/invTotalizadoDT', 'inventario_controller@inventarioCompletoTable');
 Route::get('/desInvTotal2', 'inventario_controller@descargarInventarioCompleto');
+Route::get('/invenVencidos', 'inventario_controller@invenVencidos');
+
 
 //RUTAS INVENTARIO TOTALIZADO 
 Route::get('/invTotalizado','inventario_controller@getInventarioTotalizado');
@@ -94,6 +99,7 @@ Route::get('/graficaSegmento/{mes}/{anio}/{bolson}/{Segmento}','dashboard_contro
 Route::get('/graficaSegmentoCL/{mes}/{anio}/{bolson}/{Segmento}','dashboard_controller@getTop10Clientes');
 //Route::get('/ruta/{mes}/{anio}','dashboard_controller@getTotalRutaXVentas');
 Route::get('/unidadxProd/{mes}/{anio}','dashboard_controller@getTotalUnidadesXRutaXVentas');
+Route::get('/ClientesNoFacturados/{mes}/{anio}','dashboard_controller@ClientesNoFacturados');
 
 
 
@@ -200,6 +206,12 @@ Route::get('/getDetailSumary/{numOrden}','DetalleOrdenController@getDetailSumary
 Route::get('/getHrasProducidas/{numOrden}','DetalleOrdenController@getHrasProducidas');
 Route::get('/getData','DetalleOrdenController@getData');
 
+//PROCESO DE CONVERSIÓN
+Route::get('/getOrdenesPC','DetalleOrdenController@getOrdenesPC');
+Route::get('/getDataGeneralPc/{numOrden}','DetalleOrdenController@getDataGeneralPc');
+Route::get('/getMP_PC/{numOrden}','DetalleOrdenController@getMP_PC');
+Route::get('/getProd_pc/{numOrden}','DetalleOrdenController@getProd_pc');
+Route::get('/getTiempos_paros/{numOrden}','DetalleOrdenController@getTiempos_paros');
 
 
 
@@ -210,4 +222,24 @@ Route::post('getAttachFile', 'recibos_controller@getAttachFile');
 Route::post('push_recibo', 'recibos_controller@push_recibo');
 Route::post('push_verificado', 'recibos_controller@push_verificado');
 Route::get('print_resumen', 'recibos_controller@print_resumen');
+
+
+// RUTAS PARA PROMOCIONES DE INNOVA
+Route::get('promocion_Vueno', 'promocion_controller@index');
+Route::get('getPromocion', 'promocion_controller@getPromocion');
+Route::post('getHistorialFactura','promocion_controller@getHistorialFactura');
+Route::get('getResumen', 'promocion_controller@getResumen');
+
+// RUTAS PARA INFORMACION DE FACTURA DE EXPORTACIONES
+Route::get('exportacion', 'exportacion_controller@index');
+Route::get('getVentasExportacion', 'exportacion_controller@getVentasExportacion');
+Route::get('/dtaVentaExportacion/{xbolsones}/{segmentos}','dashboard_controller@getVentasExportacion');
+
+//Route::get('/notify','importaciones_controller@index');
+Route::get('exist_notify', 'notifications_controller@exist_notify');
+Route::get('getCommentIM', 'inteligenciaMercado_controller@getComentNoLeidos');
+Route::get('exist_registry', 'notifications_controller@exist_registry');
+Route::get('Allnotificaciones', 'notifications_controller@getAllnotificaciones');
+Route::post('updateState', 'notifications_controller@updateState');
+
 

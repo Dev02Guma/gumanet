@@ -45,6 +45,11 @@ class dashboard_controller extends Controller {
     return response()->json($obj);
   }
 
+  public function ClientesNoFacturados($mes, $anio){
+    $obj = dashboard_model::ClientesNoFacturados($mes, $anio);
+    return response()->json($obj);
+  }
+
 	public function getDetalleVentas($tipo, $mes, $anio, $cliente, $articulo, $ruta) {
 		$obj = dashboard_model::getDetalleVentas($tipo, $mes, $anio, $cliente, $articulo, $ruta);
 		return response()->json($obj);
@@ -120,6 +125,11 @@ class dashboard_controller extends Controller {
 
   public function getRealVentasMensuales($xbolsones,$segmentos) {
     $obj = dashboard_model::getRealVentasMensuales($xbolsones,$segmentos);
+    return response()->json($obj);
+  }
+
+  public function getVentasExportacion($xbolsones,$segmentos) {
+    $obj = dashboard_model::getVentasExportacion($xbolsones,$segmentos);
     return response()->json($obj);
   }
 

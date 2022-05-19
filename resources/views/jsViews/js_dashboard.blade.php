@@ -1,6 +1,7 @@
 <script>
 $(document).ready(function() {
     fullScreen();
+    $('[data-toggle="tooltip"]').tooltip()
     var date    = new Date();
     var anio    = parseInt(date.getFullYear())
     var mes     = parseInt(date.getMonth()+1);
@@ -62,11 +63,16 @@ $(document).ready(function() {
 
 
     graf_Comportamiento_clientes_anual();
+
     graf_Comportamiento_sku_anual();
+    graf_Ticket_promedio();
+
     grafVentasMensuales(tipo);
     grafRealVentasMensuales(tipo,0);
+    fn_grafica_ventas_exportacion(tipo,0);
     reordenandoPantalla();
     actualizandoGraficasDashboard(mes, anio, tipo);
+
     
     Highcharts.setOptions({
         lang: {
@@ -76,6 +82,156 @@ $(document).ready(function() {
         },
         colors: ['#058DC7', '#50B432', '#ED561B', '#DDDF00', '#24CBE5', '#64E572', '#FF9655', '#FFF263', '#6AF9C4']
     });
+    function getAvg(dta) {
+        const total = dta.reduce((acc, c) => acc + c, 0);        
+        return total / dta.length;
+    }
+
+    function format_number(Numero,Formato){
+        return numeral(Numero).format(Formato);
+    }
+
+
+    function promedio_comportamiento(Grafica,Categoria) {
+
+        var Titulo = ""
+        if (Grafica=="Clientes") {
+            var Titulo = "Comportamiento de Cliente Anual"
+            
+            $("#id_row_cliente").show()
+            $("#id_row_ticket").hide()
+            $("#id_row_sku").hide()
+
+            $("#id_tbl_clientes_no_facturados").show()
+            
+
+            var mes = ClientesAnuales.xAxis.categories.indexOf(Categoria.name) + 1;
+            var anio = $('#opcAnio option:selected').val();
+
+            //Promedio Comportamiento Anual de Clientes
+            var avg_anterior_cliente_prom     = getAvg(ClientesAnuales.series[0].data);
+            var avg_anterior_cliente_nombre   = ClientesAnuales.series[0].name
+
+            var avg_actual_cliente_prom       = getAvg(ClientesAnuales.series[1].data);
+            var avg_actual_cliente_nombre     = ClientesAnuales.series[1].name
+
+            var dif_cliente = 0;
+
+            $('#id_avg_anterior_cliente_prom').text(format_number(avg_anterior_cliente_prom,'0,0.00'));
+            $('#id_avg_anterior_cliente_nombre').text(avg_anterior_cliente_nombre);
+            $('#id_avg_actual_cliente_prom').text(format_number(avg_actual_cliente_prom,'0,0.00'));
+            $('#id_avg_actual_cliente_nombre').text(avg_actual_cliente_nombre);
+
+            dif_cliente  = (( avg_actual_cliente_prom / avg_anterior_cliente_prom ) - 1 ) * 100;
+            cls_1 = (dif_cliente <0 )? 'text-danger font-weight-bolder':'text-success font-weight-bolder';
+            dif_cliente_html = '<p class="font-weight-bolder '+cls_1+'">'+format_number(dif_cliente,'0,0.00')+'</p>';
+            $('#id_dif_cliente').html(dif_cliente_html);  
+
+            
+
+            $('#tblClientes').DataTable({
+                    "ajax":{
+                        "url": "ClientesNoFacturados/"+mes+"/"+anio,
+                        'dataSrc': '',
+                    },
+                    "destroy": true,
+                    "info": true,
+                    "lengthMenu": [[10,-1], [10,"Todo"]],
+                    "language": {
+                        "zeroRecords": "-",
+                        "paginate": {
+                            "first": "Primera",
+                            "last": "Última ",
+                            "next": "Siguiente",
+                            "previous": "Anterior"
+                        },
+                        "info":       "Clientes que no han comprado del master",
+                        "infoEmpty":  "",
+                        "infoPostFix":    "",
+                        "infoFiltered":   "",
+                        "lengthMenu": "MOSTRAR _MENU_",
+                        "emptyTable": "REALICE UNA BUSQUEDA UTILIZANDO LOS FILTROS DE FECHA",
+                        "search": "BUSCAR"
+                    },
+                'columns': [
+                    {"title": "CLIENTE",                "data": "CLIENTE"},
+                    {"title": "NOMBRE",                 "data": "NOMBRE_CLIENTE"},
+                    {"title": "FECHA ULTIMA COMPRA",    "data": "ULTIMA_COMPRA"},
+                    {"title": "TIEMPO SIN COMPRAR",     "data": "Diferencia"},
+                ],
+                "columnDefs": [
+                    {"className": "dt-center","targets": [0,2,3]},
+                    {"className": "dt-right","targets": []},
+                    {"className": "dt-left","targets": [1]},
+                    {"visible": false,"searchable": false,"targets": []},
+                    {"width": "5%","targets": [0,2,3]},
+                    {"width": "10%","targets": [1]},
+                ],
+            });
+
+            $("#tblClientes_length").hide();
+            $("#tblClientes_filter").hide();
+
+        } else if(Grafica=="SKUs") {
+            var Titulo = "Comportamiento de SKU Anual"
+
+            $("#id_row_cliente").hide()
+            $("#id_row_ticket").hide()
+            $("#id_row_sku").show()
+            $("#id_tbl_clientes_no_facturados").hide()
+
+            //Promedio Comportamiento de SKU Anuales
+            const avg_anterior_sku_prom         = getAvg(SkusAnual.series[0].data);
+            const avg_anterior_sku_nombre       = SkusAnual.series[0].name
+
+            const avg_actual_sku_prom           = getAvg(SkusAnual.series[1].data);
+            const avg_actual_sku_nombre         = SkusAnual.series[1].name    
+
+            var dif_skus = 0;
+
+            $('#id_avg_anterior_sku_prom').text(format_number(avg_anterior_sku_prom,'0,0.00'));
+            $('#id_avg_anterior_sku_nombre').text(avg_anterior_sku_nombre);
+            $('#id_avg_actual_sku_prom').text(format_number(avg_actual_sku_prom,'0,0.00'));
+            $('#id_avg_actual_sku_nombre').text(avg_actual_sku_nombre);
+
+            dif_skus  = (( avg_actual_sku_prom / avg_anterior_sku_prom ) - 1 ) * 100;
+            cls_1 = (dif_skus <0 )? 'text-danger font-weight-bolder':'text-success font-weight-bolder';
+            dif_sku_html = '<p class="font-weight-bolder '+cls_1+'">'+format_number(dif_skus,'0,0.00')+'</p>';
+            $('#id_difs_skus').html(dif_sku_html);
+
+        }else{
+            var Titulo = "Comportamiento de Ticket Promedio Anual "
+            $("#id_row_cliente").hide()
+            $("#id_row_ticket").show()
+            $("#id_row_sku").hide()
+            $("#id_tbl_clientes_no_facturados").hide()
+
+            //Promedio Comportamiento de Ticket Promedio Anual
+            const avg_anterior_ticket_prom       = getAvg(TicketProm.series[0].data);
+            const avg_anterior_ticket_nombre     = TicketProm.series[0].name
+
+            const avg_actual_ticket_prom         = getAvg(TicketProm.series[1].data);
+            const avg_actual_ticket_nombre       = TicketProm.series[1].name
+            
+            var dif_ticket = 0;
+            
+            $('#id_avg_anterior_ticket_prom').text("C$ " + format_number(avg_anterior_ticket_prom,'0,0.00'));
+            $('#id_avg_anterior_ticket_nombre').text(avg_anterior_ticket_nombre);
+            $('#id_avg_actual_ticket_prom').text("C$ " + format_number(avg_actual_ticket_prom,'0,0.00'));
+            $('#id_avg_actual_ticket_nombre').text(avg_actual_ticket_nombre);
+
+            dif_ticket = (( avg_actual_ticket_prom / avg_anterior_ticket_prom ) - 1 ) * 100;
+            cls_1 = (dif_ticket <0 )? 'text-danger font-weight-bolder':'text-success font-weight-bolder';
+            dif_ticket_html = '<p class="font-weight-bolder '+cls_1+'">'+format_number(dif_ticket,'0,0.00')+'</p>';
+            $('#id_dif_ticket').html(dif_ticket_html);    
+        }
+
+        $('#titleModal-comportamiento').text(Titulo);
+
+        $('#mdl_Promedios_Comportamiento').modal('show')
+        
+
+    }
 
     //GRAFICA VENTAS MENSUALES
     ventasMensuales = {
@@ -140,7 +296,7 @@ $(document).ready(function() {
             renderTo: 'grafClienteAnual'
         },
         title: {
-            text: `<p class="font-weight-bolder">Comportamiento Anual de Clientes</p>`
+            text: `<p class="font-weight-bolder">Comportamiento de Clientes Anual</p>`
         },
         xAxis: {
             categories: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
@@ -150,6 +306,7 @@ $(document).ready(function() {
                 text: ''
             }                
         },
+        
         plotOptions: {
             series: {
                 allowPointSelect: false,
@@ -163,6 +320,15 @@ $(document).ready(function() {
                 events: {
                     legendItemClick: function() {
                         return false;
+                    }
+                },
+                cursor: 'pointer',
+                point: {
+                    events: {
+                        click: function() {
+                            promedio_comportamiento("Clientes",event.point.category)
+                            
+                        }
                     }
                 }
             },
@@ -196,7 +362,7 @@ $(document).ready(function() {
             renderTo: 'grafSkuAnual'
         },
         title: {
-            text: `<p class="font-weight-bolder">Comportamiento de SKU Anuales</p>`
+            text: `<p class="font-weight-bolder">Comportamiento de SKU Anual </p>`
         },
         xAxis: {
             categories: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
@@ -219,6 +385,144 @@ $(document).ready(function() {
                 events: {
                     legendItemClick: function() {
                         return false;
+                    }
+                },
+                cursor: 'pointer',
+                point: {
+                    events: {
+                        click: function() {
+                            promedio_comportamiento("SKUs","")
+                        }
+                    }
+                }
+            },
+        },
+        tooltip: {},
+        legend: {
+            align: 'center',
+            verticalAlign: 'top',
+            borderWidth: 0
+        },
+        series: [],
+        responsive: {
+            rules: [{
+                condition: {
+                maxWidth: 500
+                },
+                chartOptions: {
+                    legend: {
+                    layout: 'horizontal',
+                    align: 'center',
+                    verticalAlign: 'bottom'
+                    }
+                }
+            }]
+        }
+    };
+
+    TicketProm = {
+        chart: {
+            type: 'spline',
+            renderTo: 'grafTicketProm'
+        },
+        title: {
+            text: `<p class="font-weight-bolder">Comportamiento de Ticket Promedio Anual </p>`
+        },
+        xAxis: {
+            categories: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+        },
+        yAxis: {
+            title: {
+                text: ''
+            }                
+        },
+        plotOptions: {
+            series: {
+                allowPointSelect: false,
+                borderWidth: 0,
+                dataLabels: {
+                    enabled: true,
+                    formatter: function() {
+                        return FormatPretty(this.y);
+                    }
+                },
+                events: {
+                    legendItemClick: function() {
+                        return false;
+                    }
+                },
+                cursor: 'pointer',
+                point: {
+                    events: {
+                        click: function() {
+                            promedio_comportamiento("TicketProm","")
+                        }
+                    }
+                }
+            },
+        },
+        tooltip: {},
+        legend: {
+            align: 'center',
+            verticalAlign: 'top',
+            borderWidth: 0
+        },
+        series: [],
+        responsive: {
+            rules: [{
+                condition: {
+                maxWidth: 500
+                },
+                chartOptions: {
+                    legend: {
+                    layout: 'horizontal',
+                    align: 'center',
+                    verticalAlign: 'bottom'
+                    }
+                }
+            }]
+        }
+    };
+
+    //GRAFICA METAS-REAL MENSUALES
+    grafica_ventas_exportacion = {
+        chart: {
+            type: 'spline',
+            renderTo: 'id_grafica_venta_exportacion'
+        },
+        title: {
+            text: `<p class="font-weight-bolder">Ventas de Exportación</p>`
+        },
+        xAxis: {
+            categories: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+        },
+        yAxis: {
+            title: {
+                text: ''
+            }                
+        },
+        plotOptions: {
+            series: {
+                allowPointSelect: false,
+                borderWidth: 0,
+                dataLabels: {
+                    enabled: true,
+                    formatter: function() {
+                        return FormatPretty(this.y);
+                    }
+                },
+                events: {
+                    legendItemClick: function() {
+                        return false;
+                    }
+                },
+                cursor: 'pointer',
+                point: {
+                    events: {
+                        click: function() {
+                            window.location = "exportacion";
+                            
+                        }
                     }
                 }
             },
@@ -762,7 +1066,11 @@ $(document).ready(function() {
                             prec_prom       : _this.dtavg,
                             cost_unit       : _this.dtcpm,
                             marg_contrib    : _this.dtmco,
-                            porc_contrib    : _this.dtpco
+                            porc_contrib    : _this.dtpco,
+                            dttie           : _this.dttie,
+                            dttub           : _this.dttub,
+                            dttb2           : _this.dttb2,
+                            dtpro           : _this.dtpro
                         })
 
 
@@ -790,6 +1098,10 @@ $(document).ready(function() {
                 temporal += '<span style="color:black">\u25CF</span> COST. PROM. UNIT. :<b>C$ ' + numeral(Info.dtcpm).format('0,0.00') + ' </b><br/>';
                 temporal += '<span style="color:black">\u25CF</span> CONTRIBUCION.  : <b>C$ ' +  numeral(Info.dtmco).format('0,0.00') + ' </b><br/>';
                 temporal += '<span style="color:black">\u25CF</span> % MARGEN BRUTO: <b>% ' + numeral(Info.dtpco).format('0,0.00') + ' </b><br/>';
+                temporal += '<span style="color:black">\u25CF</span> CANT. DISP. B002: <b> ' + numeral(Info.dttb2).format('0,0.00') + ' </b><br/>';
+                temporal += '<span style="color:black">\u25CF</span> CANT. DISP. UNDS. B002: <b> ' + numeral(Info.dttub).format('0,0.00') + ' </b><br/>';
+                temporal += '<span style="color:black">\u25CF</span> PROM. UNDS MES 2022: <b> ' + numeral(Info.dtpro).format('0,0.00') + ' </b><br/>';
+                temporal += '<span style="color:black">\u25CF</span> CANT. DISP. MES: <b> ' + numeral(Info.dttie).format('0,0.00') + ' </b><br/>';
 
 
                 
@@ -904,12 +1216,14 @@ $("#customSwitch1").change( function() {
     
     graf_Comportamiento_clientes_anual();
     graf_Comportamiento_sku_anual();
+    graf_Ticket_promedio();
 
     if ($(this).is(':checked')) {
         switchStatus = $(this).is(':checked');
         $.cookie( 'xbolsones' , 'yes_bolsones');
         grafVentasMensuales(1);
         grafRealVentasMensuales(1,0);
+        fn_grafica_ventas_exportacion(1,0);
         actualizandoGraficasDashboard(mes, anio, 1);
     }
     else {
@@ -917,6 +1231,7 @@ $("#customSwitch1").change( function() {
         $.cookie( 'xbolsones' , 'not_bolsones');
         grafVentasMensuales(0);
         grafRealVentasMensuales(0,0);
+        fn_grafica_ventas_exportacion(0,0);
         actualizandoGraficasDashboard(mes, anio, 0);
     }
 });
@@ -1023,6 +1338,12 @@ function actualizandoGraficasDashboard(mes, anio, xbolsones) {
                             dtcpm :  x['dtCPM'],
                             dtmco :  x['dtMCO'],
                             dtpco :  x['dtPCO'],
+
+                            dttie :  x['dtTIE'],
+                            dttb2 :  x['dtTB2'],
+                            dttub :  x['dtTUB'],
+                            dtpro :  x['dtPRO'],
+
                         })
 
                         title.push(x['name'])
@@ -1095,6 +1416,8 @@ function actualizandoGraficasDashboard(mes, anio, xbolsones) {
                     Tendencia = 1;
                     Day_Max = [];
 
+                    var vVtsDiarias;
+
                     $.each(item['data'], function(i, x) {
 
                         tmp_total = tmp_total + parseFloat(x['data']);
@@ -1113,15 +1436,26 @@ function actualizandoGraficasDashboard(mes, anio, xbolsones) {
                     }); 
 
                     //temporal = (xbolsones)?'<span style="color:black"><b>{point.y}</b></span>' : '<span style="color:black"><b> C$ {point.y} {point.und}</b></span>';
+                    moneda = (xbolsones)? "" :"C$ "
                     temporal = '<span style="color:black">\u25CF</span> VALOR :<b>C$  {point.y} </b><br/>';
                     temporal += '<span style="color:black">\u25CF</span> UNITS.: <b>  {point.und} </b><br/>';                   
                     grafiacas_productos_Diarios.tooltip = {
                         pointFormat : temporal
                     }
-                    
+                    vVtsDiarias = numeral(tmp_total).format('0,0.00');
                     grafiacas_productos_Diarios.xAxis.categories = title;
-                    grafiacas_productos_Diarios.subtitle.text = "C$ " + numeral(tmp_total).format('0,0.00') + " Total";
+                    grafiacas_productos_Diarios.subtitle.text = moneda + vVtsDiarias + " Total";
                     grafiacas_productos_Diarios.series[0].data = dta;
+
+
+                    $("#id_ventas_diarias").html(moneda + vVtsDiarias)
+
+                    Lblmoneda = (xbolsones)? "Bolsones Venta Local" :"Venta Local "
+                    $("#id_lbl_ventas_diarias").html(Lblmoneda)
+
+                    
+
+
 
                     
                     Tendencia = (tmp_total / dta.length ) 
@@ -1615,6 +1949,26 @@ function actualizandoGraficasDashboard(mes, anio, xbolsones) {
 
                 break;
 
+                case 'vtsDolares':
+                    var val_vts_month = $("#id_ventas_diarias").text().replace(/[\ U,C$]/g, '')  
+                    val_vts_month = parseFloat(val_vts_month) + parseFloat(item['data']['Local']);
+                    
+                    var inCordobas = "C$. " +numeral(item['data']['Local']).format('0,0.00')
+                    
+                    $('.has_standard_tooltip').attr('data-toggle', 'tooltip');
+	                $('.vts-month-dolar').attr('title', inCordobas);  
+                    $('[data-toggle="tooltip"]').tooltip();
+
+                    if (xbolsones==1) {
+                        $("#id_ventas_totales").html("Total Venta C$. 0.00")
+                        $("#id_ventas_dolares").html("Venta Exportación $ 0.00")
+                    } else {
+                        $("#id_ventas_dolares").html("<a href='exportacion'> Venta Exportación $ " + numeral(item['data']['Dolar']).format('0,0.00')+"</a>")
+                        $("#id_ventas_totales").html("Total Venta C$ " + numeral(val_vts_month).format('0,0.00'))
+                    }
+
+                break;
+
                 default:
                 alert('Ups... parece que ocurrio un error :(');
             }
@@ -1654,9 +2008,43 @@ function grafRealVentasMensuales(xbolsones,segmentos) {
     })
 }
 
+
+var grafica_ventas_exportacion = {};
+function fn_grafica_ventas_exportacion(xbolsones,segmentos) {
+    var temporal = "";
+    $("#id_grafica_venta_exportacion")
+    .empty()
+    .append(`<div style="height:400px; background:#ffff; padding:20px">
+                <div class="d-flex align-items-center">
+                    <strong class="text-info">Cargando...</strong>
+                    <div class="spinner-border ml-auto text-primary" role="status" aria-hidden="true"></div>
+                </div>
+            </div>`);
+
+            grafica_ventas_exportacion.series = [];
+    $.getJSON("dtaVentaExportacion/"+xbolsones+"/"+segmentos, function(json) {
+        var newseries;
+        
+        $.each(json, function (i, item) {
+            temporal = (xbolsones)?'<span style="color:black"><b>{point.y:,.2f}</b></span>':'<span style="color:black"><b>TON {point.y:,.2f}</b></span>';
+
+            newseries = {};
+            newseries.data = item['data'];
+            newseries.name = item['title'];
+            newseries.color = colors_[i];
+            grafica_ventas_exportacion.series.push(newseries);
+            grafica_ventas_exportacion.tooltip = {
+                pointFormat : temporal
+            }
+            var chart = new Highcharts.Chart(grafica_ventas_exportacion);
+        })
+    })
+}
+
 var ventasMensuales     = {};
 var ClientesAnuales     = {};
 var SkusAnual           = {};
+var TicketProm          = {};
 
 var colors_ = ['#407EC9', '#D19000', '#00A376', '#DDDF00', '#24CBE5', '#64E572', '#FF9655', '#FFF263', '#6AF9C4'];
 function graf_Comportamiento_clientes_anual() {
@@ -1683,6 +2071,7 @@ function graf_Comportamiento_clientes_anual() {
         var mes_ = parseInt(date.getMonth()+1);
         temporal = '<span style="color:black"><b>{point.y:,.0f}</b></span>';
         $.each(json, function (i, item) {
+            
             if (anio != item['name']) {
 
                 $.each(item['venta'], function(i_, item_) {
@@ -1695,6 +2084,7 @@ function graf_Comportamiento_clientes_anual() {
                 temp = 0;
             }
 
+
             newseries = {};
             newseries.data = item['venta'];
             newseries.name = item['name'];
@@ -1703,9 +2093,12 @@ function graf_Comportamiento_clientes_anual() {
             ClientesAnuales.tooltip = {
                 pointFormat : temporal
             };
+            
             var chart = new Highcharts.Chart(ClientesAnuales);
             
-        })    
+        }) 
+
+        
     })    
         
     
@@ -1715,7 +2108,7 @@ function graf_Comportamiento_sku_anual() {
     var temporal = "";
     $("#grafSkuAnual").empty().append(`<div style="height:400px; background:#ffff; padding:20px">
                 <div class="d-flex align-items-center">
-                    <strong class="text-info">Cargando comportamiento SKU Anual...</strong>
+                    <strong class="text-info">Cargando...</strong>
                     <div class="spinner-border ml-auto text-primary" role="status" aria-hidden="true"></div>
                 </div>
             </div>`);
@@ -1764,6 +2157,59 @@ function graf_Comportamiento_sku_anual() {
         
     
 }
+function graf_Ticket_promedio() {
+    var temporal = "";
+    $("#grafTicketProm").empty().append(`<div style="height:400px; background:#ffff; padding:20px">
+                <div class="d-flex align-items-center">
+                    <strong class="text-info">Cargando...</strong>
+                    <div class="spinner-border ml-auto text-primary" role="status" aria-hidden="true"></div>
+                </div>
+            </div>`);
+
+
+    $("#anioAcumulado").empty();
+    $("#porcentaje").empty();
+    
+    TicketProm.series = [];
+    elementCount = "TICKETPROM";
+    $.getJSON("dtaComportamientoAnuales/"+elementCount, function(json) {
+        var newseries;
+        var sumTotales = [];
+        var temp = 0;
+        var anio = 0;
+        var date  = new Date();
+        var anio_ = parseInt(date.getFullYear());
+        var mes_ = parseInt(date.getMonth()+1);
+        
+        $.each(json, function (i, item) {
+            temporal = 'C$ <span style="color:black"><b>{point.y:,.2f}  </b></span>';
+            if (anio != item['name']) {
+
+                $.each(item['venta'], function(i_, item_) {
+                    temp = temp + parseFloat(item_)
+                })
+
+                sumTotales.push({ 'anio':item['name'], 'suma':temp });
+                
+                anio = item['name'];
+                temp = 0;
+            }
+
+            newseries = {};
+            newseries.data = item['venta'];
+            newseries.name = item['name'];
+            newseries.color = colors_[i];
+            TicketProm.series.push(newseries);
+            TicketProm.tooltip = {
+                pointFormat : temporal
+            };
+            var chart = new Highcharts.Chart(TicketProm);
+            
+        })    
+    })    
+        
+    
+}
 function grafVentasMensuales(xbolsones) {
 
     var temporal = "";
@@ -1771,7 +2217,7 @@ function grafVentasMensuales(xbolsones) {
     .empty()
     .append(`<div style="height:400px; background:#ffff; padding:20px">
                 <div class="d-flex align-items-center">
-                    <strong class="text-info">Cargando comportamiento de ventas...</strong>
+                    <strong class="text-info">Cargando...</strong>
                     <div class="spinner-border ml-auto text-primary" role="status" aria-hidden="true"></div>
                 </div>
             </div>`);
@@ -2043,6 +2489,7 @@ $("#opc_seg_graf01,#opc_seg_graf02").change( function() {
         
     } else {
         grafRealVentasMensuales(xbolsones,Segmento)
+        fn_grafica_ventas_exportacion(xbolsones,Segmento);
     }
 
     
@@ -2082,7 +2529,6 @@ $("#OpcSegmClt").change( function() {
         }
         clientes.xAxis.categories = _title;
         clientes.series[0].data = _dta;
-        console.log(_dta)
         chart = new Highcharts.Chart(clientes);
     });
    
@@ -2123,6 +2569,10 @@ $("#opcSegmentos").change( function() {
                 dtcpm :  x['dtCPM'],
                 dtmco :  x['dtMCO'],
                 dtpco :  x['dtPCO'],
+
+                dttie :  x['dtTIE'],
+                dttb2 :  x['dtTB2'],
+                dttub :  x['dtTUB'],
             })
 
             title.push(x['name'])
@@ -2407,7 +2857,6 @@ function detalleVentasMes(tipo, title, cliente, articulo) {
 
                 $('#MontoReal').empty().text('C$ '+ numeral(articulo[0].dt_vst_real).format('0,0.00'));
                 $('#cumplMeta').text(numeral(articulo[0].dt_vst_porc).format('0.00')+'%');
-
             //Tabla Ventas del mes dashboard
             $(tableActive).dataTable({
                 responsive: true,
@@ -2776,6 +3225,12 @@ function detalleVentasMes(tipo, title, cliente, articulo) {
                     $('#id_detall_cost_unit').text('C$ '+ numeral(cliente[0].cost_unit).format('0,0.00'));  
                     $('#id_detall_marg_contrib').text('C$ '+ numeral(cliente[0].marg_contrib).format('0,0.00'));  
                     $('#id_detall_porc_contrib').text(numeral(cliente[0].porc_contrib).format('0,0.00'));  
+
+
+                    $('#id_disp_cant').empty().text(numeral(cliente[0].dttb2).format('0,0.00'));
+                    $('#id_disp_unds').empty().text(numeral(cliente[0].dttub).format('0,0.00'));
+                    $('#id_disp_meses').empty().text(numeral(cliente[0].dttie).format('0,0.00'));
+                    $('#id_prom_mes_actual').empty().text(numeral(cliente[0].dtpro).format('0,0.00'));
 
                     $('#txtMontoMeta').text('TOT. FACT. :');
                     $('#MontoMeta').text(numeral('C$ '+ cliente[0].total_fact).format('0,0.00'));
@@ -3267,6 +3722,13 @@ $('#filterDtTemp').on( 'keyup', function () {
     var table = $(tableActive).DataTable();
     table.search(this.value).draw();
 });
+
+$('#Search_cliente_no_facturado').on( 'keyup', function () {
+    var table = $("#tblClientes").DataTable();
+    table.search(this.value).draw();
+});
+
+
 
 /******************FROM ALL ITEM TOP 10 ***********************/
 $('#id_txt_all_item').on( 'keyup', function () {

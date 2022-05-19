@@ -99,12 +99,20 @@ class vinneta_model extends Model
         $company_user = Company::where('id',$request->session()->get('company_id'))->first()->id;
         $i=0;
         $data = array();
-        $f1 = $f1." 00 : 00 : 00 : 000";
-        $f2 = $f2." 23 : 59 : 59 : 998";
+        $f1 = $f1." 00 : 00 : 00";
+        $f2 = $f2." 23 : 59 : 59";
 
         switch ($company_user) {
-            case '1':
-                $sql_exec = "EXEC gnet_vinneta_pagadas '".$f1."','".$f2."'";
+            case '1':                
+                $sql_exec = "SELECT
+                    T0.RUTA,
+                    (SELECT T1.NOMBRE FROM UMK_VENDEDORES_ACTIVO T1 WHERE T1.VENDEDOR=T0.RUTA) AS NOMBRE,
+                    SUM(T0.CANTIDAD * T0.VALOR_UND) AS TOTAL
+                FROM 	
+                    DESARROLLO.dbo.tbl_vineta_liquidadas T0
+                WHERE T0.FECHA >= '".$f1."' and T0.FECHA <= '".$f2."' AND T0.RUTA NOT IN ('F00') 
+                GROUP BY T0.RUTA";
+
                 break;
             case '2':
                 $sql_exec = "";

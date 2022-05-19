@@ -145,7 +145,7 @@ function dataVinneta(f1, f2) {
         },
         "destroy" : true,
         "info":    false,
-        "lengthMenu": [[10,-1], [10,"Todo"]],
+        "lengthMenu": [[20,-1], [20,"Todo"]],
         "language": {
             "zeroRecords": "NO HAY COINCIDENCIAS",
             "paginate": {
@@ -173,16 +173,23 @@ function dataVinneta(f1, f2) {
         "footerCallback": function ( row, data, start, end, display ) {
             var api = this.api(), data;                        
             var intVal = function ( i ) {
+                
                 return typeof i === 'string' ?
-                i.replace(/[^0-9.]/g, '')*1 :
+                i.replace(/[^0-9.,]/g, '')*1 :
                 typeof i === 'number' ?
                 i : 0;
             };
 
+            
+
             total = api.column( 2 ).data().reduce( function (a, b) 
             {
+               
+
                 return intVal(a) + intVal(b);
             }, 0 );
+
+            console.log(total   )
 
             $( api.column( 2 ).footer() ).html(
                     'C$ '+ numeral(total).format('0,0.00') +' TOTAL'

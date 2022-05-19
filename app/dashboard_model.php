@@ -13,7 +13,7 @@ use App\rutas;
 use App\proyectosDetalle_model;
 use DB;
 use DateTime;
-
+use App\tbl_temporal;
 use PHPExcel;
 use PHPExcel_IOFactory;
 use PHPExcel_Style_Alignment;
@@ -79,10 +79,63 @@ class dashboard_model extends Model {
             'data' => dashboard_model::dataProyectos($mes, $anio, $company_user)
         );
 
-        $array_merge = array_merge($dtaBodega, $dtaTop10Cl, $dtaTop10Pr, $dtaVtasMes, $dtaRecupera, $dtaCompMesesVentas, $dtaCompMesesItems, $dtaVentasXCateg, $dtaClientes, $dtaProyectos,$dtaVtnDiarias);
-        //$array_merge = array_merge($dtaTop10Pr);
+        /*$f1 = $anio."-".$mes."-01";
+        $f2 = $anio."-".$mes."-".date('t',strtotime('today'));*/
+
+        $Resultado = exportacion_model::getVentasExportacion("", "");
+
+        $TOTAL_FACTURA = array_sum(array_column($Resultado,'TOTAL_FACTURA'));
+        $TOTAL_MONEDA_LOCAL = array_sum(array_column($Resultado,'TOTAL_MONEDA_LOCAL'));
+        
+        $dtaDolares[] = array(
+            'tipo' => 'vtsDolares',
+            'data' => array(
+                'Dolar' => $TOTAL_FACTURA,
+                'Local' => $TOTAL_MONEDA_LOCAL
+            )
+        );
+
+        $array_merge = array_merge($dtaBodega, $dtaTop10Cl, $dtaTop10Pr, $dtaVtasMes, $dtaRecupera, $dtaCompMesesVentas, $dtaCompMesesItems, $dtaVentasXCateg, $dtaClientes, $dtaProyectos,$dtaVtnDiarias,$dtaDolares);
+        //$array_merge = array_merge($dtaDolares);
         return $array_merge;
         $sql_server->close();
+    }
+    
+    public static function getVentasExportacion($xbolsones,$Segmento) {
+        $sql_server = new \sql_server();
+        $sql_exec = '';
+        $request = Request();  
+        $i=0;
+
+        $data = array();
+
+        $anio = intval( date('Y') );
+        $month = date('m');
+
+        $f1 = $anio.'-01-01 00 : 00 : 00 : 000';
+        $f2 = $anio.'-12-31 23 : 59 : 59 : 998';
+
+        $sql_exec = "EXEC gnet_ventas_exportacion_grafica '".$f1."','".$f2."'";
+        
+        $query = $sql_server->fetchArray( $sql_exec , SQLSRV_FETCH_ASSOC);
+
+        for ($m = 1; $m <= $month; $m++) {
+            $found_key = array_search($m, array_column($query, 'nMes'));
+            if ($found_key !== false) {
+                array_push($data, floatval($query[$found_key]['Total']));
+            } else {
+                array_push($data, floatval("0.00"));
+            }
+            
+        }
+        
+
+        $array[0]['title'] = 'Venta';
+        $array[0]['data'] = $data;
+
+        $sql_server->close();        
+
+        return $array;
     }
     public static function get_Ventas_diarias($mes, $anio, $company_user, $xbolsones ,$Segmento) 
     {
@@ -372,6 +425,73 @@ class dashboard_model extends Model {
             }
 
         //}
+        return $json;
+
+            $sql_server->close();
+            $sql_exec = 'SELECT ';
+    }
+
+    public static function ClientesNoFacturados($mes, $anio){
+
+        $sql_server = new \sql_server();
+        $fecha = new DateTime($anio.'-'.$mes.'-01');
+        $sql_exec = '';
+        $request = Request();
+        $idPeriodo = '';
+        $company_user = Company::where('id',$request->session()->get('company_id'))->first()->id;
+        $idPeriodo = Metacuota_gumanet::where(['Fecha' => $fecha,'IdCompany'=> $company_user])->pluck('IdPeriodo');
+
+        $UND_NEGOCIO = '';
+
+        switch ($company_user) {
+            case '1':               
+                $UND_NEGOCIO = 'umk';
+                break;
+            case '2':
+                $UND_NEGOCIO = 'guma';
+            break;
+            case '3':
+                $sql_exec = "";
+                break;     
+            case '4':
+                $UND_NEGOCIO = 'innova';
+                break;       
+            default:                
+                dd("Ups... al parecer sucedio un error al tratar de encontrar articulos para esta empresa. ". $company->id);
+                break;
+        }
+
+        $sql_exec= "SELECT 
+                TblLastPurchase.CLIENTE,
+                T0.NOMBRE_CLIENTE, 
+            MAX(T0.FECHA) ULTIMA_COMPRA,
+            dbo.get_Exact_Date_diff( MAX(T0.FECHA), GETDATE()) as Diferencia
+            FROM  Softland.".$UND_NEGOCIO.".FACTURA T0
+                    CROSS APPLY (
+                        SELECT TOP 1 * 
+                        FROM Softland.".$UND_NEGOCIO.".FACTURA T1 
+                        WHERE T1.FACTURA = T0.FACTURA
+                        ORDER BY T0.FECHA DESC) AS TblLastPurchase							 
+                                    WHERE YEAR(T0.FECHA) = YEAR(GETDATE()) - 1 
+                                    AND T0.CLIENTE NOT IN (SELECT T2.CLIENTE FROM Softland.".$UND_NEGOCIO.".FACTURA T2 WHERE YEAR(T2.FECHA) = ".$anio." AND MONTH( T2.FECHA ) = ".$mes." AND T2.RUTA NOT IN ('F01','F12') GROUP BY T2.CLIENTE)
+            GROUP BY T0.NOMBRE_CLIENTE,TblLastPurchase.CLIENTE";
+
+
+        $query = $sql_server->fetchArray($sql_exec,SQLSRV_FETCH_ASSOC);
+
+        $i = 0;
+        $json = array();        
+
+        
+        foreach ($query as $fila) {
+
+            $json[$i]["CLIENTE"]        = $fila['CLIENTE'];
+            $json[$i]["NOMBRE_CLIENTE"] = $fila['NOMBRE_CLIENTE'];
+            $json[$i]["ULTIMA_COMPRA"]  = strftime('%a %d de %b %G', strtotime($fila['ULTIMA_COMPRA']->format('Y-m-d H:i:s')));
+            $json[$i]["Diferencia"] = $fila['Diferencia'];
+            
+            $i++;
+        }
         return $json;
 
             $sql_server->close();
@@ -1103,6 +1223,7 @@ class dashboard_model extends Model {
     public static function getTop10Productos($mes, $anio, $company_user, $xbolsones,$Segmento) {
         $sql_server = new \sql_server();
         $sql_exec = '';
+        $sql_exec_Vueno= '';
         $tem_=0;
         $RutaSegmento = "";
         
@@ -1135,7 +1256,7 @@ class dashboard_model extends Model {
 
                 
 
-                $sql_exec ="select top 10
+                $sql_exec ="SELECT top 10
                         T1.Articulo,T1.Descripcion,T1.Clasificacion6,
                         count(T1.articulo) As NºVentaMes,
                         isnull(sum(T1.cantidad),0) Cantidad,
@@ -1145,11 +1266,15 @@ class dashboard_model extends Model {
                         isnull((SELECT TOP 1 SUM(T2.cantidad) AS Cantidad FROM Softland.dbo.VtasTotal_UMK T2  WHERE ".$mes." = T2.nMes AND ".$anio." = T2.[Año] AND T2.[P. Unitario] <= 0 AND T2.Articulo = T1.Articulo and ".$qSegmento." GROUP BY  T2.Articulo),0) AS Cantida_boni,
                         ISNULL((SELECT SUM(T2.venta)  FROM Softland.dbo.VtasTotal_UMK T2 WHERE (".$mes." = T2.nMes) AND ( ".$anio." = T2.[Año]) AND (T2.[P. Unitario] > 0) AND (T2.Articulo = T1.Articulo) AND (T2.Ruta in ('F04'))    ), 0) AS Mayoristas,
                         ISNULL((SELECT SUM(T2.venta)  FROM Softland.dbo.VtasTotal_UMK T2 WHERE (".$mes." = T2.nMes) AND ( ".$anio." = T2.[Año]) AND (T2.[P. Unitario] > 0) AND (T2.Articulo = T1.Articulo) AND (T2.Ruta in ('F02'))  ), 0) AS Instituciones,
-                        ISNULL((SELECT SUM(T2.venta)  FROM Softland.dbo.VtasTotal_UMK T2 WHERE (".$mes." = T2.nMes) AND (".$anio." = T2.[Año]) AND (T2.[P. Unitario] > 0) AND (T2.Articulo = T1.Articulo) AND (T2.Ruta NOT IN ('F04','F02','F01','F12'))  ), 0) AS Farmacias
+                        ISNULL((SELECT SUM(T2.venta)  FROM Softland.dbo.VtasTotal_UMK T2 WHERE (".$mes." = T2.nMes) AND (".$anio." = T2.[Año]) AND (T2.[P. Unitario] > 0) AND (T2.Articulo = T1.Articulo) AND (T2.Ruta NOT IN ('F04','F02','F01','F12'))  ), 0) AS Farmacias,
+                        T3.total,
+                        T3.UNIDADES
             
-            from Softland.dbo.VtasTotal_UMK T1 Where ".$mes." = T1.nMes and ".$anio." = T1.[Año] and T1.[P. Unitario] > 0
+            FROM Softland.dbo.VtasTotal_UMK T1 
+            INNER JOIN iweb_articulos T3 ON T1.ARTICULO = T3.ARTICULO 
+            Where ".$mes." = T1.nMes and ".$anio." = T1.[Año] and T1.[P. Unitario] > 0
             AND  Ruta NOT IN('F01', 'F12') AND  ".$qSegmento." 
-            group by T1.Articulo,T1.Descripcion,T1.Clasificacion6,T1.mes,T1.año,T1.[Costo Unitario]
+            group by T1.Articulo,T1.Descripcion,T1.Clasificacion6,T1.mes,T1.año,T1.[Costo Unitario],T3.total,T3.UNIDADES
             order by MontoVenta desc";
 
 
@@ -1163,7 +1288,8 @@ class dashboard_model extends Model {
                 $sql_exec = "";
                 break;   
             case '4':
-                $sql_exec = " EXEC Inv_DetalleVentas_Mes ".$mes.", ".$anio." ";
+                $sql_exec       = " EXEC Inv_DetalleVentas_Mes ".$mes.", ".$anio." ";
+                $sql_exec_Vueno = " EXEC Inv_DetalleVentas_Mes_promo_vueno ".$mes.", ".$anio." ";
                 break;        
             default:                
                 dd("Ups... al parecer sucedio un error al tratar de encontrar articulos para esta empresa. ". $company->id);
@@ -1171,19 +1297,39 @@ class dashboard_model extends Model {
         }
 
         $query = $sql_server->fetchArray($sql_exec,SQLSRV_FETCH_ASSOC);
+        
 
         $json = array();
-        $json = array();
+        
         $i = 0;
-   
+        
+        $getMonth  = date('n');
 
         if( count($query)>0 ) {
             foreach ($query as $key) {
+
+                $oItem = tbl_temporal::where('articulo', $key['Articulo'])->get()->first();
+                if ($oItem) {
+                    $cantidad = $oItem->cantidad;
+                    $vst_mes_Actual = $oItem->VstMesActual;
+                    $vst_anno_Actual = $oItem->VstAnnoActual;
+                } else {
+                    $cantidad = 0;
+                    $vst_mes_Actual = 0;
+                    $vst_anno_Actual = 0;
+                }
+
+                $totalExistencia = $key['total'];
+
+                $PromedioActual = number_format(($vst_anno_Actual / $getMonth), 2,".","");
+                $tempoEstimado = ($key['total'] > 0.10 && $PromedioActual > 0.10) ? $totalExistencia  / $PromedioActual : "0.00" ;
 
                 $Total_Facturado        = $key['MontoVenta'];
                 $Cantidad               = $key['Cantidad'];
                 $Cantidad_bonificada    = $key['Cantida_boni'];                
                 $COSTO_PROM             = $key['COSTO_PROM'];
+                $TOTAL_B002             = $key['total'];
+                $TOTAL_UND_B002         = $key['UNIDADES'];
                 $json[$i]['name']       = $key['Articulo'];
                 $json[$i]['articulo']   = $key['Descripcion'];
 
@@ -1199,7 +1345,7 @@ class dashboard_model extends Model {
                $prom_contribucion = (( $AVG - floatval($COSTO_PROM) ) / $AVG) * 100;
 
 
-                if ( $company_user==4 ) {
+                if ( $company_user == 4 ) {
 
                     $tem_   = ($xbolsones) ? floatval($Cantidad) : floatval($Total_Facturado);
                     $UND_ = floatval($Cantidad);
@@ -1208,6 +1354,7 @@ class dashboard_model extends Model {
                     $COSTO_PROM_ = number_format(floatval($COSTO_PROM),2);
                     $MARG_CONTRI = number_format(floatval($Monto_Contribucion),2);
                     $PORC_CONTRI = number_format(floatval($prom_contribucion),2);
+                    $TIEMPO_ESTIMADO = number_format(floatval($tempoEstimado),2);
 
                 }else {
 
@@ -1218,6 +1365,7 @@ class dashboard_model extends Model {
                     $COSTO_PROM_ = number_format(floatval($COSTO_PROM),2);
                     $MARG_CONTRI = number_format(floatval($Monto_Contribucion),2);
                     $PORC_CONTRI = number_format(floatval($prom_contribucion),2);
+                    $TIEMPO_ESTIMADO = number_format(floatval($tempoEstimado),2);
                 }
 
 
@@ -1228,7 +1376,12 @@ class dashboard_model extends Model {
                 $json[$i]['dtAVG']      = $AVG_;
                 $json[$i]['dtCPM']      = $COSTO_PROM_;
                 $json[$i]['dtMCO']      = $MARG_CONTRI;
-                $json[$i]['dtPCO']      = $PORC_CONTRI;   
+                $json[$i]['dtPCO']      = $PORC_CONTRI; 
+                
+                $json[$i]['dtTIE']      = $TIEMPO_ESTIMADO;   
+                $json[$i]['dtTB2']      = $TOTAL_B002;   
+                $json[$i]['dtTUB']      = $TOTAL_UND_B002; 
+                $json[$i]['dtPRO']      = $PromedioActual;
                 
                 if ($company_user==1) {
                     $json[$i]['M1']         = $key['Farmacias'];
@@ -1246,6 +1399,52 @@ class dashboard_model extends Model {
             }
         }
 
+        if($company_user==4){
+            $query_result_vueno = $sql_server->fetchArray($sql_exec_Vueno,SQLSRV_FETCH_ASSOC);
+            $array_vueno = array();
+            if( count($query_result_vueno)>0 ) {
+
+                $sm_Cantidad    = array_sum(array_column($query_result_vueno, 'Cantidad'));
+                $sm_MontoVenta  = array_sum(array_column($query_result_vueno, 'MontoVenta'));
+
+                $array_vueno['name'] = 'VUENO';
+                $array_vueno['articulo'] = 'Promo VUENO';
+                $array_vueno['data']       = $sm_MontoVenta;
+                $array_vueno['dtUnd']      = $sm_Cantidad;
+                $array_vueno['dtUndBo']    = 0;
+                $array_vueno['dtAVG']      = '0.00';
+                $array_vueno['dtCPM']      = '0.00';
+                $array_vueno['dtMCO']      = '0.00';
+                $array_vueno['dtPCO']      = '0.00';             
+                $array_vueno['dtTIE']      = '0.00';   
+                $array_vueno['dtTB2']      = '0.00';   
+                $array_vueno['dtTUB']      = '0.00'; 
+                $array_vueno['dtPRO']      = '0.00';
+                $array_vueno['M1']      = $sm_Cantidad;   
+                $array_vueno['M2']      = 0; 
+                $array_vueno['M3']      = 0;
+                
+            }else{
+                $array_vueno['name'] = 'VUENO';
+                $array_vueno['articulo'] = 'Promo VUENO';
+                $array_vueno['data']       = 0;
+                $array_vueno['dtUnd']      = 0;
+                $array_vueno['dtUndBo']    = 0;
+                $array_vueno['dtAVG']      = '0.00';
+                $array_vueno['dtCPM']      = '0.00';
+                $array_vueno['dtMCO']      = '0.00';
+                $array_vueno['dtPCO']      = '0.00';             
+                $array_vueno['dtTIE']      = '0.00';   
+                $array_vueno['dtTB2']      = '0.00';   
+                $array_vueno['dtTUB']      = '0.00'; 
+                $array_vueno['dtPRO']      = '0.00';
+                $array_vueno['M1']      = 0;   
+                $array_vueno['M2']      = 0; 
+                $array_vueno['M3']      = 0;
+            }        
+            array_push($json,$array_vueno);
+
+        }
         
         return $json;
         $sql_server->close();
@@ -1353,7 +1552,10 @@ class dashboard_model extends Model {
         if (count($query)>0) {
 
             $metas = dashboard_model::getVentasMes($mes, $anio, $company_user, 0);
-            $clientesMeta = clientes_x_rutas::sum('cantidad');
+            //$clientesMeta = clientes_x_rutas::sum('cantidad');
+            $sql_count="SELECT T0.CLIENTE  FROM Softland.umk.FACTURA T0  WHERE YEAR ( T0.FECHA ) = YEAR ( GETDATE( ) ) - 1 	GROUP BY T0.CLIENTE";
+            $qCount = $sql_server->fetchArray($sql_count, SQLSRV_FETCH_ASSOC);
+            $clientesMeta = count($qCount);
 
             if (count($metas)>0) {
                 $array[0]['title'] = 'real';
@@ -2035,9 +2237,46 @@ class dashboard_model extends Model {
         $sql_exec       = '';
         $View           = '';
         $mercado        = '';
+        $isTicket       = false;
         $request        = Request();
         $company_user   = Company::where('id',$request->session()->get('company_id'))->first()->id;
         $i = 0;
+        $json = array();
+        $array = array();
+
+        $clientesMeta = clientes_x_rutas::sum('cantidad');
+
+        $sql_count="SELECT T0.CLIENTE  FROM Softland.umk.FACTURA T0  WHERE YEAR ( T0.FECHA ) = YEAR ( GETDATE( ) ) - 1 	GROUP BY T0.CLIENTE";
+        $qCount = $sql_server->fetchArray($sql_count, SQLSRV_FETCH_ASSOC);
+        $Master_Cliente = count($qCount);
+
+        if($elemento=="[Cod. Cliente]"){
+
+            for ($n = 1; $n <= 12; $n++) {
+            
+                ($n > 0 ) ? (array_push($array, $Master_Cliente)):false;
+                
+                $json[2]['name'] = "Master Cliente";
+                $json[2]['venta'] = $array;
+            }
+            $array = array();
+
+            for ($m = 1; $m <= 12; $m++) {
+            
+                ($n > 0 ) ? (array_push($array, $clientesMeta)):false;
+                
+                $json[3]['name'] = "Meta";
+                $json[3]['venta'] = $array;
+            }
+            $array = array();
+
+
+        }
+
+        if($elemento=='TICKETPROM'){
+            $elemento   = '[Cod. Cliente]';
+            $isTicket   =  true;
+        }
 
         $meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
         
@@ -2054,15 +2293,18 @@ class dashboard_model extends Model {
         }
         
 
-        $sql="SELECT mes, CAST(count( distinct ".$elemento.") AS FLOAT) AS cvalue, [Año] AS annio FROM ".$View."
+        $sql="SELECT mes, 
+                CAST(count( distinct ".$elemento.") AS FLOAT) AS cvalue, 
+                CAST ( SUM ( venta ) / COUNT ( DISTINCT [Cod. Cliente] ) AS FLOAT ) AS vntMes,
+                [Año] AS annio 
+                FROM ".$View."
                 WHERE [Año] IN ( YEAR(DATEADD(year, -1,GETDATE())), YEAR(GETDATE()))
                 AND [P. Unitario] > 0 
                 ".$mercado."
                 GROUP BY Mes,Año,nMes
                 ORDER BY nMes";
 
-        $json = array();
-        $array = array();
+        
         $query = $sql_server->fetchArray($sql, SQLSRV_FETCH_ASSOC);
 
         $anioActual = intval(date('Y'));
@@ -2070,10 +2312,17 @@ class dashboard_model extends Model {
 
         for ($anio=$anioLimit; $anio<=$anioActual; $anio++) {
             
-            foreach ($meses as $key => $mes) {
-                $temp = array_column(array_filter($query, function($item) use($mes,$anio) { return $item['annio'] == $anio and $item['mes']==$mes; } ), 'cvalue');
-
-                ( count($temp)>0 )?( array_push($array, $temp[0])):false;
+            if($isTicket){
+                foreach ($meses as $key => $mes) {
+                    $vntMes = array_column(array_filter($query, function($item) use($mes,$anio) { return $item['annio'] == $anio and $item['mes']==$mes; } ), 'vntMes');
+                    
+                    (count($vntMes) > 0 ) ? (array_push($array, $vntMes[0])):false;
+                }
+            }else{
+                foreach ($meses as $key => $mes) {
+                    $temp = array_column(array_filter($query, function($item) use($mes,$anio) { return $item['annio'] == $anio and $item['mes']==$mes; } ), 'cvalue');
+                    (count($temp) > 0 ) ? (array_push($array, $temp[0])):false;
+                }
             }
 
             $json[$i]['name'] = $anio;
@@ -2082,6 +2331,7 @@ class dashboard_model extends Model {
             
             $array = array();
         }
+        
 
         return $json;
         $sql_server->close();

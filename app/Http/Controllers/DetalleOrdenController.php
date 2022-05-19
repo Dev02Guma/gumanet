@@ -303,7 +303,7 @@ class DetalleOrdenController extends Controller
             $mp_total =  DB::table('producciontest.mp_directa')->select(DB::raw('SUM(cantidad) as mp_directa'))
                 ->where('numOrden', $numOrden)
                 ->get()->first();
-                
+
             $totalMPTPACK = DB::table('producciontest.mp_directa')->select(DB::raw('SUM(cantidad) as total'))
                 ->where('idFibra', $idTetra->idFibra)
                 ->where('numOrden', $numOrden)
@@ -398,133 +398,6 @@ class DetalleOrdenController extends Controller
         return $result;
     }
 
-    public function getDataFormat()
-    {
-        $data = array();
-        $i = 0;
-
-        $produccion_total = DB::table('producciontest.inn_produccion_total')->select('inn_produccion_total.*', 'producciontest.orden_produccion.*')
-            ->join('producciontest.orden_produccion', 'producciontest.inn_produccion_total.numOrden', '=', 'producciontest.orden_produccion.numOrden')
-            ->where('producciontest.orden_produccion.estado', 1);
-
-        $obj = $produccion_total->get();
-        foreach ($obj as $Orden => $key) {
-            $data[$i]['numOrden'] = $key->numOrden;
-            $co_subTT = DB::table('producciontest.inn_costo_orden_subtotal')->select(DB::raw('SUM(subtotal) as total'))->where('numOrden',  $key->numOrden)->get();
-
-            if (is_null($co_subTT)) {
-                $data[$i]['costo_total'] = 0;
-            } else {
-                foreach ($co_subTT as $costo_subTotal => $cst) {
-                    $data[$i]['costo_total'] = $cst->total;
-                }
-            }
-
-            $data[$i]['fechaInicio'] =  date('d/m/Y', strtotime($key->fechaInicio)) . ' ' .  date('g:i a', strtotime($key->horaInicio));
-            $data[$i]['fechaFinal'] = date('d/m/Y', strtotime($key->fechaFinal)) . ' ' . date('g:i a', strtotime($key->horaFinal));
-            $data[$i]['anio'] =  date('Y', strtotime($key->fechaInicio));
-            $nameMonth = date('F', strtotime($key->fechaInicio));
-            $mes = $this->getMes($nameMonth);
-            $data[$i]['mes'] = $mes;
-
-
-            (is_null($key->tipo_cambio)) ? $data[$i]['tipo_cambio'] = 0 :  $data[$i]['tipo_cambio'] = $key->tipo_cambio;
-            if (($key->tipo_cambio == 0) || (is_null($key->tipo_cambio))) {
-                $data[$i]['prod_real_ton'] =  0;
-                $data[$i]['costo_real_ton'] = 0;
-                $data[$i]['ct_dolar'] =  0;
-            } else {
-                $data[$i]['ct_dolar'] =  $cst->total / $key->tipo_cambio;
-                $data[$i]['prod_real_ton'] =  $cst->total / $key->tipo_cambio;
-                $data[$i]['costo_real_ton'] = ($cst->total / $key->tipo_cambio) / ($key->prod_real / 1000);
-            }
-
-            $productos = DB::table('producciontest.productos')->where('idProducto',  $key->producto)->get();
-            foreach ($productos as $producto => $p) {
-                $data[$i]['producto'] = $p->nombre;
-                //$data[$i]['descripcion'] = $p->descripcion;
-                $data[$i]['descripcion'] =  $p->descripcion == null || $p->descripcion == '' ? '' : $p->descripcion;
-                $data[$i]['ver'] = '<a href="#!"  class="btn "  onclick="getMoreDetail(' . "'" . $key->numOrden . "'" . ', ' . "'" . $p->nombre . "'" .
-                    ',' . "'" . $data[$i]['fechaInicio'] . "'" . ', ' . "'" .  $data[$i]['fechaFinal'] . "'" . ')"><i class="fas fa-eye fa-2x text-primary"></i></a>';
-            }
-
-            $data[$i]['prod_real'] = $key->prod_real;
-            $data[$i]['prod_total'] = $key->merma_total +  $key->prod_real;
-            $data[$i]['prod_real_ton'] = ($key->prod_real / 1000);
-            $i++;
-        }
-
-        $j = 0;
-        $k = 0;
-
-        $dataP = array();
-        $dataDate = array();
-        $arrayValue =  array_unique(array_column($data, 'mes')); // mes
-        $arrayValueAnio =  array_unique(array_column($data, 'anio'));  // años
-        /*foreach($arrayValueAnio as $anios){
-            $dataDate[]
-        } */
-        $arrayValueMesAnio =  array_merge($arrayValue,  $arrayValueAnio);
-        //los meses que estan en la orden No repetidos.
-        foreach ($arrayValue as $dataMonth) {
-
-            $prod_real_total        = 0;
-            $prod_total_total       = 0;
-            $prod_real_ton_total    = 0;
-            $costo_total_total      = 0;
-            $costo_real_ton_total   = 0;
-            $ct_dolar_total         = 0;
-            $contador               = 0;
-            $mes                    = '';
-            $anio                    = '';
-            $subData = array();
-
-            foreach ($data as $dataOrden  => $key) {
-                if ($key['mes'] == $dataMonth) { //Si tienen el mismo mes
-                    $subData[$k]['numOrden'] =        $key['numOrden'];
-                    $subData[$k]['producto'] =        $key['producto'];
-                    $subData[$k]['descripcion'] =     $key['descripcion'] == null || $key['descripcion'] == '' ? '' : $key['descripcion'];
-                    $subData[$k]['anio'] =            $key['anio'];
-                    $subData[$k]['mes'] =             $key['mes'];
-                    $subData[$k]['fechaInicio'] =     $key['fechaInicio'];
-                    $subData[$k]['fechaFinal'] =      $key['fechaFinal'];
-                    $subData[$k]['prod_real'] =       $key['prod_real'];
-                    $subData[$k]['prod_total'] =      $key['prod_total'];
-                    $subData[$k]['prod_real_ton'] =   $key['prod_real_ton'];
-                    $subData[$k]['costo_total'] =     $key['costo_total'];
-                    $subData[$k]['tipo_cambio'] =     $key['tipo_cambio'];
-                    $subData[$k]['ct_dolar'] =        $key['ct_dolar'];
-                    $subData[$k]['costo_real_ton'] =  $key['costo_real_ton'];
-                    $subData[$k]['ver'] =             $key['ver'];
-                    $k++;
-                    $prod_real_total +=  $key['prod_real'];
-                    $prod_total_total += $key['prod_total'];
-                    $prod_real_ton_total +=  $key['prod_real_ton'];
-                    $costo_total_total +=  $key['costo_total'];
-                    $costo_real_ton_total +=  $key['costo_real_ton'];
-                    $ct_dolar_total +=  $key['ct_dolar'];
-                    $mes  = $dataMonth;
-                    $anio  = $key['anio'];
-                    ++$contador;
-                }
-            }
-            $dataP[$j]['ordenes']              = '(' . $contador . ')';
-            $dataP[$j]['all_detalles']         = $subData;
-            $dataP[$j]['mes_']                 = $mes;
-            $dataP[$j]['anio_']                = $anio;
-            $dataP[$j]['prod_real_total']      = number_format($prod_real_total, 2);
-            $dataP[$j]['prod_total_total']     = number_format($prod_total_total, 2);
-            $dataP[$j]['prod_real_ton_total']  = number_format($prod_real_ton_total, 2);
-            $dataP[$j]['costo_total_total']    = number_format($costo_total_total, 2);
-            $dataP[$j]['costo_real_ton_total'] = number_format($costo_real_ton_total, 2);
-            $dataP[$j]['ct_dolar_total']       = number_format($ct_dolar_total, 2);
-            $dataP[$j]['detalle_general']      = '<a id="exp_more_" class="exp_more_" href="#!"><i class="material-icons expan_more">expand_more</i></a>';
-            $j++;
-        }
-        return response()->json($dataP);
-    }
-
-
     public function getData()
     {
         $detalle_orden = DB::table('producciontest.inn_detalles_gumanet')->get();
@@ -533,9 +406,9 @@ class DetalleOrdenController extends Controller
 
         foreach ($detalle_orden as $detalle => $key) {
 
-            $Data[$k]['anio']    = $key->year_;
-            $mes =  DateTime::createFromFormat('!m', $key->mes_);
-            $Data[$k]['mes']                    =   $this->getMes($mes->format('F'));
+            $Data[$k]['anio']                   = $key->year_;
+            $mes                                = DateTime::createFromFormat('!m', $key->mes_);
+            $Data[$k]['mes']                    = $this->getMes($mes->format('F'));
             $Data[$k]['contOrder']              = $key->contOrder;
             $Data[$k]['prod_real_total']        = number_format($key->prod_real_mensual,2);
             $Data[$k]['prod_total_total']       = number_format($key->prod_total_mensual, 2);
@@ -573,5 +446,191 @@ class DetalleOrdenController extends Controller
         }
 
         return $Data;
+    }
+
+    public function getOrdenesPC()
+    {
+
+        $detalle_orden = DB::table('producciontest.inn_detalles_pc_gumanet')->get();
+
+        $data = array();
+        $i = 0;
+
+        foreach ($detalle_orden as $detalle => $key) {
+
+            $data[$i]['year_']                   = $key->year_;
+            $mes                                = DateTime::createFromFormat('!m', $key->mes_);
+            $data[$i]['mes_']                    = $this->getMes($mes->format('F'));
+            $data[$i]['contOrder']              = $key->contOrder;
+            $data[$i]['total_bultos']           = number_format($key->total_bultos, 2);
+            $data[$i]['detalle_general']        = '<a id="exp_more_pc" class="exp_more" href="#!"><i class="material-icons expan_more">expand_more</i></a>';
+            $lista_ordenes                      = trim($key->Detalles, "\"[].");
+            $size                               = explode(",", $lista_ordenes);
+
+            $cLineas                            = count($size);
+            $arrDetalles                        = array();
+
+            for ($l = 0; $l < $cLineas; $l++) {
+
+                $_detalles     = explode(";", $size[$l]);
+                $arrDetalles[$l]['orden']                 = trim($_detalles[0], "\" .");
+                $arrDetalles[$l]['nombre']                = $_detalles[2];
+                $arrDetalles[$l]['fecha_inicio']          = date('Y-m-d',strtotime($_detalles[3])); 
+                $arrDetalles[$l]['fecha_final']           = date('Y-m-d',strtotime($_detalles[4]));
+                $arrDetalles[$l]['hora_inicio']           = date('g:i a', strtotime($_detalles[3]));
+                $arrDetalles[$l]['hora_final']            = date('g:i a', strtotime($_detalles[4]));
+                $arrDetalles[$l]['Hrs_trabajadas']        = $_detalles[5];
+                $arrDetalles[$l]['PESO_PORCENT']          = $_detalles[6];
+                $arrDetalles[$l]['TOTAL_BULTOS_UNDS']     = trim($_detalles[7], "\" .");
+                $arrDetalles[$l]['num_orden']             = '<a href="#!"  class=""  onclick="get_detail_pc(' . "'" .trim($_detalles[0], "\" .") . "'" . ', ' . "'" . $_detalles[1] . "'" .
+                    ',' . "'" . $_detalles[2] . "'" . ', ' . "'" .  date('Y-m-d',strtotime($_detalles[3]))  . ' ' . date('g:i a', strtotime($_detalles[3])) . "'" . ', ' . "'" .  date('Y-m-d',strtotime($_detalles[3])) . ' ' . date('g:i a', strtotime($_detalles[3])) . "'" . ')"> ' .  trim($_detalles[0], "\" .") . ' </i></a>';
+            }
+
+            $data[$i]['Detalles']       =  $arrDetalles;
+            $i++;
+        }
+
+        return $data;
+    }
+
+    public function getDataGeneralPc($num_orden)
+    {
+        //$json = array();
+        $ordenes_pc =  DB::table('producciontest.view_proceso_seco_ordenes_produccion')
+            ->where('num_orden', $num_orden)
+            ->get()->first();
+
+        $data = array();
+
+        $data[0]['Hrs_trabajadas'] = number_format($ordenes_pc->Hrs_trabajadas,2);
+        $data[0]['PESO_PORCENT'] = number_format($ordenes_pc->PESO_PORCENT,2);
+        $data[0]['TOTAL_BULTOS'] = number_format($ordenes_pc->TOTAL_BULTOS_UNDS,2);
+        $data[0]['JR_TOTAL'] = number_format(($ordenes_pc->TOTAL_BULTOS_UNDS *  $ordenes_pc->PESO_PORCENT), 2);
+        
+        return $data;
+    }
+
+    public function getProd_pc($num_orden)
+    {
+        $ordenes_pc =  DB::table('producciontest.view_proceso_seco_ordenes_produccion')
+            ->where('num_orden', $num_orden)
+            ->get()->first();
+
+        $Productos_pc = DB::table('producciontest.pc_productos_ordenes')
+            ->where('ID_PRODUCTO',  $ordenes_pc->id_productor)
+            ->where('TIPO', 'PRODUCTO')
+            ->get();
+
+        $requisado_productos = DB::table('producciontest.view_agrupado_detalle_requisas')
+            ->where('num_orden', $num_orden)
+            ->get();
+
+        $peso = $ordenes_pc->PESO_PORCENT;
+        //$peso2 = array_column($ordenes_pc, 'PESO_PORCENT', 'id');
+
+        $data = array();
+        $i = 0;
+        foreach ($Productos_pc as $producto) {
+            $bultos = 0;
+            $data[$i]['ID_ARTICULO'] = $producto->ID_ARTICULO;
+            $data[$i]['ARTICULO'] = $producto->ARTICULO;
+            $data[$i]['DESCRIPCION_CORTA'] = $producto->DESCRIPCION_CORTA;
+
+            foreach ($requisado_productos as $requisado) {
+                if ($producto->ID_ARTICULO == $requisado->ID_ARTICULO) {
+                    $bultos = $requisado->PRODUCTO;
+                }
+            }
+            $data[$i]['BULTOS'] =  number_format($bultos, 2);
+            $data[$i]['PESO_PORCENTUAL']   = number_format($peso, 2);
+            $data[$i]['KG']     = number_format($peso * $bultos, 2);
+
+            $i++;
+        }
+
+        return $data;
+    }
+
+    public function getMP_PC($num_orden)
+    {
+        $ordenes_pc =  DB::table('producciontest.view_proceso_seco_ordenes_produccion')
+            ->where('num_orden', $num_orden)
+            ->get()->first();
+
+        $Productos_pc = DB::table('producciontest.pc_productos_ordenes')
+            ->where('ID_PRODUCTO',  $ordenes_pc->id_productor)
+            ->where('TIPO', 'MATERIA_PRIMA')
+            ->get();
+
+        $MP_PC = DB::table('producciontest.view_proceso_seco_estadisticas')->where('num_orden', $num_orden)->get();
+
+        $data = array();
+        $i = 0;
+
+        foreach ($Productos_pc as $producto) {
+            $REQUISA            = 0;
+            $PISO               = 0;
+            $CONSUMO            = 0;
+            $MERMA              = 0;
+            $MERMA_PORCENTUAL   = 0;
+
+            $data[$i]['ID_ARTICULO'] = $producto->ID_ARTICULO;
+            $data[$i]['ARTICULO'] = $producto->ARTICULO;
+            $data[$i]['DESCRIPCION_CORTA'] = $producto->DESCRIPCION_CORTA;
+
+            foreach ($MP_PC as $requisado) {
+                if ($producto->ID_ARTICULO == $requisado->ID_ARTICULO) {
+                    $REQUISA            = $requisado->REQUISA;
+                    $PISO               = $requisado->PISO;
+                    $CONSUMO            = $requisado->CONSUMO;
+                    $MERMA              = $requisado->MERMA;
+                    $MERMA_PORCENTUAL   = $requisado->MERMA_PORCENT;
+                }
+            }
+
+            $data[$i]['REQUISA'] = number_format($REQUISA, 2);
+            $data[$i]['PISO'] = number_format($PISO, 2);
+            $data[$i]['CONSUMO'] = number_format($CONSUMO, 2);
+            $data[$i]['MERMA'] = number_format($MERMA, 2);
+            $data[$i]['MERMA_PORCENTUAL'] = number_format($MERMA_PORCENTUAL, 2);
+
+
+            $i++;
+        }
+
+        return $data;
+    }
+    public function getTiempos_paros($num_orden)
+    {
+        $items_productos = DB::table('producciontest.pc_tiempos_paros')->where('ACTIVO', 'S')->get();
+        $datos_productos = DB::table('producciontest.view_proceso_seco_detalles_tiempos_paros')->where('num_orden', $num_orden)->get()->toArray();
+        $json = array();
+        $i = 0;
+
+        if (count($items_productos) > 0) {
+            foreach ($items_productos as $key => $value) {
+
+                $json[$i]['ID_ROW']        = $value->ID;
+                $json[$i]['ARTICULO']           = $value->NOMBRE;
+
+                $found_key = array_search($value->ID, array_column($datos_productos, 'id_row'));
+
+                if ($found_key !== false) {
+                    $json[$i]['Dia']            = number_format($datos_productos[$found_key]->Dia, 2);
+                    $json[$i]['Noche']          = number_format($datos_productos[$found_key]->Noche, 2);
+                    $json[$i]['Total_Hrs']      = number_format($datos_productos[$found_key]->Dia + $datos_productos[$found_key]->Noche, 2);
+                    $json[$i]['num_personas']   = number_format($datos_productos[$found_key]->Personal_Dia + $datos_productos[$found_key]->Personal_Noche, 2);
+                } else {
+                    $json[$i]['Dia']            = number_format(0.00, 2);
+                    $json[$i]['Noche']          = number_format(0.00, 2);
+                    $json[$i]['Total_Hrs']      = number_format(0.00, 2);
+                    $json[$i]['num_personas']   = number_format(0.00, 2);
+                }
+
+                $i++;
+            }
+        }
+
+        return $json;
     }
 }

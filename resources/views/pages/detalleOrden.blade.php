@@ -12,9 +12,10 @@
                     <span class="input-group-text" id="basic-addon1"><i data-feather="search"></i></span>
                 </div>
                 <input type="text" id="InputDtShowSearchFilterArt" class="form-control" placeholder="Buscar en ordenes de produccion" aria-label="Username" aria-describedby="basic-addon1">
+                <input type="text" id="InputDt_PC" class="form-control" placeholder="Buscar en ordenes de produccion" aria-label="orden" aria-describedby="basic-addon1" style="display: none;">
+
             </div>
         </div>
-
     </div>
     <!-- modal detalle Orden -->
     <div class="modal fade bd-example-modal-xl" data-backdrop="static" data-keyboard="false" id="mdDetalleOrd" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
@@ -413,8 +414,18 @@
     <div class="row mt-5">
         <div class="col-xl-12">
             <div class="card">
-                <p class="text-left mt-3 ml-4 pb-2 font-weight-bolder" style="font-size: 1.3rem!important">
-                    Ordenes de producción</p>
+                <div class="container-fluid form-row m-0 p-0 pr-4">
+                    <div class="col-md-10 col-6">
+                        <p class="text-left mt-3 ml-4 pb-2 font-weight-bolder " style="font-size: 1.3rem!important">Ordenes de producción</p>
+                    </div>
+                    <div class="col-md-2 col-6 pr-0">
+                        <select class="custom-select  mt-3 pb-2 " id="tipo_procceso">
+                            <option value="1">Proceso Humedo</option>
+                            <option value="2">Proceso de Conversión</option>
+
+                        </select>
+                    </div>
+                </div>
                 <div class="card-block table-border-style mx-4 mt-2">
                     <div class="table-responsive">
                         <div class="table-responsive mb-2 ">
@@ -424,8 +435,115 @@
                         </div>
                     </div>
                 </div>
+
+                <div class="card-block table-border-style mx-4">
+                    <div class="table-responsive">
+                        <div class="table-responsive mb-2 ">
+                            <table class="table table-bordered table-hover" width="99.9%" id="dtOrdenes_pc">
+
+                            </table>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
-    @endsection
+    <div class="modal fade bd-example-modal-xl" data-backdrop="static" data-keyboard="false" id="mdDetalleOrd_pc" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl" role="document">
+            <div class="modal-content">
+                <div class="modal-header d-block">
+                    <div class="row">
+                        <!-- [ Header orden produccion ] start -->
+                        <div class="col-xl-12">
+                            <div class="card">
+                                <div class="card-header d-flex justify-content-center align-items-center pt-1 pb-0 bg-blue">
+                                    <h5 class="modal-title text-center align-self-center p-1 bg-blue text-white" id="title_detail_pc"></h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row mt-3">
+                                        <div class="col-sm-3">
+                                            <div class="card text-center">
+                                                <div class="card-body">
+                                                    <h3 class="card-title" id="peso_pc"></h3>
+                                                    <p class="card-text" id="">PESO % </p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-sm-3">
+                                            <div class="card text-center">
+                                                <div class="card-body">
+                                                    <h3 class="card-title" id="jr_total_pc"></h3>
+                                                    <p class="card-text" id="">JR TOTAL (KG) </p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-sm-3">
+                                            <div class="card text-center">
+                                                <div class="card-body">
+                                                    <h3 class="card-title" id="hrs_trabajadas_pc"></h3>
+                                                    <p class="card-text" id="">HORAS TRABAJADAS</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-3">
+                                            <div class="card text-center">
+                                                <div class="card-body">
+                                                    <h3 class="card-title" id="total_bultos_pc"> </h3>
+                                                    <p class="card-text" id="">TOTAL DE BULTOS (UNDS)</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- [ Header orden produccion ] end -->
+                        </div>
+                    </div>
+
+                    <div class=" modal-body">
+                        <nav>
+                            <div class="nav nav-tabs" id="nav-tab-pc" role="tablist">
+                                <a class="nav-item nav-link active" id="navProd-pc" data-toggle="tab" href="#nav-prod-pc" role="tab" aria-controls="nav-prod-pc" aria-selected="false">Productos</a>
+                                <a class="nav-item nav-link " id="navMP_pc" data-toggle="tab" href="#nav-mp-pc" role="tab" aria-controls="nav-mp-pc" aria-selected="true">Materia Prima</a>
+                                <a class="nav-item nav-link" id="navTiemposParos" data-toggle="tab" href="#nav-tiempos-paros" role="tab" aria-controls="nav-tiempos-paros" aria-selected="false">Tiempos Paros</a>
+                            </div>
+                        </nav>
+                        <div class="tab-content" id="nav-tabContent">
+                            <div class="tab-pane fade show active" id="nav-prod-pc" role="tabpanel" aria-labelledby="navProd-pc">
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <table id="tblProductos_pc" class="table table-hover border-bottom-0">
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="tab-pane fade" id="nav-mp-pc" role="tabpanel" aria-labelledby="navMP_pc">
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <table id="tblMateriaPrima_pc" class="table table-hover border-bottom-0">
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="tab-pane" id="nav-tiempos-paros" role="tabpanel" aria-labelledby="navTiemposParos">
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <table id="tblTiemposParos_pc" class="table table-hover border-bottom-0">
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @endsection

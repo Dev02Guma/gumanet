@@ -13,10 +13,10 @@ $(document).ready(function() {
             { title: "DESCRIPCION",             data: "DESCRIPCION" },
             { title: "UNIDAD",                  data: "UNIDAD_ALMACEN" },
             { title: "CANT. DISP. B002",        data: "total" },
-            { title: "TOTAL UNITS. ",           data: "und" },
+            { title: "TOTAL UNITS. DISP. B002",           data: "und" },
             { title: "TOTAL UNITS/ MES",        data: "VST_MES_ACTUAL" },
             { title: "PROM UNITS/ MES 2022",    data: "PROM_VST_ANUAL" },
-            { title: "TOTAL UNITS 2021",        data: "VST_ANNO_ACTUAL" },
+            { title: "TOTAL UNITS 2022",        data: "VST_ANNO_ACTUAL" },
             { title: "PROM. UNITS/ MES 2021",   data: "PROMEDIO_VENTA" },
             { title: "TOTAL UNITS 2021",        data: "CANT_ANIO_PAS" },
             { title: "MESES INVENTARIO",        data: "MESES_INVENTARIO" },
@@ -83,6 +83,8 @@ $(document).ready(function() {
             { "width":"50%", "targets": [ 1 ] }
         ]
         $("#modulo-inventario").empty();
+        $("#modulo-inventario-vencido").empty();
+        
     break
     default:
         alert('Ups... ocurrio un problema')
@@ -125,9 +127,50 @@ $(document).ready(function() {
 
     liquidacionPorMeses(6)
     inicializaControlFecha();
+    InventarioB004(12)
 });
 
+function InventarioB004() {
+    $('#id_tbl_inventario_b004').DataTable({
+        "destroy": true,
+        "ajax":{
+            "url": "invenVencidos",
+            'dataSrc': '',
+        },
+        "info":    false,
+        "lengthMenu": [[5,10,50,-1], [5,10,100,"Todo"]],
+        "language": {
+            "zeroRecords": "No hay coincidencias",
+            "loadingRecords": "Cargando datos...",
+            "paginate": {
+                "first":      "Primera",
+                "last":       "Última ",
+                "next":       "Siguiente",
+                "previous":   "Anterior"
+            },
+            "lengthMenu": "MOSTRAR _MENU_",
+            "emptyTable": "NO HAY DATOS DISPONIBLES",
+            "search":     "BUSCAR"
+        },
+        'columns': [
+            { "title": "ARTICULO",              "data": "ARTICULO" },
+            { "title": "DESCRIPCION",           "data": "DESCRIPCION" },
+            { "title": "LOTE",                  "data": "LOTE" },            
+            { "title": "CANTIDAD",              "data": "CANT_DISPONIBLE" },
+            { "title": "COSTO PROM. LOC.",      "data": "COSTO_PROM_LOC",render: $.fn.dataTable.render.number( ',', '.', 2  , 'C$ ' ) },
+            { "title": "COSTO ULT. LOC.",       "data": "COSTO_ULT_LOC",render: $.fn.dataTable.render.number( ',', '.', 2  , 'C$ ' ) },
+            { "title": "FECHA DE VENCIMIENTO",  "data": "FECHA_VENCIMIENTO" },
+        ],
+        "columnDefs": [
+            {"className": "dt-center", "targets": [ 0, 2 ,6 ]},
+            {"className": "dt-right", "targets": [ 3,4,5 ]},
+            { "width": "50%", "targets": [ 1 ] }
+        ],
+    });
 
+    $("#id_tbl_inventario_b004_length ").hide();
+    $("#id_tbl_inventario_b004_filter").hide();
+}
 
 function liquidacionPorMeses(valor) {
     $('#tblArticulosVencimiento').DataTable({
@@ -217,6 +260,17 @@ $( "#InputDtShowColumnsArtic2").change(function() {
     table.page.len(this.value).draw();
 });
 
+$( "#id_select_inventario_vencido").change(function() {
+    var table = $('#id_tbl_inventario_b004').DataTable();
+    table.page.len(this.value).draw();
+});
+
+$('#id_search_tble_inventario_vencido').on( 'keyup', function () {
+    var table = $('#id_tbl_inventario_b004').DataTable();
+    table.search(this.value).draw();
+});
+
+
 $('nav .nav.nav-tabs a').click(function(){
     var idNav = $(this).attr('id');
     switch(idNav) {
@@ -234,8 +288,14 @@ $('nav .nav.nav-tabs a').click(function(){
         case 'navCostos':        
             getCostos(articulo_g)
         break;
+        case 'navMargen':        
+            getMargen(articulo_g)
+        break;
         case 'navOtros':        
             getOtros(articulo_g)
+        break;
+        case 'navIndicadores':        
+            getIndicadores(articulo_g)
         break;
         default:
             alert('Al parecer alguio salio mal :(')
@@ -289,7 +349,29 @@ function getDataBodega(articulo) {
         }
     });
 }
-
+function getMargen(articulo) {
+    $("#tblMargen").dataTable({
+        responsive: true,
+        "autoWidth":false,
+        "ajax":{
+            "url": "objMargen/"+articulo,
+            'dataSrc': '',
+        },
+        "searching": false,
+        "destroy": true,
+        "paging":   false,
+        "columns":[
+            { "data": "NIVEL_PRECIO"},
+            { "data": "PRECIO" }
+        ],
+        "info": false,
+        "language": {            
+            "zeroRecords": "No hay datos que mostrar",
+            "emptyTable": "N/D",
+            "loadingRecords": "Cargando...",
+        }
+    });
+}
 function getPrecios(articulo) {
     $("#tblPrecios").dataTable({
         responsive: true,
@@ -337,6 +419,45 @@ function getOtros(articulo) {
             $("#id_existencia_minima").text(data[0]['MINIMO'])
             $("#id_punto_de_reoden").text(data[0]['REORDEN']);
             $("#id_plazo_rebast").text(data[0]['REABASTECIMIENTO'])
+        }
+    })
+}
+
+function getIndicadores(articulo) {   
+    $.ajax({
+        url: "objIndicadores/"+articulo,
+        type: 'get',
+        data: {},
+        async: true,
+        success: function(data) {
+
+            $("#id_total_fact").text("C$ " + numeral(data['ANUAL'][0]['data']).format("0,00.00"));
+            $("#id_unit_fact").text(numeral(data['ANUAL'][0]['dtUnd']).format("0,00.00"));
+            $("#id_unit_bonif").text(numeral(data['ANUAL'][0]['dtUndBo']).format("0,00.00"));
+            $("#id_prom_prec").text("C$ " + data['ANUAL'][0]['dtAVG']);
+            $("#id_prom_cost_unit").text("C$ " +numeral(data['ANUAL'][0]['dtCPM']).format("0,00.00"));
+            $("#id_contribucion").text("C$ " + data['ANUAL'][0]['dtMCO']);
+            $("#id_margen_bruto").text(numeral(data['ANUAL'][0]['dtPCO']).format("0,00.00") + " %");
+
+            $("#id_disp_bodega").text(numeral(data['ANUAL'][0]['dtTB2']).format("0,00.00") );
+            $("#id_disp_bodega_unds").text(numeral(data['ANUAL'][0]['dtTUB']).format("0,00.00"));
+
+            $("#id_prom_unds_mes").text(numeral(data['ANUAL'][0]['dtPRO']).format("0,00.00") );
+            $("#id_cant_disp_mes").text(numeral(data['ANUAL'][0]['dtTIE']).format("0,00.00"));
+
+            $("#id_total_fact_month").text("C$ " + numeral(data['MENSUAL'][0]['data']).format("0,00.00"));
+            $("#id_unit_fact_month").text(numeral(data['MENSUAL'][0]['dtUnd']).format("0,00.00"));
+            $("#id_unit_bonif_month").text(numeral(data['MENSUAL'][0]['dtUndBo']).format("0,00.00"));
+            $("#id_prom_prec_month").text("C$ " + data['MENSUAL'][0]['dtAVG']);
+            $("#id_prom_cost_unit_month").text("C$ " +numeral(data['ANUAL'][0]['dtCPM']).format("0,00.00"));
+            $("#id_contribucion_month").text("C$ " + data['MENSUAL'][0]['dtMCO']);
+            $("#id_margen_bruto_month").text(numeral(data['MENSUAL'][0]['dtPCO']).format("0,00.00") + " %");
+
+            $("#id_disp_bodega_month").text(numeral(data['MENSUAL'][0]['dtTB2']).format("0,00.00") );
+            $("#id_disp_bodega_unds_month").text(numeral(data['MENSUAL'][0]['dtTUB']).format("0,00.00"));
+
+            $("#id_prom_unds_mes_month").text(numeral(data['MENSUAL'][0]['dtPRO']).format("0,00.00") );
+            $("#id_cant_disp_mes_month").text(numeral(data['MENSUAL'][0]['dtTIE']).format("0,00.00"));
         }
     })
 }

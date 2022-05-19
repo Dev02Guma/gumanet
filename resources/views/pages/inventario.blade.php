@@ -95,6 +95,45 @@
       </div>
     </div>
   </div>
+
+
+
+
+  <div class="row mt-4" id="modulo-inventario-vencido">
+    <div class="col-sm-12">
+      <h1 class="h4 text-info mb-4">Articulos de Bodega 004 - Dañados y Vencidos</h1>
+      <div class="row">
+        <div class="col-md-11">
+          <div class="form-group">
+            <label for="InputDtShowSearchFilterArtVenc" class="text-muted">Realizar busqueda por Articulo</label>
+            <div class="input-group">
+              <div class="input-group-prepend">
+                <span class="input-group-text" id=""><i data-feather="search"></i></span>
+              </div>
+              <input type="text" id="id_search_tble_inventario_vencido" class="form-control" aria-label="Username" aria-describedby="basic-addon1">
+            </div>
+          </div>
+        </div>        
+        <div class="col-sm-1">
+          <div class="form-group">
+            <label for="InputDtShowColumnsArtic2" class="text-muted">Ver por</label>
+            <select class="custom-select" id="id_select_inventario_vencido" name="InputDtShowColumnsArtic2">
+              <option value="10" selected>10</option>
+              <option value="20">20</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+              <option value="-1">Todo</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="table-responsive mb-5">
+        <table class="table table-bordered table-sm" width="100%" id="id_tbl_inventario_b004"></table>
+      </div>
+    </div>
+  </div>
+
+
 </div>
 
 <!--MODAL: DETALLE DE ARTICULO-->
@@ -112,9 +151,11 @@
             <a class="nav-item nav-link" id="navBonificados" data-toggle="tab" href="#nav-boni" role="tab" aria-controls="nav-boni" aria-selected="false">Bonificados</a>
             @if( Auth::User()->role == 1  || Auth::User()->role== 2 || Auth::User()->role== 6 || Auth::User()->role== 7 )
               <a class="nav-item nav-link" id="navCostos" data-toggle="tab" href="#nav-costos" role="tab" aria-controls="nav-trans" aria-selected="false">Costos</a>
+              <a class="nav-item nav-link" id="navMargen" data-toggle="tab" href="#nav-margen" role="tab" aria-controls="nav-margen" aria-selected="false">Margen</a>
             @endif
             <a class="nav-item nav-link" id="navTransaccion" data-toggle="tab" href="#nav-trans" role="tab" aria-controls="nav-trans" aria-selected="false">Transacciones</a>
             <a class="nav-item nav-link" id="navOtros" data-toggle="tab" href="#nav-otros" role="tab" aria-controls="nav-otros" aria-selected="false">Otros</a>
+            <a class="nav-item nav-link" id="navIndicadores" data-toggle="tab" href="#nav-Indicadores" role="tab" aria-controls="nav-Indicadores" aria-selected="false">Indicadores</a>
 
             
             
@@ -238,6 +279,22 @@
             </div>
           </div>
 
+          <div class="tab-pane fade" id="nav-margen" role="tabpanel" aria-labelledby="navMargen">
+            <div class="row">
+              <div class="col-sm-12">
+                
+                <table id="tblMargen" class="table table-bordered mt-3">
+                  <thead class="bg-blue text-light">
+                  <tr>
+                      <th>CANAL</th>
+                      <th>MARGEN BRUTO</th>
+                  </tr>
+                  </thead>
+                </table>
+              </div>
+            </div>
+          </div>
+
           <div class="tab-pane fade" id="nav-otros" role="tabpanel" aria-labelledby="navOtros">
             <div class="row">
               <div class="col-sm-12">                
@@ -262,7 +319,78 @@
                     </tbody>
                 </table>
               </div>
-            </div>
+            </div>            
+          </div>
+
+          <div class="tab-pane fade" id="nav-Indicadores" role="tabpanel" aria-labelledby="navIndicadores">
+            <div class="row">
+              <div class="col-sm-12">                
+                <table id="tblIndicadores" class="table table-bordered mt-3">
+                  <tbody id="tbody1">
+                      <tr>
+                        <td class="bg-blue text-light dt-center"><b>Descripción</b></td>
+                        <td id="" class ="dt-center">Mes Actual.</td>
+                        <td id="" class ="dt-center">Acumulado.</td>
+                      </tr>
+                      <tr>
+                        <td class="bg-blue text-light"><b>TOTAL. FACT.</b></td>
+                        <td id="id_total_fact_month" class ="dt-right">0</td>
+                        <td id="id_total_fact" class ="dt-right">0</td>
+                      </tr>
+                      <tr >
+                        <td class="bg-blue text-light"><b>UNIT. FACT.</b></td>
+                        <td id="id_unit_fact_month" class="dt-right">0</td>
+                        <td id="id_unit_fact" class="dt-right">0</td>
+                      </tr>
+                      <tr>
+                        <td class="bg-blue text-light"><b>UNIT. BONIF. </b></td>
+                        <td id="id_unit_fact_month" class="dt-right">0</td>
+                        <td id="id_unit_bonif" class ="dt-right">0</td>
+                      </tr>
+                      <tr >
+                        <td class="bg-blue text-light"><b>PREC. PROM.</b></td>
+                        <td id="id_prom_prec_month" class="dt-right">0</td>
+                        <td id="id_prom_prec" class="dt-right">0</td>
+                      </tr>
+                      <tr>
+                        <td class="bg-blue text-light"><b>COST. PROM. UNIT</b></td>
+                        <td id="id_prom_cost_unit_month" class="dt-right">0</td>
+                        <td id="id_prom_cost_unit" class ="dt-right">0</td>
+                      </tr>
+                      <tr >
+                        <td class="bg-blue text-light"><b>CONTRIBUCION</b></td>
+                        <td id="id_contribucion_month" class="dt-right">0</td>
+                        <td id="id_contribucion" class="dt-right">0</td>
+                      </tr>
+                      <tr>
+                        <td class="bg-blue text-light"><b>% MARGEN BRUTO </b></td>
+                        <td id="id_margen_bruto_month" class="dt-right">0</td>
+                        <td id="id_margen_bruto" class ="dt-right">0</td>
+                      </tr>
+                      <tr >
+                        <td class="bg-blue text-light"><b>CANT. DISP. B002</b></td>
+                        <td id="id_disp_bodega_month" class="dt-right">0</td>
+                        <td id="id_disp_bodega" class="dt-right">0</td>
+                      </tr>
+                      <tr>
+                      <td class="bg-blue text-light"><b>CANT. DISP. UNDS. B002</b></td>
+                      <td id="id_disp_bodega_unds_month" class="dt-right">0</td>
+                        <td id="id_disp_bodega_unds" class ="dt-right">0</td>
+                      </tr>
+                      <tr >
+                        <td class="bg-blue text-light"><b>PROM. UNDS. MES 2022</b></td>
+                        <td id="id_prom_unds_mes_month" class="dt-right">0</td>
+                        <td id="id_prom_unds_mes" class="dt-right">0</td>
+                      </tr>
+                      <tr>
+                        <td class="bg-blue text-light"><b>CANT. DISP. MES</b></td>
+                        <td id="id_cant_disp_mes_month" class="dt-right">0</td>
+                        <td id="id_cant_disp_mes" class ="dt-right">0</td>
+                      </tr>                      
+                    </tbody>
+                </table>
+              </div>
+            </div>            
           </div>
 
         </div>
