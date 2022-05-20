@@ -136,9 +136,11 @@ function inicializaControlFecha() {
 var down = false;
 
 exist_notify();
+var base_url = window.location.origin + '/' +  window.location.pathname.split ('/') [1] + '/';
+var url_IM = base_url +'public/InteligenciaMercado';
+
 $('#bell').on('click', function (e) {
     //$('.toast').toast('show');
-
     $('#list-notify').empty();
     getCommentIM();
     getNotificacionesExport();
@@ -194,6 +196,7 @@ function exist_registry() {
 }
 
 //Obtener norificaciones
+
 function getCommentIM() {
     $.ajax({
         url: "getCommentIM",
@@ -210,7 +213,7 @@ function getCommentIM() {
                 data.forEach(element => {
                     if (element.Read == 0) {
                         scriptHTML += `<li class="list-group-item notification-list--unread" style="border-left: 3px solid #007bff !important ;">
-                                <a href="http://localhost/gumanet-1/public/InteligenciaMercado">
+                                <a href="`+ url_IM +`">
                                     <div class="row">
                                           <div class="col-2 ">
                                             <img src="img/img_avatar.png" alt="" class="img-fluid" style="border-radius: 50%;">
@@ -233,7 +236,7 @@ function getCommentIM() {
                     } else {
                         if (i <= 4) {
                             scriptHTML += `<li class="list-group-item ">
-                                 <a href="http://localhost/gumanet-1/public/InteligenciaMercado">
+                                 <a href="` + url_IM + `">
                                      <div class="row">
                                            <div class="col-2 ">
                                              <img src="img/img_avatar.png" alt="" class="img-fluid" style="border-radius: 50%;">
