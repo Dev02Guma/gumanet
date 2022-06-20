@@ -79,10 +79,11 @@ class dashboard_model extends Model {
             'data' => dashboard_model::dataProyectos($mes, $anio, $company_user)
         );
 
-        /*$f1 = $anio."-".$mes."-01";
-        $f2 = $anio."-".$mes."-".date('t',strtotime('today'));*/
+        $f1 = $anio."-".$mes."-01";
+        $f2 = $anio."-".$mes."-".date('t',strtotime('today'));
 
-        $Resultado = exportacion_model::getVentasExportacion("", "");
+
+        $Resultado = exportacion_model::getVentasExportacion($f1, $f2);
 
         $TOTAL_FACTURA = array_sum(array_column($Resultado,'TOTAL_FACTURA'));
         $TOTAL_MONEDA_LOCAL = array_sum(array_column($Resultado,'TOTAL_MONEDA_LOCAL'));

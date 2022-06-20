@@ -12,10 +12,15 @@ class exportacion_model extends Model
         $sql_exec = '';
         $i=0;
         $data = array();
+
         $f1 = $f1." 00 : 00 : 00 : 000";
         $f2 = $f2." 23 : 59 : 59 : 998";
 
         $sql_exec = "EXEC gnet_ventas_exportacion '".$f1."','".$f2."'";
+
+       
+
+
         
         $query = $sql_server->fetchArray( $sql_exec , SQLSRV_FETCH_ASSOC);
         

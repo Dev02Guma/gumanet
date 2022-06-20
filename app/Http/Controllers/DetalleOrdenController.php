@@ -303,11 +303,12 @@ class DetalleOrdenController extends Controller
             $mp_total =  DB::table('producciontest.mp_directa')->select(DB::raw('SUM(cantidad) as mp_directa'))
                 ->where('numOrden', $numOrden)
                 ->get()->first();
-
             $totalMPTPACK = DB::table('producciontest.mp_directa')->select(DB::raw('SUM(cantidad) as total'))
                 ->where('idFibra', $idTetra->idFibra)
                 ->where('numOrden', $numOrden)
                 ->get()->first();
+
+
             //Calculo de los porcentajes
             $porcentMermaYankeeDry = ($key->merma_total > 0  && $key->prod_real > 0) ?  (($key->merma_total / ($key->prod_real + $key->merma_total)) * 100) :   0;
             $porcentLavadoraTetrapack = ($key->lavadora_total > 0 && $totalMPTPACK->total > 0) ? (($key->lavadora_total / $totalMPTPACK->total) * 100) : 0;
@@ -315,6 +316,7 @@ class DetalleOrdenController extends Controller
             $factorFibral =  (!is_null($mp_directa_exist) > 0 && $key->lavadora_total != '') ? (($mp_total->mp_directa - $key->lavadora_total) / ($key->prod_real + $key->merma_total)) : 0;
             $data[$i]['costoBolson'] =  number_format(((($key->merma_total +  $key->prod_real)) / 4.5), 2);
             $data[$i]['bolsones'] =   number_format(40000, 2);
+
 
             $data[$i]['factorFibral'] = number_format($factorFibral, 2);
             $data[$i]['porcentMermaYankeeDry'] = number_format($porcentMermaYankeeDry, 2);
@@ -325,6 +327,20 @@ class DetalleOrdenController extends Controller
             $Tonelada_dia =  (($key->prod_real) > 0 && ($key->hrsTrabajadas > 0)) ?  number_format(($key->prod_real / ($key->hrsTrabajadas / 24)) / 1000, 2) : 0;
             $data[$i]['Tonelada_dia'] = $Tonelada_dia;
 
+
+            
+            //Calculo de los porcentajes
+            ($key->merma_total > 0  && $key->prod_real > 0) ?  $porcentMermaYankeeDry = (($key->merma_total / ($key->prod_real + $key->merma_total)) * 100) :  $porcentMermaYankeeDry = 0;
+            
+            ($key->lavadora_total > 0 && $totalMPTPACK->total > 0) ? $porcentLavadoraTetrapack = (($key->lavadora_total / $totalMPTPACK->total) * 100 ): $porcentMermaYankeeDry = 0;
+            ($key->residuo_total > 0 && $mp_total->mp_directa > 0) ? $porcentResiduosPulper = (($key->residuo_total / $mp_total->mp_directa) * 100): $porcentMermaYankeeDry = 0;
+            
+            (!is_null($mp_directa_exist) > 0 && $key->lavadora_total != '') ? $factorFibral = (($mp_total->mp_directa - $key->lavadora_total) / ($key->prod_real + $key->merma_total)): $factorFibral = 0;
+
+            $data[$i]['factorFibral'] = number_format($factorFibral,2);
+            $data[$i]['porcentMermaYankeeDry'] = number_format($porcentMermaYankeeDry,2);
+            $data[$i]['porcentLavadoraTetrapack'] = number_format($porcentLavadoraTetrapack,2);
+            $data[$i]['porcentResiduosPulper'] = number_format($porcentResiduosPulper,2);
             $i++;
         }
         return response()->json($data);
