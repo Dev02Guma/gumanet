@@ -18,12 +18,9 @@ class dashboard_controller extends Controller {
   public function index() {
 
     $this->agregarDatosASession();
-
-
       $data = [
           'name' =>  'GUMA@NET'
-      ];
-      
+      ];      
       return view('pages.dashboard',$data);
   }
 
@@ -47,6 +44,16 @@ class dashboard_controller extends Controller {
 
   public function ClientesNoFacturados($mes, $anio){
     $obj = dashboard_model::ClientesNoFacturados($mes, $anio);
+    return response()->json($obj);
+  }
+
+  public function ArticuloNoFacturado($mes, $anio){
+    $obj = dashboard_model::ArticuloNoFacturado($mes, $anio);
+    return response()->json($obj);
+  }
+
+  public function getClientesSinComprar($mes, $anio){
+    $obj = dashboard_model::Cliente_sin_comprar($mes, $anio);
     return response()->json($obj);
   }
 

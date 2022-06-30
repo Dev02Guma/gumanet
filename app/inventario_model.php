@@ -945,14 +945,13 @@ class inventario_model extends Model {
         $sql_exec_Vueno= '';
         $tem_=0;
         $RutaSegmento = "";
-
-        $company_user = 1;
+        $request        = Request();
+        $company_user = Company::where('id',$request->session()->get('company_id'))->first()->id;;
         $Segmento = 0;
 
         $mes = intval(date('n'));
         $anio = intval(date('Y'));;
 
-        
         switch ($company_user) {
             case '1':
                 
@@ -999,6 +998,8 @@ class inventario_model extends Model {
                         group by T1.Articulo,T1.Descripcion,T1.Clasificacion6,T1.año,T1.[Costo Unitario],T3.total,T3.UNIDADES
                         order by MontoVenta desc";
 
+                        
+
             $sql_exec_mensual = "SELECT                         
                         T1.Articulo,T1.Descripcion,T1.Clasificacion6,
                         count(T1.articulo) As NºVentaMes,
@@ -1017,23 +1018,91 @@ class inventario_model extends Model {
                         group by T1.Articulo,T1.Descripcion,T1.Clasificacion6,T1.mes,T1.año,T1.[Costo Unitario],T3.total,T3.UNIDADES
                         order by MontoVenta desc";
 
-
-
-            
-            
-
-
-
                 break;
             case '2':
-                $sql_exec_anual = " EXEC Gp_DetalleVentas_Mes ".$mes.", ".$anio." ";
+
+
+            $sql_exec_anual = "SELECT 
+                T1.Articulo,T1.Descripcion,T1.Clasificacion6,
+                count(T1.articulo) As NºVentaMes,
+                isnull(sum(T1.cantidad),0) Cantidad,
+                isnull(sum(T1.venta),0) MontoVenta,
+                AVG (T1.[P. Unitario]) as AVG_,         
+                T1.[Costo Unitario] AS COSTO_PROM,
+                isnull((SELECT TOP 1 SUM(T2.cantidad) AS Cantidad FROM Softland.dbo.GP_VtasTotal_UMK T2  WHERE ".$anio." = T2.[Año] AND T2.[P. Unitario] <= 0 AND T2.Articulo = T1.Articulo  GROUP BY  T2.Articulo),0) AS Cantida_boni,
+                
+                T3.total,
+                T3.UNIDADES
+    
+                FROM Softland.dbo.GP_VtasTotal_UMK T1 
+                INNER JOIN GP_iweb_articulos T3 ON T1.ARTICULO = T3.ARTICULO 
+                Where ".$anio." = T1.[Año] and T1.[P. Unitario] > 0 AND T1.Articulo = '".$articulo."'
+                
+                group by T1.Articulo,T1.Descripcion,T1.Clasificacion6,T1.año,T1.[Costo Unitario],T3.total,T3.UNIDADES
+                order by MontoVenta desc";
+
+                
+    $sql_exec_mensual = "SELECT                         
+                T1.Articulo,T1.Descripcion,T1.Clasificacion6,
+                count(T1.articulo) As NºVentaMes,
+                isnull(sum(T1.cantidad),0) Cantidad,
+                isnull(sum(T1.venta),0) MontoVenta,
+                AVG (T1.[P. Unitario]) as AVG_,         
+                T1.[Costo Unitario] AS COSTO_PROM,
+                isnull((SELECT TOP 1 SUM(T2.cantidad) AS Cantidad FROM Softland.dbo.GP_VtasTotal_UMK T2  WHERE ".$mes." = T2.nMes AND ".$anio." = T2.[Año] AND T2.[P. Unitario] <= 0 AND T2.Articulo = T1.Articulo  GROUP BY  T2.Articulo),0) AS Cantida_boni,
+                T3.total,
+                T3.UNIDADES
+
+                FROM Softland.dbo.GP_VtasTotal_UMK T1 
+                INNER JOIN GP_iweb_articulos T3 ON T1.ARTICULO = T3.ARTICULO 
+                Where ".$mes." = T1.nMes and ".$anio." = T1.[Año] and T1.[P. Unitario] > 0 AND T1.Articulo = '".$articulo."'
+                group by T1.Articulo,T1.Descripcion,T1.Clasificacion6,T1.mes,T1.año,T1.[Costo Unitario],T3.total,T3.UNIDADES
+                order by MontoVenta desc";
                 break;
+
+                
+
             case '3':
-                $sql_exec_anual = "";
+                //$sql_exec_anual = "";
                 break;   
             case '4':
-                $sql_exsql_exec_anualec       = " EXEC Inv_DetalleVentas_Mes ".$mes.", ".$anio." ";
-                $sql_exec_Vueno = " EXEC Inv_DetalleVentas_Mes_promo_vueno ".$mes.", ".$anio." ";
+                $sql_exec_anual = "SELECT 
+                T1.Articulo,T1.Descripcion,
+                count(T1.articulo) As NºVentaMes,
+                isnull(sum(T1.cantidad),0) Cantidad,
+                isnull(sum(T1.venta),0) MontoVenta,
+                AVG (T1.[P. Unitario]) as AVG_,         
+                T1.[Costo Unitario] AS COSTO_PROM,
+                isnull((SELECT TOP 1 SUM(T2.cantidad) AS Cantidad FROM Softland.dbo.INV_VtasTotal_UMK_Temporal T2  WHERE ".$anio." = T2.[Año] AND T2.[P. Unitario] <= 0 AND T2.Articulo = T1.Articulo  GROUP BY  T2.Articulo),0) AS Cantida_boni,
+                
+                T3.total,
+                T3.UNIDADES
+    
+                FROM Softland.dbo.INV_VtasTotal_UMK_Temporal T1 
+                INNER JOIN inn_iweb_articulos T3 ON T1.ARTICULO = T3.ARTICULO 
+                Where ".$anio." = T1.[Año] and T1.[P. Unitario] > 0 AND T1.Articulo = '".$articulo."'
+                
+                group by T1.Articulo,T1.Descripcion,T1.año,T1.[Costo Unitario],T3.total,T3.UNIDADES
+                order by MontoVenta desc";
+
+                
+    $sql_exec_mensual = "SELECT                         
+                T1.Articulo,T1.Descripcion,
+                count(T1.articulo) As NºVentaMes,
+                isnull(sum(T1.cantidad),0) Cantidad,
+                isnull(sum(T1.venta),0) MontoVenta,
+                AVG (T1.[P. Unitario]) as AVG_,         
+                T1.[Costo Unitario] AS COSTO_PROM,
+                isnull((SELECT TOP 1 SUM(T2.cantidad) AS Cantidad FROM Softland.dbo.INV_VtasTotal_UMK_Temporal T2  WHERE ".$mes." = T2.nMes AND ".$anio." = T2.[Año] AND T2.[P. Unitario] <= 0 AND T2.Articulo = T1.Articulo  GROUP BY  T2.Articulo),0) AS Cantida_boni,
+                T3.total,
+                T3.UNIDADES
+
+                FROM Softland.dbo.INV_VtasTotal_UMK_Temporal T1 
+                INNER JOIN inn_iweb_articulos T3 ON T1.ARTICULO = T3.ARTICULO 
+                Where ".$mes." = T1.nMes and ".$anio." = T1.[Año] and T1.[P. Unitario] > 0 AND T1.Articulo = '".$articulo."'
+                group by T1.Articulo,T1.Descripcion,T1.mes,T1.año,T1.[Costo Unitario],T3.total,T3.UNIDADES
+                order by MontoVenta desc";
+
                 break;        
             default:                
                 dd("Ups... al parecer sucedio un error al tratar de encontrar articulos para esta empresa. ". $company->id);
@@ -1091,7 +1160,7 @@ class inventario_model extends Model {
 
 
                 $tem_ = floatval($Total_Facturado);
-                $UND_ = floatval($Cantidad);
+                $UND_ = $Cantidad;
                 $UND_BO = floatval($Cantidad_bonificada);
                 $AVG_ = number_format(floatval($AVG),2);
                 $COSTO_PROM_ = number_format(floatval($COSTO_PROM),2);
@@ -1182,7 +1251,7 @@ class inventario_model extends Model {
                 $json['MENSUAL'][$i]['dtTB2']      = $TOTAL_B002;   
                 $json['MENSUAL'][$i]['dtTUB']      = $TOTAL_UND_B002; 
                 $json['MENSUAL'][$i]['dtPRO']      = $PromedioActual;
-             
+                
                 
                 $i++;
             }

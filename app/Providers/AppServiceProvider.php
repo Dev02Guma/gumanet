@@ -4,7 +4,6 @@ namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\View;
-use GuzzleHttp\Client;
 use App\menu;
 
 class AppServiceProvider extends ServiceProvider
