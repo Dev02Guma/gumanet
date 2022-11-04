@@ -1399,14 +1399,13 @@ class inventario_model extends Model {
         $array_unidades = array(
             "iweb_lotes"=>"UMK" , 
             "gp_iweb_lotes" => "GUMAPHARMA",
-            "inn_iweb_lotes" => "INN" 
+            "inn_iweb_lotes" => "INN",
+            "gp_iweb_lotes" => "GP",
         );
 
         $view = array_search($Unidad, $array_unidades);
 
         $sql_exec = "SELECT * FROM ".$view." WHERE BODEGA = '".$bodega."' AND  ARTICULO = '".$articulo."' ";
-
-  
         
         $query = $sql_server->fetchArray($sql_exec, SQLSRV_FETCH_ASSOC);
 

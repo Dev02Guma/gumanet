@@ -64,24 +64,14 @@ function dataVentaExportacion(f1, f2) {
             { "title": "TOTAL FACT.", "data": "TOTAL_MONEDA_LOCAL" ,render: $.fn.dataTable.render.number( ',', '.', 2  , 'C$ ' )},
             { "title": "ANULADO", "data":"FACTURA", "render": function(data, type, row, meta) {
 
-                return  ` <td class="align-middle">
-                    <div class="d-flex align-items-center position-relative"><img class="rounded-1 border border-200" alt="" width="60">
-                        <div class="flex-1 ms-3">
-                            
-                            <div class="d-flex align-items-center">
-                                <h6 class="mb-1 fw-semi-bold text-nowrap"><a href="#!" onclick=" AnularFacturas(`+"'" + row.FACTURA+"'" +`)"> <strong>  ANULAR </strong></a></h6>
-                            
-                            </div>
-                        </div>
-                    </div>
-                </td> `
+                return  `<h6 class="mb-1 fw-semi-bold text-nowrap"><a href="#!" onclick=" AnularFacturas(`+"'" + row.FACTURA+"'" +`)"> <strong>  ANULAR </strong></a></h6>`
 
                 
                 }},
             
         ],
         "columnDefs": [
-            {"className": "dt-center", "targets": [0,1,2,4,6 ]},
+            {"className": "dt-center", "targets": [0,1,2,4,6,9 ]},
             {"className": "dt-right", "targets": [ 5,6,7,8 ]},
             {"className": "dt-left", "targets": [ 3 ]},
             { "width": "6%", "targets": [0,1,2,4,5,6,7] },

@@ -374,6 +374,8 @@ class recibos_controller extends Controller {
         $data = array();
         $i=0;
 
+        $GrupoB = array('F18', 'F19','F21','F22', 'F23');
+
 
         $from   = $request->input('f1').' 00:00:00';
         $to     = $request->input('f2').' 23:59:59';
@@ -424,6 +426,10 @@ class recibos_controller extends Controller {
             
             $found_key = array_search($key['VENDEDOR'], array_column($obj, 'ruta'));
 
+            $isGrupoB = (in_array($key['VENDEDOR'], $GrupoB)) ? 'B' : 'A' ;
+
+
+
             $SUM_INGRESS = ($found_key === false) ? 0 : $obj[$found_key]->sum_ingress ;
             $SUM_PROCESS = ($found_key === false) ? 0 : $obj[$found_key]->sum_process ;
             $SUM_TOTAL = ($found_key === false) ? 0 : $obj[$found_key]->sum_total ;
@@ -439,6 +445,9 @@ class recibos_controller extends Controller {
             $data[$i]["DETALLE"]            = '<a id="exp_more" class="exp_more" href="#!"><i class="material-icons expan_more">expand_more</i></a>';
             $data[$i]['VENDEDOR']           = $key['VENDEDOR'];
             $data[$i]['NOMBRE']             = $key['NOMBRE'];
+            $data[$i]['GRUPO']             = $isGrupoB;
+
+
             
             $data[$i]['SUM_INGRESS']        = $SUM_INGRESS;
             $data[$i]['SUM_PROCESS']        = $SUM_PROCESS;

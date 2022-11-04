@@ -90,6 +90,7 @@ $('#dtVinneta').DataTable({
         { "title": "",                      "data": "DETALLE","className":'text-center detalles-rutas-recibos'},
         { "title": "VENDEDOR",              "data": "VENDEDOR" },
         { "title": "NOMBRE",                "data": "NOMBRE" },
+        { "title": "GRUPO",                "data": "GRUPO" },
         
         { "title": "CREADO POR VENDEDOR",                 "data": "SUM_INGRESS" ,render: $.fn.dataTable.render.number( ',', '.', 2  , 'C$ ' )},
         { "title": "INGRESADO A EXACTUS",                 "data": "SUM_PROCESS" ,render: $.fn.dataTable.render.number( ',', '.', 2  , 'C$ ' )},
@@ -102,7 +103,7 @@ $('#dtVinneta').DataTable({
 
     ],
     "columnDefs": [
-        {"className": "dt-center", "targets": [1,3,4,5,6,7,8,9 ]},
+        {"className": "dt-center", "targets": [1,3,4,5,6,7,8,9,10 ]},
         {"className": "dt-left", "targets": [2]},
         { "width": "8%", "targets": [0,1,3,4,5] },
         { "width": "12%", "targets": [ 2 ] },
