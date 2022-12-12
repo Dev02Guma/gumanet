@@ -55,5 +55,11 @@ class exportacion_controller extends Controller {
         }
     }    
 
+    // GUARDA LA FACTURA ANULADA
+    public function AnularFactura(Request $request)
+    {
+        $obj = exportacion_model::AnularFactura($request);
+        return response()->json($obj);
+    }
 
 }

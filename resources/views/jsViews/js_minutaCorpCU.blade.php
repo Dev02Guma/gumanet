@@ -20,7 +20,7 @@ $("#guardarMinuta").click( function() {
 		return false;
 	}
 
-    swal({
+  Swal.fire({
       title: 'Guardar Minuta',
       text: "¿Desea guardar esta minuta?",
       type: 'warning',
@@ -45,7 +45,7 @@ $("#guardarMinuta").click( function() {
 $("#cancelMinuta").click( function() {
   var base_url = window.location.origin + '/' + window.location.pathname.split ('/') [1] + '/';
   
-  swal({
+  Swal.fire({
     title: 'Cancelar redaccion',
     text: "¿Desea cancelar la edicion?",
     type: 'warning',

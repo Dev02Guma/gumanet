@@ -9,9 +9,13 @@
 		<div class="card border-0 shadow-sm mt-3 ">
 			<div class="col-sm-12">
 				<div class="card-body">					
-					<div class="row ">
+						<div class="input-group">
+							<input type="text" id="userr" style="visibility:hidden" class="form-control" value="{{ Session::get('user_email') }}" placeholder="Buscar...">
+						</div>
+						<div class="row ">
 						<div class="col-sm-6 mt-4 ">
 						<span id="id_form_role" style="display:none">{{ Session::get('user_role') }}</span>
+							
 							<div class="input-group">
 								<div class="input-group-prepend">
 									<span class="input-group-text" id="basic-addon1"><i data-feather="search"></i></span>

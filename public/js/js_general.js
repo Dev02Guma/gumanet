@@ -19,14 +19,14 @@ function mensaje(mensaje, tipo) {
     Tipos:
     success, error, warning, info, question
     +*/
-    const toast = swal.mixin({
+    const toast = Swal.mixin({
       toast: true,
       position: 'top-end',
       showConfirmButton: false,
       timer: 3000
     });
 
-    toast({
+    toast.fire({
       type: tipo,
       title: mensaje
     })

@@ -26,9 +26,20 @@ $(document).ready(function() {
 			"search":     "BUSCAR"
 		},
 		'columns': [	
-			{ "data": "DETALLE"},        
-			{"title": "ARTICULO", 		"data": "ARTICULO" },
+			{"title": "ARTICULO","data": "ARTICULO", "render": function(data, type, row, meta) { 
+
+				var obj = {
+				a: "hello"
+				};
+
+				return`<a href="#!" onclick="getDetalleArticulo(`+ "'" +row.ARTICULO + "'" +` , ` + "'" +row.DESCRIPCION + "'" +` ,`+ "'" +row.UNIDAD + "'" +`)" >`+ row.ARTICULO +`</a>`
+
+			}},
 			{"title": "DESCRIPCIÓN", 		"data": "DESCRIPCION", "render": function(data, type, row, meta) { 
+                var lblVinneta =''
+                if(row.VINNETA != ''){
+                    var lblVinneta = `<span class="badge badge-pill badge-success"> `+ row.VINNETA +`</span>`
+                }
 
 				return`<div class="row justify-content-between">
                                 <div class="col">
@@ -40,6 +51,9 @@ $(document).ready(function() {
                                         <h6 class="mb-1 fs-1 fw-semi-bold">`+ row.DESCRIPCION +`</h6>
                                         <p class="mb-0 fs--1">
                                             <span class="badge badge-pill badge-primary"><span class="fas fa-check"></span> `+ row.UNIDAD +`</span>
+                                            `+lblVinneta+`
+                                            
+                                            
                                         </p>
                                     </div>
                                   </div>
@@ -51,9 +65,9 @@ $(document).ready(function() {
 		],
 		"columnDefs": [
 			{"className": "dt-center", "targets": [0, 1 ]},
-			{"className": "dt-right", "targets": [3]},
+			{"className": "dt-right", "targets": [2]},
 			{"width":"20%","targets":[]},
-			{"width":"5%","targets":[0,1]}
+			{"width":"5%","targets":[]}
 		],
     });
 
@@ -73,12 +87,14 @@ $(document).ready(function() {
 	$("#exp-to-excel").click( function() {
 	    location.href = "desInvTotal2";
 	})
-    
+   
     $(document).on('click', '#exp_more', function(ef) {
-		var table = $('#dtInvCompleto').DataTable();
+		var table = $('#tblBodega').DataTable();
 		var tr = $(this).closest('tr');
 		var row = table.row(tr);
 		var data = table.row($(this).parents('td')).data();
+        dtARTICULO = $("#id_cod_articulo").text()
+
 
 		if (row.child.isShown()) {
 			row.child.hide();
@@ -103,7 +119,9 @@ $(document).ready(function() {
 				}
 			} );
 
-			format(row.child,data.UNIDAD,data.ARTICULO);
+			//format(row.child,data.UNIDAD,data.ARTICULO);
+            format(row.child,data.BODEGA,dtARTICULO,data.UNIDAD);
+
 			tr.addClass('shown');
 			
 			ef.target.innerHTML = "expand_less";
@@ -114,24 +132,26 @@ $(document).ready(function() {
 
 	
 	
-	function format ( callback, bodega_, articulo_ ) {
-
-    var thead = tbody = '';            
-        thead =`<table  class="table table-bordered" width='100%' id='dtDetalle' >
+	function format ( callback, bodega_, articulo_, Unidad_ ) {
+        var thead = tbody = '';            
+        thead =`<table class="" width='100%'>
                     <tr>
-						<th class="dt-center"></th>   
-                        <th class="dt-center">BODEGA</th>                        
-                        <th class="dt-center">UNIDAD</th>
-                        <th class="dt-center">CANT. DISPONIBLE</th>
+                        <th class="center">LOTE</th>
+                        <th class="center">CANT. DISPONIBLE</th>
+                        <th class="center">CANT. INGRESADA POR COMPRA</th>
+                        <th class="center">FECHA ULTM. INGRESO COMPRA</th>
+                        <th class="center">FECHA DE CREACION</th>
+                        <th class="center">FECHA VENCIMIENTO</th>
                     </tr>
                 <tbody>`;
-    $.ajax({
-        type: "POST",
-        url: "getAllBodegas",
-        data:{
-            articulo: articulo_  ,
-			UNIDAD: bodega_      
-        },        
+        $.ajax({
+            type: "POST",
+            url: "lotes",
+            data:{
+                bodega: bodega_,
+                articulo: articulo_,
+                Unidad: Unidad_,        
+            },        
         success: function ( data ) {
             if (data.length==0) {
                 tbody +=`<tr>
@@ -140,40 +160,174 @@ $(document).ready(function() {
                 callback(thead + tbody).show();
             }
             $.each(data, function (i, item) {
-				var idDi = 'D'+item['BODEGA']
-				var idRow = 'R'+item['BODEGA']
-
-			
-				if(numeral(item['CANT_DISPONIBLE']).format('00.00') > 0){
-
-					tbody +=`<tr class="center">
-								<td class= "dt-center"><a class='expan_more_lotes' onClick='ShowLotes(` + '"' + idDi + '"' + `,` + '"' + item['UNIDAD']+ '"' + `,` +'"' + articulo_+ '"' + `)' href="#!"><i class="material-icons expan_more">expand_more</i></a></td>
-								<td class= "dt-center">` + item['BODEGA'] + `</td>								
-								<td  class= "dt-center">` + item['UNIDAD'] + `</td>
-								<td class="dt-right">` + item['CANT_DISPONIBLE'] + `</td>
-							</tr>
-						<tr id='` + idRow + `' style="display: none;">
-							<td  colspan='4'>
-								<div id='` + idDi + `' >
-								
-								<div>
-							</td>
-						<tr>`;
-
-				}
-				
-				
-						
+                tbody +=`<tr class="center">
+                            <td>` + item['LOTE'] + `</td>
+                            <td>` + item['CANT_DISPONIBLE'] + `</td>
+                            <td>` + item['CANTIDAD_INGRESADA'] + `</td>
+                            <td>` + item['FECHA_INGRESO'] + `</td>
+                            <td>` + item['FECHA_ENTRADA'] + `</td>
+                            <td>` + item['FECHA_VENCIMIENTO'] + `</td>
+                        </tr>`;
             });
             tbody += `</tbody></table>`;
             callback(thead + tbody).show();
-        }
-    });
-}
+            }
+        });
+    }
 
 
 });
+function getDetalleArticulo(Articulos,Descripcion,Undiad) {
 
+	$("#tArticulo").html(Descripcion+`<p class="text-muted" id="id_cod_articulo">`+Articulos+`</p>`);
+	
+	var target = '#nav-bod';
+    $('a[data-toggle=tab][href=' + target + ']').tab('show');
+
+    //$("#tbody1").empty().append(`<tr><td colspan='5'><center>Aún no ha realizado ninguna busqueda</center></td></tr>`);
+	$("#mdDetalleArt").modal('show');
+
+
+	$.ajax({
+        url: "ArticuloDetalles/"+Articulos+"/"+Undiad+"",
+        type: 'get',
+        data: {},
+        async: true,
+        success: function(data) {            
+
+            $("#id_total_fact").text("C$ " + numeral(data[0].Indicadores['ANUAL'][0]['data']).format("0,00.00"));
+            $("#id_unit_fact").text(numeral(data[0].Indicadores['ANUAL'][0]['dtUnd']).format("0,00.00"));
+            $("#id_unit_bonif").text(numeral(data[0].Indicadores['ANUAL'][0]['dtUndBo']).format("0,00.00"));
+            $("#id_prom_prec").text("C$ " + data[0].Indicadores['ANUAL'][0]['dtAVG']);
+            $("#id_prom_cost_unit").text("C$ " +numeral(data[0].Indicadores['ANUAL'][0]['dtCPM']).format("0,00.00"));
+            $("#id_contribucion").text("C$ " + data[0].Indicadores['ANUAL'][0]['dtMCO']);
+            $("#id_margen_bruto").text(numeral(data[0].Indicadores['ANUAL'][0]['dtPCO']).format("0,00.00") + " %");
+
+            $("#id_disp_bodega").text(numeral(data[0].Indicadores['ANUAL'][0]['dtTB2']).format("0,00.00") );
+            $("#id_disp_bodega_unds").text(numeral(data[0].Indicadores['ANUAL'][0]['dtTUB']).format("0,00.00"));
+
+            $("#id_prom_unds_mes").text(numeral(data[0].Indicadores['ANUAL'][0]['dtPRO']).format("0,00.00") );
+            $("#id_cant_disp_mes").text(numeral(data[0].Indicadores['ANUAL'][0]['dtTIE']).format("0,00.00"));
+
+            $("#id_total_fact_month").text("C$ " + numeral(data[0].Indicadores['MENSUAL'][0]['data']).format("0,00.00"));
+            $("#id_unit_fact_month").text(numeral(data[0].Indicadores['MENSUAL'][0]['dtUnd']).format("0,00.00"));
+            $("#id_unit_bonif_month").text(numeral(data[0].Indicadores['MENSUAL'][0]['dtUndBo']).format("0,00.00"));
+            $("#id_prom_prec_month").text("C$ " + data[0].Indicadores['MENSUAL'][0]['dtAVG']);
+            $("#id_prom_cost_unit_month").text("C$ " +numeral(data[0].Indicadores['ANUAL'][0]['dtCPM']).format("0,00.00"));
+            $("#id_contribucion_month").text("C$ " + data[0].Indicadores['MENSUAL'][0]['dtMCO']);
+            $("#id_margen_bruto_month").text(numeral(data[0].Indicadores['MENSUAL'][0]['dtPCO']).format("0,00.00") + " %");
+
+            $("#id_disp_bodega_month").text(numeral(data[0].Indicadores['MENSUAL'][0]['dtTB2']).format("0,00.00") );
+            $("#id_disp_bodega_unds_month").text(numeral(data[0].Indicadores['MENSUAL'][0]['dtTUB']).format("0,00.00"));
+
+            $("#id_prom_unds_mes_month").text(numeral(data[0].Indicadores['MENSUAL'][0]['dtPRO']).format("0,00.00") );
+            $("#id_cant_disp_mes_month").text(numeral(data[0].Indicadores['MENSUAL'][0]['dtTIE']).format("0,00.00"));
+
+			$("#id_clase_abc").text(data[0].Otros[0]['CLASE']);
+            $("#id_existencia_minima").text(data[0].Otros[0]['MINIMO']);
+            $("#id_punto_de_reoden").text(data[0].Otros[0]['REORDEN']);
+            $("#id_plazo_rebast").text(data[0].Otros[0]['REABASTECIMIENTO']);
+
+			$("#id_prec_prom").text(data[0].Costos[0]['COSTO_PROM_LOC']);
+            $("#id_ult_prec").text(data[0].Costos[0]['COSTO_ULT_LOC'])
+
+            $("#id_vineta_valor").text("C$ " + numeral(data[0].ValorVinneta).format("0,00.00"))
+
+			getMargen(data[0].Margen)
+			getBonificados(data[0].Bonificaciones)
+			getPrecios(data[0].Precios)
+			getDataBodega(data[0].Bodega)
+        }
+    })
+
+}
+function getDataBodega(datos) {
+    $("#tblBodega").dataTable({
+        responsive: true,
+        "autoWidth":false,
+		"data": datos,
+        "searching": false,
+        "destroy": true,
+        "paging":   false,
+        "columns":[
+            { "data": "DETALLE"},
+            { "data": "BODEGA" },
+            { "data": "UNIDAD" },
+            { "data": "NOMBRE" },
+            { "data": "CANT_DISPONIBLE" }
+        ],
+        "columnDefs": [
+            { "width": "5%", "targets": [ 0, 1 ,2] },
+            {"className":"dt-right", "targets": [ 4 ] },
+            {"className":"dt-center", "targets": [ 1,2 ] }
+        ],
+        "info": false,
+        "language": {            
+            "zeroRecords": "No hay datos que mostrar",
+            "emptyTable": "N/D",
+            "loadingRecords": "Cargando...",
+        }
+    });
+}
+function getPrecios(datos) {
+    $("#tblPrecios").dataTable({
+        responsive: true,
+        "autoWidth":false,
+        "data": datos,
+        "searching": false,
+        "destroy": true,
+        "paging":   false,
+        "columns":[
+            { "data": "NIVEL_PRECIO"},
+            { "data": "PRECIO" }
+        ],
+        "info": false,
+        "language": {            
+            "zeroRecords": "No hay datos que mostrar",
+            "emptyTable": "N/D",
+            "loadingRecords": "Cargando...",
+        }
+    });
+}
+function getMargen(datos) {
+    $("#tblMargen").dataTable({
+        responsive: true,
+        "autoWidth":false,
+		"data": datos,
+        "searching": false,
+        "destroy": true,
+        "paging":   false,
+        "columns":[
+            { "data": "NIVEL_PRECIO"},
+            { "data": "PRECIO" }
+        ],
+        "info": false,
+        "language": {            
+            "zeroRecords": "No hay datos que mostrar",
+            "emptyTable": "N/D",
+            "loadingRecords": "Cargando...",
+        }
+    });
+}
+function getBonificados(datos) {
+    $("#tblBonificados").dataTable({
+        responsive: true,
+        "autoWidth":false,
+		"data": datos,
+        "searching": false,
+        "destroy": true,
+        "paging":   false,
+        "columns":[
+            { "data": "REGLAS"}
+        ],
+        "info": false,
+        "language": {            
+            "zeroRecords": "No hay datos que mostrar",
+            "emptyTable": "N/D",
+            "loadingRecords": "Cargando...",
+        }
+    });
+}
 function ShowLotes(ID,Unidad_,articulo_){
 	var bodega_ = ID.substr(1,ID.length);
 

@@ -86,7 +86,7 @@ $(document).on('mouseenter','.card', function (event) {
 });
 
 function deleteMinuta(idMinuta) {
-    swal({
+    Swal.fire({
       title: 'Eliminar este registro',
       text: "¿Desea eliminar este registro?",
       type: 'warning',

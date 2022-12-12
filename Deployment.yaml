@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gnet-app
+  namespace: grupoguma
+  labels:
+    app: gumanet
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: gnet-app
+  template:
+    metadata:
+      labels:
+        app: gnet-app
+    spec:
+      volumes:
+        - name: storage
+          persistentVolumeClaim:
+            claimName: mysql-pvc
+      imagePullSecrets:
+        - name: regcred
+      containers:
+        - name: cn-gnet-app
+          image: gumadesarrollo/gumanet:v1.0.{{BUILD_NUMBER}}
+          imagePullPolicy: Always
+          volumeMounts:
+            - name: storage
+              mountPath: /data/web/storage
+              subPath: storageApp
+          ports:
+            - containerPort: 80
+          envFrom:
+          - configMapRef:
+              name: laravel-config
+          env:
+            - name: APP_KEY
+              value: base64:y2IqhqsLzpUjz3S9Fa1J6lejtgUFmvB9dS8zItVE+DI=
+            - name: DB_DATABASE
+              value: gumanet
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "72m"
+            limits:
+              memory: "128Mi"
+              cpu: "144m"

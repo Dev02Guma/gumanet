@@ -11,6 +11,13 @@
 |
 */
 
+
+
+Route::get('/infraestructura','infraestructura_controller@home');
+Route::get('/getProyects','infraestructura_controller@getProyects');
+Route::post('/getTasksProjects','infraestructura_controller@getTasksProjects');
+
+
 //RUTAS MENU
 Route::get('/Inventario','inventario_controller@index');
 Route::get('/Metas','metas_controller@index');
@@ -58,11 +65,13 @@ Route::get('/objPrecios/{articulo}','inventario_controller@getPreciosArticulos')
 Route::get('/objCostos/{articulo}','inventario_controller@getCostosArticulos');
 Route::get('/objMargen/{articulo}','inventario_controller@getMargenArticulos');
 Route::get('/objOtros/{articulo}','inventario_controller@getOtrosArticulos');
+Route::get('/objVineta/{articulo}','inventario_controller@getVineta');
 Route::get('/objBonificado/{articulo}','inventario_controller@getArtBonificados');
 Route::get('/objIndicadores/{articulo}','inventario_controller@objIndicadores');
 
 Route::post('/transacciones','inventario_controller@transaccionesDetalle');
 Route::post('/lotes','inventario_controller@getLotesArticulo');
+
 Route::post('/getLotes','inventario_controller@getLotes');
 Route::get('/liqMeses/{valor}','inventario_controller@liquidacionMeses');
 Route::get('/desInventario/{tipo}/{valor}', 'inventario_controller@descargarInventario');
@@ -210,9 +219,6 @@ Route::get('/getDetailSumary/{numOrden}','DetalleOrdenController@getDetailSumary
 Route::get('/getHrasProducidas/{numOrden}','DetalleOrdenController@getHrasProducidas');
 Route::get('/getData','DetalleOrdenController@getData');
 
-
-
-
 //RUTAS PARA LOS RECIBOS
 Route::get('recibos', 'recibos_controller@index');  
 Route::get('getRecibos', 'recibos_controller@getRecibos');
@@ -237,3 +243,7 @@ Route::get('getResumen', 'promocion_controller@getResumen');
 Route::get('exportacion', 'exportacion_controller@index');
 Route::get('getVentasExportacion', 'exportacion_controller@getVentasExportacion');
 Route::get('/dtaVentaExportacion/{xbolsones}/{segmentos}','dashboard_controller@getVentasExportacion');
+Route::post('AnularFactura', 'exportacion_controller@AnularFactura')->name('AnularFactura');
+
+Route::get('/ArticuloDetalles/{articulo}/{unidad}','inventario_controller@getArticuloDetalles')->name('ArticuloDetalles');;
+

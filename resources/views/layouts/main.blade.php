@@ -32,6 +32,12 @@
       background-color: #c8f5bf !important;
   }
 
+  .tbl_rows_done{
+      color: #c7c7c7
+  }
+
+  
+
 </style>
 <!-- Custom styles for this template -->
 <link rel="stylesheet" href="{{ url('css/dashboard.css') }}">
@@ -126,6 +132,7 @@
 <script src="{{ url('js/jquery.dataTables.min.js') }}"></script>
 <script src="{{ url('js/js_general.js') }}"></script>
 <script src="{{ url('js/sweetalert2.all.js') }}"></script>
+<script src="{{ url('js/sweetalert2.all.min.js') }}"></script>
 <script src="{{ url('js/jquery.cookie.js') }}"></script>
 <script src="{{ url('js/Numeral.js') }}"></script>
 <script src="{{ url('js/xlsx.full.min.js') }}"></script>

@@ -21,7 +21,7 @@ $("#updateMinuta").click( function() {
 		return false;
 	}
 
-    swal({
+  Swal.fire({
       title: 'Actualizar registro',
       text: "¿Desea Actualizar esta minuta?",
       type: 'warning',
@@ -46,7 +46,7 @@ $("#updateMinuta").click( function() {
 $("#cancelMinuta").click( function() {
 	var base_url = window.location.origin + '/' + window.location.pathname.split ('/') [1] + '/';
 
-    swal({
+  Swal.fire({
       title: 'Cancelar edicion',
       text: "¿Desea cancelar la edicion?",
       type: 'warning',

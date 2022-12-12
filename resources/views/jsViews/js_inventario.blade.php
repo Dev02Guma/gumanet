@@ -297,6 +297,9 @@ $('nav .nav.nav-tabs a').click(function(){
         case 'navIndicadores':        
             getIndicadores(articulo_g)
         break;
+        case 'navVinneta':  
+            getVineta(articulo_g)
+        break;
         default:
             alert('Al parecer alguio salio mal :(')
     }    
@@ -311,8 +314,7 @@ function getDetalleArticulo(articulo, descripcion) {
     var target = '#nav-bod';
     $('a[data-toggle=tab][href=' + target + ']').tab('show');
 
-    $("#tbody1")
-    .empty()
+    $("#tbody1").empty()
     .append(`<tr><td colspan='5'><center>Aún no ha realizado ninguna busqueda</center></td></tr>`);
 
     $("#mdDetalleArt").modal('show');
@@ -420,6 +422,18 @@ function getOtros(articulo) {
             $("#id_existencia_minima").text(data[0]['MINIMO'])
             $("#id_punto_de_reoden").text(data[0]['REORDEN']);
             $("#id_plazo_rebast").text(data[0]['REABASTECIMIENTO'])
+        }
+    })
+}
+
+function getVineta(articulo) {   
+    $.ajax({
+        url: "objVineta/"+articulo,
+        type: 'get',
+        data: {},
+        async: true,
+        success: function(data) {
+            $("#id_vineta_valor").text("C$ " + numeral(data[0]['VINNETA']).format("0,00.00"))
         }
     })
 }
@@ -565,6 +579,8 @@ $(document).on('click', '#exp_more', function(ef) {
 });
 
 function format ( callback, bodega_, articulo_, Unidad_ ) {
+
+    
     var thead = tbody = '';            
         thead =`<table class="" width='100%'>
                     <tr>
@@ -585,6 +601,8 @@ function format ( callback, bodega_, articulo_, Unidad_ ) {
             Unidad: Unidad_,        
         },        
         success: function ( data ) {
+
+
             if (data.length==0) {
                 tbody +=`<tr>
                             <td colspan='6'><center>Bodega sin existencia</center></td>
@@ -592,7 +610,7 @@ function format ( callback, bodega_, articulo_, Unidad_ ) {
                 callback(thead + tbody).show();
             }
             $.each(data, function (i, item) {
-               tbody +=`<tr class="center">
+                tbody +=`<tr class="center">
                             <td>` + item['LOTE'] + `</td>
                             <td>` + item['CANT_DISPONIBLE'] + `</td>
                             <td>` + item['CANTIDAD_INGRESADA'] + `</td>

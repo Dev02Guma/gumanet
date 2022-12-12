@@ -28,7 +28,10 @@ class inventario_controller extends Controller
 		);
 		return view('pages.inventario', $data);
 	}
-
+	public function getArticuloDetalles($Articulo,$Unidad) {
+	$obj = inventario_model::getArticuloDetalles($Articulo,$Unidad);
+	return response()->json($obj);
+	}
     public function agregarDatosASession(){
         $request = Request();
         $ApplicationVersion = new \git_version();
@@ -382,6 +385,11 @@ class inventario_controller extends Controller
 		return response()->json($obj);
 	}
 
+	public function getVineta($articulo) {
+		$obj = inventario_model::getVineta($articulo);
+		return response()->json($obj);
+	}
+
 	public function objIndicadores($articulo) {
 		$obj = inventario_model::objIndicadores($articulo);
 		return response()->json($obj);
@@ -401,10 +409,8 @@ class inventario_controller extends Controller
 	}
 
 	public function getLotesArticulo(Request $request) {
-		if($request->isMethod('post')){
-			$obj = inventario_model::getLotesArticulo($request->input('bodega'),$request->input('articulo'),$request->input('Unidad'));
+		$obj = inventario_model::getLotesArticulo($request->input('bodega'),$request->input('articulo'),$request->input('Unidad'));
 			return response()->json($obj);
-		}
 	}
 
 	public function getLotes(Request $request) {

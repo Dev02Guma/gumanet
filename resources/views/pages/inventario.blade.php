@@ -156,6 +156,7 @@
             <a class="nav-item nav-link" id="navTransaccion" data-toggle="tab" href="#nav-trans" role="tab" aria-controls="nav-trans" aria-selected="false">Transacciones</a>
             <a class="nav-item nav-link" id="navOtros" data-toggle="tab" href="#nav-otros" role="tab" aria-controls="nav-otros" aria-selected="false">Otros</a>
             <a class="nav-item nav-link" id="navIndicadores" data-toggle="tab" href="#nav-Indicadores" role="tab" aria-controls="nav-Indicadores" aria-selected="false">Indicadores</a>
+            <a class="nav-item nav-link" id="navVinneta" data-toggle="tab" href="#nav-Vinneta" role="tab" aria-controls="nav-Vineta" aria-selected="false">Viñeta</a>
 
             
             
@@ -392,6 +393,21 @@
                 </table>
               </div>
             </div>            
+          </div>
+
+          <div class="tab-pane fade" id="nav-Vinneta" role="tabpanel" aria-labelledby="navVinneta">
+            <div class="row">
+              <div class="col-sm-12">                
+                <table id="tblVinneta" class="table table-bordered mt-3">
+                  <tbody id="tbody1">
+                      <tr>
+                        <td class="bg-blue text-light"><b>VALOR.</b></td>
+                        <td id="id_vineta_valor" class ="dt-right">0</td>
+                      </tr>
+                    </tbody>
+                </table>
+              </div>
+            </div>
           </div>
 
         </div>

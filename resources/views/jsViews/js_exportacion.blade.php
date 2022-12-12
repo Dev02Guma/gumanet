@@ -62,10 +62,16 @@ function dataVentaExportacion(f1, f2) {
             { "title": "TOTAL FACT.", "data": "TOTAL_FACTURA" ,render: $.fn.dataTable.render.number( ',', '.', 2  , '$ ' )},
             { "title": "TIPO DE CAMBIO.", "data": "TIPO_CAMBIO" ,render: $.fn.dataTable.render.number( ',', '.', 2  , 'C$ ' )},
             { "title": "TOTAL FACT.", "data": "TOTAL_MONEDA_LOCAL" ,render: $.fn.dataTable.render.number( ',', '.', 2  , 'C$ ' )},
+            { "title": "ANULADO", "data":"FACTURA", "render": function(data, type, row, meta) {
+
+                return  `<h6 class="mb-1 fw-semi-bold text-nowrap"><a href="#!" onclick=" AnularFacturas(`+"'" + row.FACTURA+"'" +`)"> <strong>  ANULAR </strong></a></h6>`
+
+                
+                }},
             
         ],
         "columnDefs": [
-            {"className": "dt-center", "targets": [0,1,2,4,6 ]},
+            {"className": "dt-center", "targets": [0,1,2,4,6,9 ]},
             {"className": "dt-right", "targets": [ 5,6,7,8 ]},
             {"className": "dt-left", "targets": [ 3 ]},
             { "width": "6%", "targets": [0,1,2,4,5,6,7] },
@@ -102,6 +108,11 @@ function dataVentaExportacion(f1, f2) {
         },
     });
 
+    var mostrarAnular = $("#userr").val();
+    if(mostrarAnular != "admin@gmail.com"){
+        var ocultar = $('#dtVentaExportacion').DataTable();
+        ocultar.column(9).visible(false);
+    }
     $("#dtVentaExportacion_length").hide();
     $("#dtVentaExportacion_filter").hide();
 }
@@ -210,6 +221,51 @@ function format ( callback, ordCompra_ ,Cliente) {
         }
 
 
+    });
+}
+
+function AnularFacturas(factura){
+    Swal.fire({
+        title: '¿Estas Seguro de Anular la Factura?',
+        text: "N° "+factura,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Si!',
+        target:"",
+        showLoaderOnConfirm: true,
+        preConfirm: () => {
+            $.ajax({
+                url: "AnularFactura",
+                type: 'post',
+                data: {
+                    id      : factura
+                },
+                async: true,
+                success: function(response) {
+                    if(response.original){
+                    Swal.fire({
+                    title: 'Factura Anulada',
+                    icon: 'success',
+                    showCancelButton: false,
+                    confirmButtonColor: '#3085d6',
+                    cancelButtonColor: '#d33',
+                    confirmButtonText: 'OK'
+                    }).then((result) => {
+                    if (result.isConfirmed) {
+                        location.reload();
+                        }
+                    })
+                }
+                },
+                error: function(response) {
+                }
+            }).done(function(data) {
+                
+            });
+        },
+        allowOutsideClick: () => !Swal.isLoading()
     });
 }
 

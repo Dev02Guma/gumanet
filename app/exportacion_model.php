@@ -2,7 +2,10 @@
 
 namespace App;
 
+use DateTime;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\Request;
+use Exception;
 
 class exportacion_model extends Model
 {
@@ -58,6 +61,33 @@ class exportacion_model extends Model
 
         $sql_server->close();
         return false;
+    }
+
+
+    protected $connection = 'sqlsrv';
+    public $timestamps = false;
+    protected $table = "PRODUCCION.dbo.gnet_facturas_anuladas_innova";
+    public static function AnularFactura(Request $request){
+        if ($request->ajax()) {
+            try {
+
+                $factura     = $request->input('id');
+                
+                $obj_f = new exportacion_model();
+                $obj_f->FACTURA = $factura;
+                $obj_f->created_by = new \DateTime();
+
+
+                $response = $obj_f->save();
+
+                return response()->json($response);
+
+
+            } catch (Exception $e) {
+                $mensaje =  'Excepción capturada: ' . $e->getMessage() . "\n";
+                return response()->json($mensaje);
+            }
+        }
     }
         
 }
