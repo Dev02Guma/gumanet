@@ -2,7 +2,7 @@ pipeline {
     agent any
     environment {
 		DOCKERHUB_CREDENTIALS=credentials('DockerHub')
-        APP_VERSION = 'v1.0'
+        APP_VERSION = 'v1.1'
 	}
     stages {
         stage('Docker Build') {
@@ -24,7 +24,6 @@ pipeline {
         stage('Apply Kubernetes'){
             steps {
                 sh 'cat Deployment.yaml | sed "s/${APP_VERSION}.{{BUILD_NUMBER}}/${APP_VERSION}.$BUILD_NUMBER/g" | kubectl apply -f -'
-                sh 'kubectl apply -f service.yaml'            
             }
         }
     }
