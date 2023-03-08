@@ -418,7 +418,8 @@ $(document).ready(function() {
             text: `<p class="font-weight-bolder">Comportamiento de Clientes Anual</p>`
         },
         xAxis: {
-            categories: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+            categories: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'],
+            categories2: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']
         },
         yAxis: {
             title: {
@@ -445,8 +446,7 @@ $(document).ready(function() {
                 point: {
                     events: {
                         click: function() {
-                            //promedio_comportamiento("Clientes",event.point.category)
-                            
+                           $('#mSegmento').modal('show');
                         }
                     }
                 }
@@ -1998,6 +1998,7 @@ function actualizandoGraficasDashboard(mes, anio, xbolsones) {
                             cumplC = (parseFloat(clientesReal__)/parseFloat(clientesMeta__))*100;
 
                         });
+                        modalSegmento(item['data2']);
 
                         tbody = `<tr>
                                 <th scope="row" style="font-size: 1rem!important">Meta</th>
@@ -2026,7 +2027,7 @@ function actualizandoGraficasDashboard(mes, anio, xbolsones) {
                                 <tr>
                                 <th scope="row" style="font-size: 1rem!important">Real Cliente</th>
                                 <td class="text-right">
-                                <p class="font-weight-bolder" style="font-size: 1rem!important">`+ numeral(clientesReal__).format('0,0') +`</p>
+                                    <p class="font-weight-bolder" style="font-size: 1rem!important"><a class="stretched-link text-dark fw-semi-bold" href="#!" data-toggle="modal" data-target=".bd-example-modal-lg">`+ numeral(clientesReal__).format('0,0') +`</a></p>
                                 </td>
                                 </tr>
                                 <tr>
@@ -2035,7 +2036,7 @@ function actualizandoGraficasDashboard(mes, anio, xbolsones) {
                                     <p class="font-weight-bolder" style="font-size: 1rem!important">`+ numeral(cumplC).format('0.0') + ` %</p>
                                 </td>
                                 </tr>`;
-
+                                
                         $('#tbody01').empty().append(tbody);
                     }else {
                         $("#crecimientoxruta").css('display', 'none');
@@ -2043,17 +2044,13 @@ function actualizandoGraficasDashboard(mes, anio, xbolsones) {
                 break;
 
                 case 'dtaProyectos':
-
-
-
-
+                   
 
                     var tbody = '';
                     var metaGRP1__ = metaGRP2__ = metaGRP3__ = 0;
                     var realGRP1__ = realGRP2__ = realGRP3__ = 0;
                     var totalMETA__ = totalREAL__ = totalALC__ = 0;
-                    
-
+                   
                     if (item['data'].length>0) {
                         $.each(item['data'], function(i, x) {
                             temp = x['proyecto'];
@@ -2090,6 +2087,9 @@ function actualizandoGraficasDashboard(mes, anio, xbolsones) {
                             cumplGRP3 = (parseFloat(realGRP3__)/parseFloat(metaGRP3__))*100;
                             cumplTOTAL = (parseFloat(totalREAL__)/parseFloat(totalMETA__))*100;
                         });
+
+                        //modalSegmento(item['data'], item['data2']);
+                        
 
                         tbody = `<tr>
                             <th scope="row" style="font-size: 1rem!important">Instituciones</th>
@@ -2170,6 +2170,230 @@ function actualizandoGraficasDashboard(mes, anio, xbolsones) {
         });
     });
 }
+
+function modalSegmento(data){
+    var metaGRP1__ = metaGRP2__ = metaGRP3__ = 0;
+    var realGRP1__ = realGRP2__ = realGRP3__ = 0;
+    var totalMETA__ = totalREAL__ = totalALC__ = 0;
+    $.each(data, function(i, x) {
+              
+        temp = x['proyecto'];
+        
+        if ( temp=='Instituciones' ) {
+            metaGRP1__ = x['metaCliente'];
+            realGRP1__ = x['totalCliente'];
+        }else if ( temp=='Mayoristas' ) {
+            metaGRP2__ = x['metaCliente'];
+            realGRP2__ = x['totalCliente'];
+        }else if ( temp=='Farmacias' ) {
+            metaGRP3__= x['metaCliente'];
+            realGRP3__ = x['totalCliente'];
+        }
+
+        totalMETA__ = totalMETA__ + parseFloat(x['metaCliente']);
+        totalREAL__ = totalREAL__ + parseFloat(x['totalCliente']);
+
+
+        cumplGRP1 = (parseFloat(realGRP1__)/parseFloat(metaGRP1__))*100;
+        cumplGRP2 = (parseFloat(realGRP2__)/parseFloat(metaGRP2__))*100;
+        cumplGRP3 = (parseFloat(realGRP3__)/parseFloat(metaGRP3__))*100;
+        cumplTOTAL = (parseFloat(totalREAL__)/parseFloat(totalMETA__))*100;
+              
+    });
+  
+    tbody = `<tr>
+        <th scope="row" style="font-size: 1rem!important">Instituciones</th>
+        <td class="text-right">
+            <p class="font-weight-bolder text-center" style="font-size: 1rem!important">`+ numeral(metaGRP1__).format('0,0') +`</p>
+        </td>
+        <td class="text-right">
+            <p class="font-weight-bolder text-center" style="font-size: 1rem!important">`+ numeral(realGRP1__).format('0,0') +`</p>
+        </td>
+        <td class="text-right">
+            <p class="font-weight-bolder text-center" style="font-size: 1rem!important">`+ numeral(cumplGRP1).format('0.0') +` %</p>
+        </td>
+        </tr>
+        <tr>
+        <th scope="row" style="font-size: 1rem!important">Mayoristas</th>
+        <td class="text-right">
+            <p class="font-weight-bolder text-center" style="font-size: 1rem!important">`+ numeral(metaGRP2__).format('0,0') +`</p>
+        </td>
+        <td class="text-right">
+            <p class="font-weight-bolder text-center" style="font-size: 1rem!important">`+ numeral(realGRP2__).format('0,0') +`</p>
+        </td>
+        <td class="text-right">
+            <p class="font-weight-bolder text-center" style="font-size: 1rem!important">`+ numeral(cumplGRP2).format('0.0') +` %</p>
+        </td>
+        </tr>
+        <tr>
+        <th scope="row" style="font-size: 1rem!important">Farmacia</th>
+        <td class="text-right">
+            <p class="font-weight-bolder text-center" style="font-size: 1rem!important">`+ numeral(metaGRP3__).format('0,0') +`</p>
+        </td>
+        <td class="text-right">
+            <p class="font-weight-bolder text-center" style="font-size: 1rem!important">`+ numeral(realGRP3__).format('0,0') +`</p>
+        </td>
+        <td class="text-right">
+            <p class="font-weight-bolder text-center" style="font-size: 1rem!important">`+ numeral(cumplGRP3).format('0.0') +` %</p>
+        </td>
+        </tr>
+        <tr>
+        <th scope="row" style="font-size: 1rem!important">Total</th>
+        <td class="text-right">
+            <p class="font-weight-bolder text-center" style="font-size: 1rem!important">`+ numeral(totalMETA__).format('0,0') +`</p>
+        </td>
+        <td class="text-right">
+            <p class="font-weight-bolder text-center" style="font-size: 1rem!important">`+ numeral(totalREAL__).format('0,0') +`</p>
+        </td>
+        <td class="text-right">
+            <p class="font-weight-bolder text-center" style="font-size: 1rem!important">`+ numeral(cumplTOTAL).format('0.0') +` %</p>
+        </td>
+        </tr>`;
+    $('#tbodySegmento').empty().append(tbody);
+        
+}
+function mostrar(d, l){
+    console.log(l);
+}
+/*function modalSegmento(data, data2){
+    var metaGRP1__ = metaGRP2__ = metaGRP3__ = 0;
+    var realGRP1__ = realGRP2__ = realGRP3__ = 0;
+    var totalMETA__ = totalREAL__ = totalALC__ = 0;
+    $.each(data, function(i, x) {
+              
+        temp = x['proyecto'];
+        
+        if ( temp=='Instituciones' ) {
+            metaGRP1__ = x['meta'];
+            realGRP1__ = x['real'];
+        }else if ( temp=='Mayoristas' ) {
+            metaGRP2__ = x['meta'];
+            realGRP2__ = x['real'];
+        }else if ( temp=='Farmacias' ) {
+            metaGRP3__= x['meta'];
+            realGRP3__ = x['real'];
+        }
+
+        totalMETA__ = totalMETA__ + parseFloat(x['meta']);
+        totalREAL__ = totalREAL__ + parseFloat(x['real']);
+
+
+        cumplGRP1 = (parseFloat(realGRP1__)/parseFloat(metaGRP1__))*100;
+        cumplGRP2 = (parseFloat(realGRP2__)/parseFloat(metaGRP2__))*100;
+        cumplGRP3 = (parseFloat(realGRP3__)/parseFloat(metaGRP3__))*100;
+        cumplTOTAL = (parseFloat(totalREAL__)/parseFloat(totalMETA__))*100;
+              
+    });
+
+    $('#lbl_meta_ins').text('Meta: ' + numeral(metaGRP1__).format('0,0'));
+    $('#lbl_venta_ins').text('Venta: ' + numeral(realGRP1__).format('0,0'));
+    $('#id_ins').text(numeral(cumplGRP1).format('0.0') + '%');
+
+    $('#lbl_meta_may').text('Meta: ' + numeral(metaGRP2__).format('0,0'));
+    $('#lbl_venta_may').text('Venta: ' + numeral(realGRP2__).format('0,0'));
+    $('#id_may').text(numeral(cumplGRP2).format('0.0') + '%');
+
+    $('#lbl_meta_far').text('Meta: ' + numeral(metaGRP3__).format('0,0'));
+    $('#lbl_venta_far').text('Venta: ' + numeral(realGRP3__).format('0,0'));
+    $('#id_far').text(numeral(cumplGRP3).format('0.0') + '%');
+
+    $('#lbl_meta_tot').text('Meta: ' + numeral(totalMETA__).format('0,0'));
+    $('#lbl_venta_tot').text('Venta: ' + numeral(totalREAL__).format('0,0'));
+    $('#id_tot').text(numeral(cumplTOTAL).format('0.0') + '%');    
+    
+    lIntitucion = [];
+    lMayorista = [];
+    lFarmacia = [];
+    dta_table_header = [
+        {"data": "cliente",
+            "render": function(data, type, row, meta) {
+            return `<div class="d-flex align-items-center position-relative ">
+                    <div class="flex-1">
+                        <h6 class="mb-0 fw-semi-bold">
+                            <a class="stretched-link text-dark fw-semi-bold" href="#!" >
+                                <div class="stretched-link text-dark">`+ row.cliente +`</div>
+                            </a>
+                        </h6>
+                    </div>
+                </div>`
+        }},
+        {"data": "total","render": function(data, type, row, meta) {
+            return `<div class="pe-4">
+                    <div class="d-flex align-items-center">
+                        <h6 class="fs-0 text-dark mb-0 me-2">C$ `+ row.total +`</h6>
+                    </div>
+                </div>`
+        }},        
+    ]
+    //<span class="badge rounded-pill badge-primary">`+ row.Cumple +` %</span>
+    $.each(data2, function(i, x) {
+        if(x.proyecto == 'Instituciones'){
+            lIntitucion.push({
+                cliente: x.cliente,
+                total: numeral(x.total).format(0,0.00)
+            })
+        }
+        if(x.proyecto == 'Mayoristas'){
+            lMayorista.push({
+                cliente: x.cliente,
+                total: numeral(x.total).format(0,0.00)
+            })
+        }
+        if(x.proyecto == 'Farmacias'){
+            lFarmacia.push({
+                cliente: x.cliente,
+                total: numeral(x.total).format(0,0.00)
+            })
+        }
+    })
+
+    table_render('#tb_insticucion',lIntitucion,dta_table_header,false)  
+    table_render('#tb_mayorista',lMayorista,dta_table_header,false)
+    table_render('#tb_farmacia',lFarmacia,dta_table_header,false)
+}*/
+
+/*function table_render(Table,datos,Header,Filter){
+    $(Table).DataTable({
+        "data": datos,
+        "destroy": true,
+        "info": false,
+        "bPaginate": true,
+        "order": [
+            [0, "asc"]
+        ],
+        "lengthMenu": [
+            [10, -1],
+            [10, "Todo"]
+        ],
+        "language": {
+            "zeroRecords": "NO HAY COINCIDENCIAS",
+            "paginate": {
+                "first": "Primera",
+                "last": "Última ",
+                "next": "Siguiente",
+                "previous": "Anterior"
+            },
+            "lengthMenu": "MOSTRAR _MENU_",
+            "emptyTable": "-",
+            "search": "BUSCAR"
+        },
+        'columns': Header,
+        "columnDefs": [
+            { "width": "70%", "targets": [0] },
+           
+            
+        ],
+        rowCallback: function( row, data, index ) {
+            if ( data.Index < 0 ) {
+                $(row).addClass('table-danger');
+            } 
+        }
+    });
+    if(!Filter){
+        $(Table+"_length").hide();
+        $(Table+"_filter").hide();
+    }
+}*/
 
 var ventasRealMensuales = {};
 function grafRealVentasMensuales(xbolsones,segmentos) {

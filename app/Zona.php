@@ -4,7 +4,7 @@ namespace App;
 
 use Illuminate\Database\Eloquent\Model;
 
-class Factor extends Model
+class Zona extends Model
 {
-    //
+    protected $table = "gumadesk.zonas";
 }

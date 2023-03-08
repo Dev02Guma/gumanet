@@ -71,7 +71,8 @@ class dashboard_model extends Model {
 
         $dtaClientes[] = array(
             'tipo' => 'dtaClientes',
-            'data' => dashboard_model::clientesMeta($mes, $anio, $company_user)
+            'data' => dashboard_model::clientesMeta($mes, $anio, $company_user),
+            'data2' => dashboard_model::dataSegmento($mes, $anio, $company_user)
         );
 
         $dtaProyectos[] = array(
@@ -276,6 +277,7 @@ class dashboard_model extends Model {
             case '1':
                 $proyectos = proyectos_model::orderBy('priori', 'asc')->get();
 
+                
                 foreach ($segmentos as $key) {
                     
                     /*$rutas = proyectosDetalle_model::select('rutas.vendedor as ruta')
@@ -317,7 +319,92 @@ class dashboard_model extends Model {
                     $line = '';
                     $i++;
                 }
+            
 
+                return $array;
+                break;
+            case '2':
+                break;
+            case '3':
+                break;    
+            case '4':
+                break;      
+            default:                
+                dd("Ups... al parecer sucedio un error al tratar de encontrar articulos para esta empresa. ". $company->id);
+                break;
+        }
+        return $array;
+        $sql_server->close();
+    }
+
+    public static function dataSegmento($mes, $anio, $company_user){
+        $sql_server = new \sql_server();
+        $sql_exec = '';
+        $sql_count = "";
+        $segmentos = array();
+        $array = array();
+        $i=0;
+
+        $segmentos[0] = array(
+            'name' => 'Instituciones',
+            'line' => "'F02'",
+            'ruta' => ['F02']
+        );
+
+        $segmentos[1] = array(
+            'name' => 'Mayoristas',
+            'line' => "'F04'",
+            'ruta' => ['F04']
+        );
+
+        $segmentos[2] = array(
+            'name' => 'Farmacias',
+            'line' => "'F01','F02','F04','F12'",
+            'ruta' => ['F03','F05','F06','F07','F08','F09','F10','F11','F13','F14','F15','F20','F21']
+        );
+
+        switch ($company_user) {
+            case '1':
+                $proyectos = proyectos_model::orderBy('priori', 'asc')->get();
+                
+                foreach ($segmentos as $key) {
+                    
+                    if($key['name'] == 'Farmacias'){
+                        $sql_exec = "SELECT
+                                        count(distinct [Cod. Cliente]) as totalClientes
+                                    FROM
+                                        Softland.dbo.VtasTotal_UMK (nolock)
+                                    WHERE
+                                        [Año] = ".$anio." AND nmes = ".$mes." AND Ruta NOT IN(".$key['line'].")
+                                    AND [P. Unitario] > 0";
+                        $sql_count="SELECT T0.CLIENTE  FROM Softland.umk.FACTURA T0  WHERE YEAR ( T0.FECHA ) = YEAR ( GETDATE( ) ) - 1 AND T0.VENDEDOR NOT IN('F02','F04')	GROUP BY T0.CLIENTE";
+                                   
+                    }else{
+                        $sql_exec = "SELECT
+                                        count(distinct [Cod. Cliente]) as totalClientes
+                                    FROM
+                                        Softland.dbo.VtasTotal_UMK (nolock)
+                                    WHERE
+                                        [Año] = ".$anio." AND nmes = ".$mes." AND Ruta IN(".$key['line'].")
+                                    AND [P. Unitario] > 0";
+                        $sql_count="SELECT T0.CLIENTE  FROM Softland.umk.FACTURA T0  WHERE YEAR ( T0.FECHA ) = YEAR ( GETDATE( ) ) - 1 AND T0.VENDEDOR IN(".$key['line'].")	GROUP BY T0.CLIENTE";                        
+                    }
+
+                    
+                    $result = $sql_server->fetchArray($sql_exec,SQLSRV_FETCH_ASSOC);
+                    $qCount = $sql_server->fetchArray($sql_count, SQLSRV_FETCH_ASSOC);
+                    $clientesMeta = count($qCount);
+
+                    foreach($result as $row){
+                        $array[$i]['proyecto'] = $key['name'];
+                        $array[$i]['totalCliente'] = $row['totalClientes'];
+                        $array[$i]['metaCliente'] = $clientesMeta;
+                                                                        
+                        $i++;
+                    }
+                }
+                
+                            
                 return $array;
                 break;
             case '2':

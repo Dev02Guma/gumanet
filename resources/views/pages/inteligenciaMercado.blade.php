@@ -51,7 +51,7 @@
 					</div>
 					<div class="col-md-2 ">
 					@if ($key->Imagen!='' || $key->Imagen!=NULL)
-						<img src="{{config('global.url_server').$key->Imagen}}" width="100" class="img-fluid rounded float-right" style="cursor: pointer" />
+						<img src="{{Storage::Disk('s3')->temporaryUrl('news/'.$key->Imagen, now()->addMinutes(5))}}" width="100" class="img-fluid rounded float-right" style="cursor: pointer" />
 					@endif						
 					</div>
 				</div>

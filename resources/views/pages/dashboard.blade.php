@@ -966,4 +966,42 @@
     </div>
   </div>
 </div>
+
+<!--=====================================
+MODAL 
+======================================-->
+
+<div class="modal fade bd-example-modal-lg" id="mSegmento" tabindex="-1" role="dialog" aria-labelledby="myLargeModalLabel" aria-hidden="true">
+	<div class="modal-dialog modal-lg">
+	    <div class="modal-content">
+		    <div class="modal-header bg-blue text-light" >
+                <div class="row col-md-12">
+                    <div class="col-md-12 text-center">
+                        <b>ALCANCE DE CLIENTES POR SEGMENTO</b>
+                    </div>
+                    
+                </div>
+               
+		    </div>
+		    <div class="modal-body">	
+                <table class="table table-striped table-bordered table-sm" id="tb_segmento" width="100%">
+                    <thead>
+                        <tr>
+                            <th scope="col" class="text-center">CANAL</th>
+                            <th scope="col" class="text-center">META</th>
+                            <th scope="col" class="text-center">CLIENTE</th>
+                            <th scope="col" class="text-center">ALCANCE</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbodySegmento"></tbody>
+                </table>  
+            </div>
+    
+            <!---->
+		    <div class="modal-footer">			
+		    </div>
+	    </div>
+    </div>
+</div>
+
 @endsection

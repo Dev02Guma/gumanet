@@ -173,7 +173,7 @@ function attach_file(idRecibo){
             CardConten +='<div class="col"><div class="card border-light mb-3 shadow-sm bg-white rounded">'+
 			'<div class="card-body">'+
 				
-                    '<img src="http://186.1.15.166:8448/gmv3/upload/recibos/'+item.IMAGEN+'" width="200" class="img-fluid rounded" style="cursor: pointer" />'+
+                    '<img src="'+item.IMAGEN+'" width="200" class="img-fluid rounded" style="cursor: pointer" />'+
                 
 			'</div></div></div>';
 

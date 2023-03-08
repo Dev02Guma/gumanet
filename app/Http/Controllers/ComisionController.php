@@ -18,7 +18,15 @@ class ComisionController extends Controller
         $Anno   = $request->input('anno');
 
         $Comision = Comision::getData($Mes,$Anno);
-        //return response()->json($Comision);
-        return response()->json($Comision);
+        return response()->json($Comision);  
+    }
+
+    public function getHistoryItem(Request $request){
+        $mes = $request->input('mes');
+        $anno = $request->input('anno');
+        $ruta = $request->input('ruta');
+
+        $result = Comision::getHistoryItem($mes, $anno, $ruta);
+        return response()->json($result);
     }
 }

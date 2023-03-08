@@ -37,6 +37,7 @@ Route::get('/ordenesCompra', 'ordenesCompra_controller@index');
 Route::get('/DetalleOrden', 'DetalleOrdenController@index');
 Route::get('/Comiciones', 'ComisionController@index')->name('/Comiciones');
 Route::get('/getDataComiciones', 'ComisionController@getDataComiciones')->name('/getDataComiciones');
+Route::get('/getHistoryItem', 'ComisionController@getHistoryItem')->name('/getHistoryItem');
 
 //RUTAS LOGIN
 Route::get('/','Auth\LoginController@showLoginForm');//pagina login
@@ -228,7 +229,7 @@ Route::get('Cartera', 'recibos_controller@getReporte');
 Route::get('getCartera', 'recibos_controller@getCartera');
 Route::get('getOneRecibos', 'recibos_controller@getOneRecibos');
 
-Route::post('getAttachFile', 'recibos_controller@getAttachFile');
+Route::get('getAttachFile', 'recibos_controller@getAttachFile');
 Route::post('push_recibo', 'recibos_controller@push_recibo');
 Route::post('push_verificado', 'recibos_controller@push_verificado');
 Route::get('print_resumen', 'recibos_controller@print_resumen');
@@ -248,3 +249,10 @@ Route::post('AnularFactura', 'exportacion_controller@AnularFactura')->name('Anul
 
 Route::get('/ArticuloDetalles/{articulo}/{unidad}','inventario_controller@getArticuloDetalles')->name('ArticuloDetalles');;
 
+Route::get('Promocion', 'PromocionController@getPromocion')->name('Promocion');
+Route::get('SavePromo', 'PromocionController@SavePromo')->name('SavePromo');
+Route::get('SaveDetalles', 'PromocionController@SaveDetalles')->name('SaveDetalles');
+Route::get('getDetalles', 'PromocionController@getDetalles')->name('getDetalles');
+Route::post('DeleteItems', 'PromocionController@DeleteItems')->name('DeleteItems');
+Route::post('rmPromocion', 'PromocionController@rmPromocion')->name('rmPromocion');
+Route::post('updtFechas', 'PromocionController@updtFechas')->name('updtFechas');

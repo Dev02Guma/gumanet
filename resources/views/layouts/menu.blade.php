@@ -15,7 +15,7 @@
     </div>
     <hr style="padding:0; margin:0;"></hr>
     <div class="row mt-4">
-      <div class="col-sm-12">
+      <div class="col-sm-12 my-custom-scrollbar my-custom-scrollbar-primary">
         <ul class="nav flex-column">
        
           @foreach ($menus as $menu)
