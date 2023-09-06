@@ -220,7 +220,6 @@ function format ( callback, ordCompra_ ,Cliente) {
             callback(temp).show();
         }
 
-
     });
 }
 

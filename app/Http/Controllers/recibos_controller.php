@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\DB;
 use GPDF;
 use PDF;
 use App\app_onesignal;
+use Illuminate\Support\Facades\Storage;
 
 class recibos_controller extends Controller {
     public function __construct() {
@@ -169,12 +170,16 @@ class recibos_controller extends Controller {
             return response()->json(false);
         }
 
-        $query = DB::table('tbl_order_recibo_adjuntos')->where('id_recibo', $Recibo);
+        $query = DB::table('tbl_order_recibo_adjuntos')->where('id_recibo', $Recibo)->get();
 
-        $obj = $query->get();
+        //$obj = $query->get();
 
-        foreach ($obj as $qR => $key) {
-            $data[$i]['IMAGEN'] = $key->Nombre_imagen;
+
+        foreach ($query as $qR => $key) {
+
+           
+            $data[$i]['IMAGEN'] = Storage::Disk('s3')->temporaryUrl('Adjuntos-Recibos/'.$key->Nombre_imagen, now()->addMinutes(5));
+
             $i++;
 
         }  

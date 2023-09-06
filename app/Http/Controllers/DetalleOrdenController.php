@@ -1,429 +1,418 @@
-<?php
+@extends('layouts.lyt_gumadesk')
+@section('metodosjs')
+@include('jsViews.js_solicitud');
+<style>
+  
 
-namespace App\Http\Controllers;
+    .dataTables_paginate {
+        display: flex;
+        align-items: center;
+        padding-top: 20px;
 
-use App\DetalleOrden_model;
-use Illuminate\Http\Request;
-use App\Http\Controllers\Controller;
-use App\Models;
-use App\Company;
-use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
-use DateTime;
-
-
-
-class DetalleOrdenController extends Controller
-{
-
-    public function __construct()
-    {
-        $this->middleware('auth');
-        setlocale(LC_ALL, 'es_ES');
+    }
+    .notification-body {
+      width: 100% !important;
+    }
+    .dataTables_paginate a {
+        padding: 0 10px;
+        margin-inline: 5px;
     }
 
-    function index()
-    {
-        return view('pages.detalleOrden');
+    .dataTables_wrapper .dataTables_paginate {
+      font-size: .8rem;      
     }
 
-    public function getMateriaPrima($numOrden)
-    {
-        $data = array();
-        $i = 0;
-        //  $query2 = DB::table('producciontest.orden_produccion')->where('numOrden', $key->numOrden)->get();
-
-        $mp_directa =  DB::table('producciontest.mp_directa')->select('producciontest.mp_directa.*', 'producciontest.fibras.descripcion', 'producciontest.maquinas.nombre')
-            ->join('producciontest.fibras', 'producciontest.mp_directa.idFibra', '=', 'producciontest.fibras.idFibra')
-            ->join('producciontest.maquinas', 'producciontest.mp_directa.idMaquina', '=', 'producciontest.maquinas.idMaquina')
-            ->where('producciontest.mp_directa.numOrden', $numOrden)
-            ->get();
-
-        foreach ($mp_directa as $key => $mp) {
-            $data[$i]['fibra'] = $mp->descripcion;
-            $data[$i]['maquina'] = $mp->nombre;
-            $data[$i]['cantidad'] = number_format($mp->cantidad, 2) . " kg";
-            $i++;
-        }
-
-        return response()->json($data);
+    .dt-center {
+      text-align: center;
     }
 
-    public function getMOD($numOrden)
-    {
-        $data = array();
-        $i = 0;
-        $t_pulpeo = DB::table('producciontest.tiempo_pulpeo')->select(DB::raw('COALESCE(SUM(cant_dia),0) as cantDia, COALESCE(SUM(cant_noche),0) as cantNoche,  COALESCE(tiempoPulpeo,0) as tiempoPulpeo'))
-            ->where('numOrden', $numOrden)
-            ->groupBy('tiempoPulpeo')
-            ->get()->first();
-
-        $t_lavado = DB::table('producciontest.tiempo_lavado')->select(DB::raw('COALESCE(SUM(cant_dia),0)as cantDia, COALESCE(SUM(cant_noche),0) as cantNoche, COALESCE(tiempoLavado,0)'))
-            ->where('numOrden', $numOrden)
-            ->groupBy('tiempoLavado')
-            ->get()->first();
-
-        $t_muertos =  DB::table('producciontest.tiempos_muertos')->select(DB::raw('COALESCE(SUM(y1_dia),0) as cantDiaY1, COALESCE(SUM(y2_dia),0) as cantDiaY2, COALESCE(SUM(y1_noche),0) as cantNocheY1, COALESCE(SUM(y2_noche),0)as cantNocheY2'))
-            ->where('numOrden', $numOrden)
-            ->get()->first();
-
-        $hrsTrabajadas = DB::table('producciontest.orden_produccion')->select('hrsTrabajadas')->where('numOrden', $numOrden)->get()->first();
-        $hrsTrabajadas = $hrsTrabajadas->hrsTrabajadas / 2;
-
-        if (!empty($t_pulpeo)) {
-            $t_pulpeo_dia = ($t_pulpeo->cantDia * $t_pulpeo->tiempoPulpeo) / 60;
-            $t_pulpeo_noche = ($t_pulpeo->cantNoche * $t_pulpeo->tiempoPulpeo) / 60;
-        } else {
-            $t_pulpeo_dia = 0;
-            $t_pulpeo_noche = 0;
-        }
-        if (!empty($t_lavado)) {
-            if (!empty($t_pulpeo)) {
-                $t_lavado_dia = ($t_lavado->cantDia * $t_pulpeo->tiempoPulpeo) / 60;
-                $t_lavado_noche = ($t_lavado->cantNoche * $t_pulpeo->tiempoPulpeo) / 60;
-            } else {
-                $t_lavado_dia = 0;
-                $t_lavado_noche = 0;
-            }
-        } else {
-            $t_lavado_dia = 0;
-            $t_lavado_noche = 0;
-        }
-        if ($t_muertos) {
-            $y1_jumboroll_dia = $hrsTrabajadas - ($t_muertos->cantDiaY1 / 60);
-            $y1_jumboroll_noche = $hrsTrabajadas - ($t_muertos->cantNocheY1 / 60);
-            $y1_jumboroll_total = $y1_jumboroll_dia + $y1_jumboroll_noche;
-            $y2_jumboroll_dia = $hrsTrabajadas - ($t_muertos->cantDiaY2 / 60);
-            $y2_jumboroll_noche = $hrsTrabajadas - ($t_muertos->cantNocheY2 / 60);
-            $y2_jumboroll_total = $y2_jumboroll_dia + $y2_jumboroll_noche;
-        } else {
-            $y1_jumboroll_dia = 0;
-            $y1_jumboroll_noche = 0;
-            $y1_jumboroll_total = 0;
-            $y2_jumboroll_dia = 0;
-            $y2_jumboroll_noche = 0;
-            $y2_jumboroll_total = 0;
-        }
-        $data[0]['actividad'] = 'Pulper 1 - Pasta Reciclada';
-        $data[0]['dia']       = number_format($t_pulpeo_dia, 2) . " hrs";
-        $data[0]['noche']     = number_format($t_pulpeo_noche, 2)  . " hrs";
-        $data[0]['total']     = number_format(($t_pulpeo_dia + $t_pulpeo_noche), 2)  . " hrs";
-
-        $data[1]['actividad'] = 'Lavadora de Tetrapack';
-        $data[1]['dia'] = number_format($t_lavado_dia, 2)  . " hrs";
-        $data[1]['noche'] = number_format($t_lavado_noche, 2)  . " hrs";
-        $data[1]['total'] = number_format(($t_lavado_dia + $t_lavado_noche), 2)  . " hrs";
-
-        $data[2]['actividad'] = 'Pulper 2 - Pasta Virgen';
-        $data[2]['dia'] = number_format(0, 2)  . " hrs";
-        $data[2]['noche'] = number_format(0, 2)  . " hrs";
-        $data[2]['total'] = number_format(0, 2) . " hrs";
-
-        $data[3]['actividad'] = 'Pulper 2 - Pasta Virgen';
-        $data[3]['dia'] = number_format(0, 2)  . " hrs";
-        $data[3]['noche'] = number_format(0, 2)  . " hrs";
-        $data[3]['total'] = number_format(0, 2)  . " hrs";
-
-        $data[4]['actividad'] = 'Yankee 1 - Jumbo Roll';
-        $data[4]['dia'] = number_format($y1_jumboroll_dia, 2)  . " hrs";
-        $data[4]['noche'] = number_format($y1_jumboroll_noche, 2)  . " hrs";
-        $data[4]['total'] = number_format($y1_jumboroll_total, 2)  . " hrs";
-
-        $data[5]['actividad'] = 'Yankee 2 - Jumbo Roll';
-        $data[5]['dia'] = number_format($y2_jumboroll_dia, 2)  . " hrs";
-        $data[5]['noche'] = number_format($y2_jumboroll_noche, 2)  . " hrs";
-        $data[5]['total'] = number_format($y2_jumboroll_total, 2)  . " hrs";
-
-        $data[6]['actividad'] = 'Caldera';
-        $data[6]['dia'] = number_format($hrsTrabajadas, 2)  . " hrs";
-        $data[6]['noche'] = number_format($hrsTrabajadas, 2)  . " hrs";
-        $data[6]['total'] = number_format($hrsTrabajadas * 2, 2)  . " hrs";
-
-        $data[7]['actividad'] = 'Planta de Tratamiento';
-        $data[7]['dia'] = number_format($hrsTrabajadas, 2)  . " hrs";
-        $data[7]['noche'] = number_format($hrsTrabajadas, 2)  . " hrs";
-        $data[7]['total'] = number_format($hrsTrabajadas * 2, 2)  . " hrs";
-
-        // return $array;
-        return response()->json($data);
-    }
-    public function getSubCostos($numOrden)
-    {
-        $data = array();
-        $i = 0;
-        //$query2 = DB::table('producciontest.orden_produccion')->where('numOrden', $key->numOrden)->get();
-        $costos_por_orden = DB::table('producciontest.inn_costo_orden_subtotal')->where('numOrden', $numOrden)->get();
-
-        foreach ($costos_por_orden as $key => $costo) {
-            $data[$i]['codigo'] = $costo->codigo;
-            $data[$i]['descripcion'] = $costo->descripcion;
-            $data[$i]['unidad_Medida'] = $costo->unidad_medida;
-            $data[$i]['cantidad'] = number_format($costo->cantidad, 2) . " kg";
-            $data[$i]['costo_Unitario'] =  number_format($costo->costo_unitario, 2);
-            $data[$i]['costo_Total'] =  number_format($costo->subtotal, 2);
-            $i++;
-        }
-
-        return response()->json($data);
+    .dt-right {
+      text-align: right;
     }
 
-    public function getQuimicos($numOrden)
-    {
-        $data = array();
-        $i = 0;
-
-        $quimico_maquina =   DB::table('producciontest.quimico_maquina')->select('producciontest.quimico_maquina.*', 'producciontest.quimicos.descripcion', 'producciontest.maquinas.nombre')
-            ->join('producciontest.quimicos', 'producciontest.quimico_maquina.idQuimico', '=', 'producciontest.quimicos.idQuimico')
-            ->join('producciontest.maquinas', 'producciontest.quimico_maquina.idMaquina', '=', 'producciontest.maquinas.idMaquina')
-            ->where('producciontest.quimico_maquina.numOrden', $numOrden)
-            ->get();
-
-        foreach ($quimico_maquina as $key => $qm) {
-            $data[$i]['quimico'] = $qm->descripcion;
-            $data[$i]['maquina'] = $qm->nombre;
-            $data[$i]['cantidad'] = number_format($qm->cantidad, 2)  . " kg";
-            $i++;
-        }
-
-        return response()->json($data);
+    .dt-left {
+      text-align: left;
+    }
+    .custom {
+        min-width: 70%;
+        min-height: 100%;
     }
 
-    public function getOtrosConsumos($numOrden)
-    {
-        $data = array();
-        $electricidad = DB::table('producciontest.electricidad')->select('inicial', 'final')
-            ->where('numOrden', $numOrden)
-            ->get()->first();
-
-        $consumo_agua =  DB::table('producciontest.consumo_agua')->select('inicial', 'final')
-            ->where('numOrden', $numOrden)
-            ->get()->first();
-
-        $consumo_gas = DB::table('producciontest.gas')->select('inicial', 'final')
-            ->where('numOrden', $numOrden)
-            ->get()->first();
-
-        $prodRealTon = DB::table('producciontest.inn_produccion_total')
-            ->where('numOrden', $numOrden)
-            ->get()->first();
-
-
-
-        //Electricidad
-        if ($electricidad) {
-            $inicialE = ($electricidad->inicial == '') ? 0 : $electricidad->inicial;
-            $finalE = ($electricidad->final == '') ? 0 : $electricidad->final;
-        } else {
-            $inicialE = 0;
-            $finalE = 0;
-        }
-        //Consumo de agua
-        if ($consumo_agua) {
-            $inicialA = ($consumo_agua->inicial == '') ? 0 : $consumo_agua->inicial;
-            $finalA = ($consumo_agua->final == '') ? 0 : $consumo_agua->final;
-        } else {
-            $inicialA = 0;
-            $finalA = 0;
-        }
-        //Consume de gas
-        if ($consumo_gas) {
-            $inicialG = ($consumo_gas->inicial == '') ? 0 : $consumo_gas->inicial;
-            $finalG = ($consumo_gas->final == '') ? 0 : $consumo_gas->final;
-        } else {
-            $inicialG = 0;
-            $finalG = 0;
-        }
-        //Electricidad
-        if ($finalE > 0) {
-            $data[0]['Einicial']          = number_format($inicialE, 2);
-            $data[0]['Efinal']            = number_format($finalE, 2);
-            $data[0]['EtotalConsumo']     =  number_format(($finalE - $inicialE), 2);
-            $data[0]['E_ConsumoSTD']      = number_format(((((($finalE - $inicialE) * 560) * 0.8) / ($prodRealTon->prod_real + $prodRealTon->merma_total)) * 1000), 2);
-            $data[0]['E_ConsumoPH']       = number_format((($finalE - $inicialE) * 560) * 0.8, 2); //Consumo 80% PH
-            $data[0]['E_ConsumoTTestimado'] = number_format((($finalE - $inicialE) * 560), 2); //Consumo 80% PH
-        } else {
-            $data[0]['Einicial']          = number_format(0, 2);
-            $data[0]['Efinal']            = number_format(0, 2);
-            $data[0]['EtotalConsumo']     = number_format(0, 2);
-            $data[0]['E_ConsumoSTD']      = number_format(0, 2);
-            $data[0]['E_ConsumoPH']      = number_format(0, 2);
-            $data[0]['E_ConsumoTTestimado'] = number_format((($finalE - $inicialE) * 560), 2); //Consumo 80% PH
-        }
-        //Consumo de Agua
-        if ($finalA > 0) {
-            $data[0]['Ainicial']         =  number_format($inicialA, 2);
-            $data[0]['Afinal']           =  number_format($finalA, 2);
-            $data[0]['AtotalConsumo']    =  number_format(($finalA - $inicialA), 2);
-        } else {
-            $data[0]['Ainicial']          = number_format(0, 2);
-            $data[0]['Afinal']           = number_format(0, 2);
-            $data[0]['AtotalConsumo']    = number_format(0, 2);
-        }
-        //Consumo de Gas
-        if ($finalG > 0) {
-            $data[0]['Ginicial']          = number_format($inicialG, 2);
-            $data[0]['Gfinal']            = number_format($finalG, 2);
-            $data[0]['GtotalConsumo']     =  number_format(($finalG - $inicialG), 2);
-            $data[0]['G_totalConsumoTon'] = number_format(((($finalG - $inicialG) / ($prodRealTon->prod_real + $prodRealTon->merma_total)) * 1000), 2);
-        } else {
-            $data[0]['Ginicial']          = number_format(0, 2);
-            $data[0]['Gfinal']           = number_format(0, 2);
-            $data[0]['GtotalConsumo']    = number_format(0, 2);
-            $data[0]['G_totalConsumoTon']   = number_format(0, 2);
-        }
-
-        return response()->json($data);
+    .custom_detail {
+        min-width: 80%;
+        min-height: 100%;
     }
-    public function getDetailSumary($numOrden)
-    {
-        $data = array();
-        $i = 0;
-        $j = 0;
-        $produccion_total = DB::table('producciontest.inn_produccion_total')
-            ->select('inn_produccion_total.*', 'producciontest.orden_produccion.*')
-            ->join('producciontest.orden_produccion', 'producciontest.inn_produccion_total.numOrden', '=', 'producciontest.orden_produccion.numOrden')
-            ->where('producciontest.inn_produccion_total.numOrden', $numOrden);
-        $pt = $produccion_total->get();
-        $idTetra = DB::table('producciontest.fibras')->select('idFibra')->where('descripcion', 'like', '%Tetrapack%')->get()->first();
-        foreach ($pt as $Orden => $key) {
-            $data[$i]['numOrden'] = $key->numOrden;
-            $data[$i]['merma_total'] = number_format($key->merma_total, 2);
-            $data[$i]['residuo_total'] = number_format($key->residuo_total, 2);
-            $data[$i]['lavadora_total'] = number_format($key->lavadora_total, 2);
-            $data[$i]['prod_real'] = number_format($key->prod_real, 2);
-            $data[$i]['prod_total'] = number_format($key->merma_total +  $key->prod_real, 2);
-            $data[$i]['fechaInicio'] = date('d/m/Y', strtotime($key->fechaInicio));
-            $data[$i]['fechaFinal'] = date('d/m/Y', strtotime($key->fechaFinal));
-            $data[$i]['horaInicio'] =  date('g:i a', strtotime($key->horaInicio));
-            $data[$i]['horaFinal'] = date('g:i a', strtotime($key->horaFinal));
-            $data[$i]['hrsTrabajadas'] = number_format($key->hrsTrabajadas, 2);
-            $productos = DB::table('producciontest.productos')->where('idProducto',  $key->producto)->get()->first();;
-            $data[$i]['producto'] = $productos->nombre;
-            $mp_directa_exist  = $this->getMateriaPrima($numOrden);
-            $mp_total =  DB::table('producciontest.mp_directa')->select(DB::raw('SUM(cantidad) as mp_directa'))
-                ->where('numOrden', $numOrden)
-                ->get()->first();
+
+    u.dotted {
+        border-bottom: 1px dashed red;
+        text-decoration: none;
+    }
+
+    .dBorder {
+        border: 1px solid #ccc !important;
+    }
+
+    .text-primary {
+        color: #4e73df !important;
+    }
+
+    .text-success {
+        color: #1cc88a !important;
+    }
+
+    .text-info {
+        color: #36b9cc !important;
+    }
+
+    .text-warning {
+        color: #f6c23e !important;
+    }
+
+    .border-left-primary {
+        border-left: .25rem solid #4e73df !important;
+    }
+
+    .border-left-success {
+        border-left: .25rem solid #1cc88a !important;
+    }
+
+    .border-left-info {
+        border-left: .25rem solid #36b9cc !important;
+    }
+
+    .border-left-warning {
+        border-left: .25rem solid #f6c23e !important;
+    }
+
+    .color-focus {
+        color: #0894ff !important;
+    }
+
+    .nav-tabs>.nav-item {
+        padding-left: 3.25rem;
+    }
+
+    @media (min-width: 768px) {
+        .nav-tabs .nav-item {
+            padding-left: 1.5rem;
+        }
+    }
+
+    @media (min-width: 992px) {
+        .nav-tabs .nav-item {
+            padding-left: 1.75rem;
+        }
+    }
+
+    @media (min-width: 1200px) {
+        .nav-tabs .nav-item {
+            padding-left: 2.25rem;
+        }
+    }
+
+    .swal2-shown {
+        padding-right: 0px !important;
+    }
+</style>
+@endsection
+@section('content')
+    <!-- ===============================================-->
+    <!--    Main Content-->
+    <!-- ===============================================-->
+    <main class="main" id="top">
+      <div class="container-fluid" data-layout="container">
+      
+        <div class="content">
+          @include('layouts.nav_gumadesk')
+          <div class="row mb-3 g-3">
+            <div class="col-lg-12 col-xxl-12">
+              <div class="card">
+              <div class="card-header">
+              <div class="row flex-between-center">
                 
-            $totalMPTPACK = DB::table('producciontest.mp_directa')->select(DB::raw('SUM(cantidad) as total'))
-                ->where('idFibra', $idTetra->idFibra)
-                ->where('numOrden', $numOrden)
-                ->get()->first();
-            //Calculo de los porcentajes
-            $porcentMermaYankeeDry = ($key->merma_total > 0  && $key->prod_real > 0) ?  (($key->merma_total / ($key->prod_real + $key->merma_total)) * 100) :   0;
-            $porcentLavadoraTetrapack = ($key->lavadora_total > 0 && $totalMPTPACK->total > 0) ? (($key->lavadora_total / $totalMPTPACK->total) * 100) : 0;
-            $porcentResiduosPulper = ($key->residuo_total > 0 && $mp_total->mp_directa > 0) ?  (($key->residuo_total / $mp_total->mp_directa) * 100) : 0;
-            $factorFibral =  (!is_null($mp_directa_exist) > 0 && $key->lavadora_total != '') ? (($mp_total->mp_directa - $key->lavadora_total) / ($key->prod_real + $key->merma_total)) : 0;
-            $data[$i]['costoBolson'] =  number_format(((($key->merma_total +  $key->prod_real)) / 4.5), 2);
-            $data[$i]['bolsones'] =   number_format(40000, 2);
+                <div class="col-4 col-sm-auto d-flex align-items-center pe-0">
+                <div class="w-100">
+                    <h6 class="mb-3 text-800">Un total de <strong class="text-dark" id="id_total_solicitud"> 0.00 </strong> <span id="id_title_solicitudes"></span></h6>
+                    
+                    <div class="row fs--1 fw-semi-bold text-500 g-0">
+                      <div class="col-auto d-flex align-items-center pe-3"><span class="dot bg-warning"></span><span>Retenido </span><span class="d-none d-md-inline-block d-lg-none d-xxl-inline-block" id="id_total_Retenido"> (0)</span></div>
+                      <div class="col-auto d-flex align-items-center pe-3"><span class="dot bg-info"></span><span>Ingreso Parcial </span><span class="d-none d-md-inline-block d-lg-none d-xxl-inline-block" id="id_total_Parcial"> (0)</span></div>
+                      <div class="col-auto d-flex align-items-center pe-3"><span class="dot bg-success"></span><span>Ingreso Total </span><span class="d-none d-md-inline-block d-lg-none d-xxl-inline-block" id="id_total_total"> (0)</span></div>
+                      <div class="col-auto d-flex align-items-center"><span class="dot bg-200"></span><span>En Proceso </span><span class="d-none d-md-inline-block d-lg-none d-xxl-inline-block" id="id_total_soli"> (0)</span></div>
+                    </div>
+                  </div>
 
-            $data[$i]['factorFibral'] = number_format($factorFibral, 2);
-            $data[$i]['porcentMermaYankeeDry'] = number_format($porcentMermaYankeeDry, 2);
-            $data[$i]['porcentLavadoraTetrapack'] = number_format($porcentLavadoraTetrapack, 2);
-            $data[$i]['porcentResiduosPulper'] = number_format($porcentResiduosPulper, 2);
-
-            //Calculo de la tonelada por dia
-            $Tonelada_dia =  (($key->prod_real) > 0 && ($key->hrsTrabajadas > 0)) ?  number_format(($key->prod_real / ($key->hrsTrabajadas / 24)) / 1000, 2) : 0;
-            $data[$i]['Tonelada_dia'] = $Tonelada_dia;
-
-            $i++;
-        }
-        return response()->json($data);
-    }
-
-    public function getHrasProducidas($numOrden)
-    {
-
-        $horas_efectivas = DB::table('producciontest.horas_efectivas')->select(DB::raw('SUM(TIME_TO_SEC(y1_dia)) as total_y1_Dia,
-        SUM(TIME_TO_SEC(y1_noche)) as total_y1_Noche, 
-        SUM(TIME_TO_SEC(y2_dia)) as total_y2_Dia,
-        SUM(TIME_TO_SEC(y2_noche)) as total_y2_Noche'))
-            ->where('numOrden', $numOrden)->where('estado', 1)->groupBy('numOrden')
-            ->get()->first();
-
-        if (!is_null($horas_efectivas)) {
-            $total_y1_Dia   = $horas_efectivas->total_y1_Dia / 3600;
-            $total_y1_Noche = $horas_efectivas->total_y1_Noche / 3600;
-            $total_y2_Dia   = $horas_efectivas->total_y2_Dia / 3600;
-            $total_y2_Noche = $horas_efectivas->total_y2_Noche / 3600;
-            $total          = $total_y1_Dia +  $total_y1_Noche  + $total_y1_Dia +  $total_y1_Noche +  $total_y2_Dia + $total_y2_Noche;
-            $totak_yk       = number_format($total / 3, 2);
-        } else {
-            $total_y1_Dia   = 0;
-            $total_y1_Noche = 0;
-            $total_y2_Dia   = 0;
-            $total_y2_Noche = 0;
-            $total          = 0;
-            $totak_yk       = 0;
-        }
+               
 
 
-        // YANKEE 1
-        $data[0]['nombre'] = 'Yankee  Dryer 1 '; //$horas_efectivas->;
-        $data[0]['dia'] =  number_format($total_y1_Dia, 2); //$horas_efectivas->;
-        $data[0]['noche'] = number_format($total_y1_Noche, 2);
-        $data[0]['total'] =  number_format($total_y1_Dia + $total_y1_Noche, 2);
+                  <h5 class="fs-0 mb-0 text-nowrap py-2 py-xl-0 invisible" >Historial de Solicitudes</h5> 
+                  <span id="id_rol" class="invisible">{{Session::get('rol')}}</span>
+                </div>
+                <div class="col-8 col-sm-auto ms-auto text-end ps-0">
+                  <div id="orders-actions">
+                  
+                    <button class="btn btn-falcon-default btn-sm" type="button" id="id_btn_setting">
+                      <span class="fas fa-filter" data-fa-transform="shrink-3 down-2"></span>
+                      <span class="d-none d-sm-inline-block ms-1">Filtro</span>
+                    </button>
+                    
+                    <button class="btn btn-falcon-default btn-sm" type="button" id="id_add_multi_row">
+                      <span class="fas fa-plus" data-fa-transform="shrink-3 down-2"></span>
+                      <span class="d-none d-sm-inline-block ms-1">Cargar</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>  
+            <div class="card-body p-0">
+              <div class="table-responsive scrollbar">
+                  <table class="table table-sm table-striped fs--1 mb-0 overflow-hidden" id="tbl_solicitudes" ></table>  
+              </div>
+            </div>
+              </div>
+            </div>
+            <div class="col-xxl-3" style="display:none">
+              <div class="card">
+                <div class="card-header d-flex flex-between-center py-2 border-bottom">
+                  <h6 class="mb-0">Resumen</h6>
+                  
+                </div>
+                <div class="card-body d-flex flex-column justify-content-between">
+                  <div class="row align-items-center">
+                    <div class="col-md-5 col-xxl-12 mb-xxl-1">
+                      <div class="position-relative">
+                        <div class="echart-most-leads my-2" data-echart-responsive="true"></div>
+                        <div class="position-absolute top-50 start-50 translate-middle text-center">
+                          <p class="fs--1 mb-0 text-400 font-sans-serif fw-medium">Total</p>
+                          <p class="fs-3 mb-0 font-sans-serif fw-medium mt-n2" >00</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-xxl-12 col-md-7">
+                      <hr class="mx-ncard mb-0 d-md-none d-xxl-block" />
+                      <div class="d-flex flex-between-center border-bottom py-3 pt-md-0 pt-xxl-3">
+                        <div class="d-flex">
+                        <span class="badge badge rounded-pill d-block badge-soft-secondary">Transito<span class="ms-1 fas fa-ban" data-fa-transform="shrink-2"></span></span> 
+                        </div>
+                        <p class="fs--1 text-500 mb-0 fw-semi-bold" id="id_count_transito">0.00</p>
+                        <h6 class="text-700 mb-0"> <span id="id_porcent_transito"> 00 </span> %</h6>
+                      </div>
+                      <div class="d-flex flex-between-center border-bottom py-3">
+                        <div class="d-flex">
+                          <span class="badge badge rounded-pill d-block badge-soft-warning">Retenido<span class="ms-1 fas fa-stream" data-fa-transform="shrink-2"></span></span>
+                        </div>
+                        <p class="fs--1 text-500 mb-0 fw-semi-bold" id="id_count_Retenido">0.00</p>
+                        <h6 class="text-700 mb-0"> <span id="id_porcent_Retenido"> 00 </span> %</h6>
+                      </div>                      <div class="d-flex flex-between-center border-bottom py-3">
+                        <div class="d-flex">
+                          <span class="badge badge rounded-pill d-block badge-soft-primary">Ingreso Parcial<span class="ms-1 fas fa-redo" data-fa-transform="shrink-2"></span></span>
+                        </div>
+                        <p class="fs--1 text-500 mb-0 fw-semi-bold" id="id_count_In_parci">0.00</p>
+                        <h6 class="text-700 mb-0"> <span id="id_porcent_In_parci"> 00 </span> %</h6>
+                      </div>
+                      <div class="d-flex flex-between-center border-bottom py-3 border-bottom-0 pb-0">
+                        <div class="d-flex">
+                          <span class="badge badge rounded-pill d-block badge-soft-success">Ingreso Total<span class="ms-1 fas fa-check" data-fa-transform="shrink-2"></span></span>
+                        </div>
+                        <p class="fs--1 text-500 mb-0 fw-semi-bold" id="id_count_In_Total">00</p>
+                        <h6 class="text-700 mb-0"> <span id="id_porcent_In_Total"> 00 </span> %</h6>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="card-footer bg-light p-0"><a class="btn btn-sm btn-link d-block py-2" href="#!"><br></a></div>
+              </div>
+            </div>
+          </div>
+          
+       
+          
+          @include('layouts.footer_gumadesk')
+        </div>
+            
+        <div class="modal fade" id="addNuevaSolicitud" tabindex="-1" role="dialog" aria-labelledby="authentication-modal-label" aria-hidden="true">
+          <div class="modal-dialog modal-xl mt-6" role="document">
+            <div class="modal-content border-0">
+              <div class="modal-header px-5 position-relative modal-shape-header bg-shape">
+                <div class="position-relative z-index-1 light">
+                  <h4 class="mb-0 text-white" id="id_mdl_nombre_articulo">Nombre del Articulo a Modificar</h4>
+                  <p class="fs--1 mb-0 text-white" ><span id="id_mdl_articulo">000000</span>  - #<a href="!#" class="text-white"> <strong id="id_row"># 000 </strong></a> </p> 
+                </div>
+                <button class="btn-close btn-close-white position-absolute top-0 end-0 mt-2 me-2" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body py-4 px-5">
+                <div class="mb-3" style="display:none">
+                  <label for="organizerSingle">Articulo</label>
+                    <select class="form-select js-choice" id="organizerSingle" size="1" name="organizerSingle" data-options='{"removeItemButton":true,"placeholder":true}'>
+                      <option value="">Select organizer...</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                  <label class="fs-0" for="eventStartDate">Fecha de Solicitud</label>
+                  <input class="form-control datetimepicker" id="eventStartDate" type="text" required="required" name="startDate" placeholder="yyyy/mm/dd" data-options='{"static":"true","enableTime":"false","dateFormat":"Y-m-d"}' />
+                </div>
+                <div class="row gx-2">
+                  <div class="mb-3 col-sm-12">
+                    <label class="form-label" for="txt_proyeccion_mensual">Proyeccion Mensual</label>
+                    <input class="form-control" type="text" autocomplete="on" id="id_txt_proyeccion_mensual" onkeypress="soloNumeros(event.keyCode, event, $(this).val())"/>
+                  </div>
+                </div>                
+                <div class="mb-3">
+                  <button class="btn btn-primary d-block w-100 mt-3" id="id_send_info" type="submit" name="submit">Guardar</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
 
-        //YANKEE 2
-        $data[1]['nombre'] = 'Yankee  Dryer 2';
-        $data[1]['dia'] = number_format($total_y2_Dia, 2);
-        $data[1]['noche'] = number_format($total_y2_Noche, 2);
-        $data[1]['total'] = number_format($total_y2_Dia + $total_y2_Noche, 2);
-        //Total de hiras efectivas
-        $data[1]['totalYk'] = number_format($totak_yk, 2);
+        <div class="modal fade" id="addMultiRow" tabindex="-1" role="dialog" aria-labelledby="authentication-modal-label" aria-hidden="true">
+          <div class="modal-dialog modal-xl mt-6" role="document">
+            <div class="modal-content border-0">
+              <div class="modal-header px-5 position-relative modal-shape-header bg-shape">
+                <div class="position-relative z-index-1 light">
+                  <h4 class="mb-0 text-white" id="authentication-modal-label">Multiples Filas</h4>
+                  <p class="fs--1 mb-0 text-white">Puede descar el formato para carga la información dando click <a href="{{ asset('Formatos/Formato_Proyecciones.xlsx') }}" class="text-white" >Aqui </a></p>
+                </div>
+                <button class="btn-close btn-close-white position-absolute top-0 end-0 mt-2 me-2" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body py-4 px-5 ">
+                <div class="row">
+                  <div class="col-md-5">
+                    <input class="form-control" id="upload" type=file  name="files[]"/>
+                  </div>
+                  <div class="col-md-2">
+                    <select class="form-select" id="IdSelectMes">
+                        <?php                        
+                            $mes = date("m");
 
-        //return $data;
-        return response()->json($data);
-    }
+                            $meses = array('none','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre');
 
-    public function getMes($date)
-    {
-        $meses = [
-            "January" => "Enero",
-            "February" => "Febrero",
-            "March" => "Marzo",
-            "April" => "Abril",
-            "May" => "Mayo",
-            "June" => "Junio",
-            "July" => "Julio",
-            "August" => "Agosto",
-            "September" => "Septiembre",
-            "October" => "Octubre",
-            "November" => "Noviembre",
-            "December" => "Diciembre"
-        ];
+                            for ($i= 1; $i <= 12 ; $i++) {
+                              if ($i==$mes) {
+                                  echo'<option selected value="'.$i.'">'.$meses[$i].'</option>';
+                              }else {
+                                  echo'<option value="'.$i.'">'.$meses[$i].'</option>';
+                              }
+                            }
+                        ?>
+                    </select>
+                  </div>
+                  <div class="col-md-2">
+                      <select class="form-select" id="IdSelectAnnio">
+                        <?php
+                            $year = date("Y");
+                            for ($i= 2018; $i <= $year ; $i++) {
+                                if ($i==$year) {
+                                    echo'<option selected value="'.$i.'">'.$i.'</option>';
+                                }else {
+                                    echo'<option value="'.$i.'">'.$i.'</option>';
+                                }
+                            }
+                        ?>
+                      </select>
+                  </div>
+                  
+                  <div class="col-md-3">
+                        <div class="input-group">
+                          <input class="form-control  shadow-none search" type="search"  id="id_searh_table_Excel" placeholder="Ingrese informacion a buscar." aria-label="search" />
+                          <div class="input-group-text bg-transparent">
+                            <span class="fa fa-search fs--1 text-600"></span>
+                          </div>
+                          <div class="input-group-text bg-transparent" id="id_get_history">
+                            <span class="fa fa-history fs--1 text-600"></span>
+                          </div>
+                        </div>
+                    </div>
+                </div>
+                  
+                  
 
-        $clave = array_search($date, $meses);
-        $result = $meses[$date];
+                  <div class="mb-3 mt-3">
+                    
 
-        return $result;
-    }
+                      <div class="notification" href="#!">
+                        
+                        <div class="notification-body">
+                        <table class="table table-hover table-striped overflow-hidden" id="tbl_excel" style="width:100%"></table>  
+                    
+                        </div>
+                          </div>
 
-    public function getDataFormat()
-    {
-        $data = array();
-        $i = 0;
 
-        $produccion_total = DB::table('producciontest.inn_produccion_total')->select('inn_produccion_total.*', 'producciontest.orden_produccion.*')
-            ->join('producciontest.orden_produccion', 'producciontest.inn_produccion_total.numOrden', '=', 'producciontest.orden_produccion.numOrden')
-            ->where('producciontest.orden_produccion.estado', 1);
+                    
+                  </div>
+                              
+                  <div class="mb-3">
+                    <button class="btn btn-primary d-block w-100 mt-3" id="id_send_data_excel" type="submit" name="submit">Cargar</button>
+                  </div>
+              </div>
+            </div>
+          </div>
+        </div>
 
-        $obj = $produccion_total->get();
-        foreach ($obj as $Orden => $key) {
-            $data[$i]['numOrden'] = $key->numOrden;
-            $co_subTT = DB::table('producciontest.inn_costo_orden_subtotal')->select(DB::raw('SUM(subtotal) as total'))->where('numOrden',  $key->numOrden)->get();
+        <div class="modal fade" id="tbl_setting" tabindex="-1" role="dialog" aria-labelledby="authentication-modal-label" aria-hidden="true">
+          <div class="modal-dialog modal-xl mt-6" role="document">
+            <div class="modal-content border-0">
+              <div class="modal-header px-5 position-relative modal-shape-header bg-shape">
+                <div class="position-relative z-index-1 light">
+                  <h4 class="mb-0 text-white" id="authentication-modal-label">Filtros</h4>
+                  <p class="fs--1 mb-0 text-white">Filtrado de información a aplicar</p>
+                </div>
+                <button class="btn-close btn-close-white position-absolute top-0 end-0 mt-2 me-2" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body py-4 px-5">
+                <div class="mb-3">
+                  <label for="">Mes</label>
+                  <select class="form-select" id="id_select_nmes">
+                      <?php                        
+                            $mes = date("m");
 
-            if (is_null($co_subTT)) {
-                $data[$i]['costo_total'] = 0;
-            } else {
-                foreach ($co_subTT as $costo_subTotal => $cst) {
-                    $data[$i]['costo_total'] = $cst->total;
-                }
-            }
+                            $meses = array('none','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre');
 
-            $data[$i]['fechaInicio'] =  date('d/m/Y', strtotime($key->fechaInicio)) . ' ' .  date('g:i a', strtotime($key->horaInicio));
-            $data[$i]['fechaFinal'] = date('d/m/Y', strtotime($key->fechaFinal)) . ' ' . date('g:i a', strtotime($key->horaFinal));
-            $data[$i]['anio'] =  date('Y', strtotime($key->fechaInicio));
-            $nameMonth = date('F', strtotime($key->fechaInicio));
+                            for ($i= 1; $i <= 12 ; $i++) {
+                              if ($i==$mes) {
+                                  echo'<option selected value="'.$i.'">'.$meses[$i].'</option>';
+                              }else {
+                                  echo'<option value="'.$i.'">'.$meses[$i].'</option>';
+                              }
+                            }
+                        ?>
+                        
+                    </select>
+                </div>
+                
+                <div class="row gx-2">
+                  <div class="mb-3 col-sm-12">
+                  <label for="">Año</label>
+                  <select class="form-select" id="id_select_annio">
+                        <?php
+                            $year = date("Y");
+                            for ($i= 2018; $i <= $year ; $i++) {
+                                if ($i==$year) {
+                                    echo'<option selected value="'.$i.'">'.$i.'</option>';
+                                }else {
+                                    echo'<option value="'.$i.'">'.$i.'</option>';
+                                }
+                            }
+                        ?>
+                  </select>
+                  </div>
+                </div>                
+                <div class="mb-3">
+                  <button class="btn btn-primary d-block w-100 mt-3" id="id_send_filtros" type="submit" name="submit">Aplicar</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+    
+    <!-- ===============================================-->
+    <!--    End of Main Content-->
+    <!-- ===============================================-->
+
+@endsection('content')                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    te('F', strtotime($key->fechaInicio));
             $mes = $this->getMes($nameMonth);
             $data[$i]['mes'] = $mes;
 

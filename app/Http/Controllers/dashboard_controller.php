@@ -18,12 +18,9 @@ class dashboard_controller extends Controller {
   public function index() {
 
     $this->agregarDatosASession();
-
-
       $data = [
           'name' =>  'GUMA@NET'
-      ];
-      
+      ];      
       return view('pages.dashboard',$data);
   }
 
@@ -91,6 +88,20 @@ class dashboard_controller extends Controller {
   public function getValBodegas() {
     $obj = dashboard_model::getValBodegas();
     return response()->json($obj);
+  }
+
+  public function getSaleCadena(Request $request) {
+    if($request->isMethod('post')) {
+      $obj = dashboard_model::getSaleCadena($request);
+      return response()->json($obj);
+    }
+  }
+
+  public function getSaleCadenaDetalle(Request $request) {
+    if($request->isMethod('post')) {
+      $obj = dashboard_model::getSaleCadenaDetalle($request);
+      return response()->json($obj);
+    }
   }
 
   public function ventaXCategorias(Request $request) {

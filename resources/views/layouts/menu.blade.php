@@ -17,13 +17,14 @@
     <div class="row mt-4">
       <div class="col-sm-12">
         <ul class="nav flex-column">
+       
           @foreach ($menus as $menu)
-          <li class="nav-item">
-            <a class="nav-link text-secondary" href="{{url($menu['url'])}}">
-              <span data-feather="{{$menu['icono']}}" class="mr-3"></span>
-              {{$menu['nombre']}}
-            </a>
-          </li>
+            <li class="nav-item">
+              <a class="nav-link text-secondary" href="{{url($menu['url'])}}">
+                <span data-feather="{{$menu['icono']}}" class="mr-3"></span>
+                {{$menu['nombre']}}
+              </a>
+            </li>
           @endforeach
           <li class="nav-item">
           <a class="nav-link text-danger font-weight-bold" href="{{ route('logout') }}" onclick="event.preventDefault(); document.getElementById('logout-form').submit();"><span data-feather="log-out" class="mr-3"></span> Cerrar sesion

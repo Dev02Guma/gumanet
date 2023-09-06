@@ -46,7 +46,7 @@
 <link rel="stylesheet" type="text/css" href="{{ url('css/jquery.dataTables.min.css') }}">
 <link rel="stylesheet" type="text/css" href="{{ url('css/bootstrap-select.css') }}">
 <!--Import Google Icon Font-->
-<link href="http://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 </head>
 <body>
 @include('layouts.menu')
@@ -125,8 +125,11 @@
 <script src="{{ url('js/highcharts-3d.js') }}"></script>
 <script src="{{ url('js/all.min.js') }}"></script>
 <script src="{{ url('js/popper.min.js') }}"></script>
+<script src="{{ url('js/bootstrap.bundle.min.js') }}"></script>
+<script src="{{ url('js/bootstrap.bundle.js') }}"></script>
 <script src="{{ url('js/bootstrap.min.js') }}"></script>
 <script src="{{ url('js/bootstrap-select.js') }}"></script>
+<script src="{{ url('js/bootstrap.js') }}"></script>
 <script src="{{ url('js/ext/moment.js') }}"></script>
 <script src="{{ url('js/ext/daterangepicker.js') }}"></script>
 <script src="{{ url('js/jquery.dataTables.min.js') }}"></script>

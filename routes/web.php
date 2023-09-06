@@ -35,7 +35,9 @@ Route::get('/Roles','rol@index');
 Route::get('/recuProyectos','recupProyectos_controller@index');
 Route::get('/ordenesCompra', 'ordenesCompra_controller@index');
 Route::get('/DetalleOrden', 'DetalleOrdenController@index');
-
+Route::get('/Comiciones', 'ComisionController@index')->name('/Comiciones');
+Route::get('/getDataComiciones', 'ComisionController@getDataComiciones')->name('/getDataComiciones');
+Route::get('/getHistoryItem', 'ComisionController@getHistoryItem')->name('/getHistoryItem');
 
 //RUTAS LOGIN
 Route::get('/','Auth\LoginController@showLoginForm');//pagina login
@@ -227,7 +229,7 @@ Route::get('Cartera', 'recibos_controller@getReporte');
 Route::get('getCartera', 'recibos_controller@getCartera');
 Route::get('getOneRecibos', 'recibos_controller@getOneRecibos');
 
-Route::post('getAttachFile', 'recibos_controller@getAttachFile');
+Route::get('getAttachFile', 'recibos_controller@getAttachFile');
 Route::post('push_recibo', 'recibos_controller@push_recibo');
 Route::post('push_verificado', 'recibos_controller@push_verificado');
 Route::get('print_resumen', 'recibos_controller@print_resumen');
@@ -246,4 +248,19 @@ Route::get('/dtaVentaExportacion/{xbolsones}/{segmentos}','dashboard_controller@
 Route::post('AnularFactura', 'exportacion_controller@AnularFactura')->name('AnularFactura');
 
 Route::get('/ArticuloDetalles/{articulo}/{unidad}','inventario_controller@getArticuloDetalles')->name('ArticuloDetalles');;
+
+Route::get('Promocion', 'PromocionController@getPromocion')->name('Promocion');
+Route::get('getPromoMes', 'PromocionController@getPromoMes')->name('getPromoMes');
+
+Route::get('inventarioInnova', 'InnovaController@inventarioInnova')->name('inventarioInnova');
+Route::get('getKerdex', 'InnovaController@getKerdex')->name('getKerdex');
+Route::get('getResumenKardex', 'InnovaController@getResumenKardex')->name('getRasumenKardex');
+Route::get('getMateriaPrima', 'InnovaController@getMateriaPrima')->name('getMateriaPrima');
+
+
+Route::get('getStatsInn', 'InnovaController@getStatsInn')->name('getStatsInn');
+Route::get('saveInnStat', 'InnovaController@saveInnStat')->name('saveInnStat');
+
+Route::post('getSaleCadena', 'dashboard_controller@getSaleCadena');
+Route::post('getSaleCadenaDetalle', 'dashboard_controller@getSaleCadenaDetalle')->name('getSaleCadenaDetalle');
 

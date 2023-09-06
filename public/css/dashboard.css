@@ -104,3 +104,14 @@ body {
   border-color: transparent;
   box-shadow: 0 0 0 3px rgba(255, 255, 255, .25);
 }
+
+.my-custom-scrollbar {
+  position: relative;
+  width: 800px;
+  height: 400px;
+  overflow: auto;
+}
+
+.colorTable {
+  background-color:#b2e9b2;
+}

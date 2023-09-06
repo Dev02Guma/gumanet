@@ -1,6 +1,7 @@
 <?php
 namespace App\Http\Controllers;
 
+use Auth;
 use App\inventario_model;
 use Illuminate\Http\Request;
 use App\Models;
@@ -11,6 +12,9 @@ use PHPExcel_Style;
 use PHPExcel_Style_Border;
 use PHPExcel_Style_Fill;
 use App\Company;
+use App\InnovaKardex;
+use App\InnovaModel;
+use Illuminate\Support\Facades\Session;
 
 class inventario_controller extends Controller
 {
@@ -20,13 +24,21 @@ class inventario_controller extends Controller
 
 	public function index() {
 		$this->agregarDatosASession();
+		$companie = Session::get('company_id');
+
 
 		$data = array(
 			'page' 				=> 'Inventario',
 			'name' 				=> 'GUMA@NET',
 			'hideTransaccion' 	=> ''
 		);
-		return view('pages.inventario', $data);
+		
+		if($companie == 4){
+      $inventario = InnovaModel::getAll();
+			return view('pages.inventarioINN', compact('inventario'));
+		}else{
+			return view('pages.inventario', $data);
+		}
 	}
 	public function getArticuloDetalles($Articulo,$Unidad) {
 	$obj = inventario_model::getArticuloDetalles($Articulo,$Unidad);
