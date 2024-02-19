@@ -8,7 +8,8 @@ use App\Models;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Company;
-
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Redis;
 
 class dashboard_controller extends Controller {
   
@@ -90,6 +91,33 @@ class dashboard_controller extends Controller {
     return response()->json($obj);
   }
 
+  public function getSaleCadena(Request $request) {
+    if($request->isMethod('post')) {
+      $obj = dashboard_model::getSaleCadena($request);
+      return response()->json($obj);
+    }
+  }
+
+  public function getSaleInstitucion(Request $request) {
+    if($request->isMethod('post')) {
+      $obj = dashboard_model::getSaleInstitucion($request);
+      return response()->json($obj);
+    }
+  }
+
+  public function getSaleCadenaDetalle(Request $request) {
+    if($request->isMethod('post')) {
+      $obj = dashboard_model::getSaleCadenaDetalle($request);
+      return response()->json($obj);
+    }
+  }
+  public function getSaleDetalleInsta(Request $request) {
+    if($request->isMethod('post')) {
+      $obj = dashboard_model::getSaleDetalleInsta($request);
+      return response()->json($obj);
+    }
+  }
+
   public function ventaXCategorias(Request $request) {
     if($request->isMethod('post')) {
       $obj = dashboard_model::ventaXCategorias($request->input('mes'),$request->input('anio'),$request->input('cate'));
@@ -97,10 +125,53 @@ class dashboard_controller extends Controller {
     }
   }
 
-  public function getDataGraficas($mes, $anio, $xbolsones) {
-    $obj = dashboard_model::getDataGraficas($mes, $anio, $xbolsones);
-    return response()->json($obj);
+  //FUNCIONES QUE CALCULA EL DASHBOARD
+  public function getRealVentasMensuales($xbolsones,$segmentos) {
+    $Key = 'getRealVentasMensuales_'.$segmentos."_".$xbolsones;
+    $cached = Redis::get($Key);
+    if ($cached) {
+        $obj = $cached;
+    } else {
+        $obj = json_encode(dashboard_model::getRealVentasMensuales($xbolsones,$segmentos));
+        Redis::setex($Key, 900, $obj); 
+    }
+    return response()->json(json_decode($obj));
   }
+  public function getDataGraficas($mes, $anio, $xbolsones) {
+    $Key = 'getDataGraficas_'.$mes."_".$anio."_".$xbolsones;
+    $cached = Redis::get($Key);
+    if ($cached) {
+        $obj = $cached;
+    } else {
+        $obj = json_encode(dashboard_model::getDataGraficas($mes, $anio, $xbolsones));
+        Redis::setex($Key, 900, $obj); 
+    }
+    return response()->json(json_decode($obj));
+  }
+  public function getComportamiento($elemento) {
+    $Key = 'getComportamiento_'.$elemento;
+    $cached = Redis::get($Key);
+    if ($cached) {
+        $obj = $cached;
+    } else {
+        $obj = json_encode(dashboard_model::getComportamiento($elemento));
+        Redis::setex($Key, 900, $obj); 
+    }
+    return response()->json(json_decode($obj));
+  }
+  
+  public function getVentasMensuales($xbolsones) {
+    $Key = 'getVentasMensuales'.$xbolsones;
+    $cached = Redis::get($Key);
+    if ($cached) {
+        $obj = $cached;
+    } else {
+        $obj = json_encode(dashboard_model::getVentasMensuales($xbolsones));
+        Redis::setex($Key, 300, $obj); 
+    }
+    return response()->json(json_decode($obj));
+  }
+
   public function getDataGrafSelect($mes, $anio, $xbolsones,$Segmentos) {
     $obj = dashboard_model::get_Ventas_diarias($mes, $anio, 1 ,$xbolsones,$Segmentos);
     return response()->json($obj);
@@ -118,22 +189,11 @@ class dashboard_controller extends Controller {
 
 
 
-  public function getComportamiento($elemento) {
-    $obj = dashboard_model::getComportamiento($elemento);
-    return response()->json($obj);
-  }
 
 
-  public function getVentasMensuales($xbolsones) {
-    $obj = dashboard_model::getVentasMensuales($xbolsones);
-    return response()->json($obj);
-  }
 
 
-  public function getRealVentasMensuales($xbolsones,$segmentos) {
-    $obj = dashboard_model::getRealVentasMensuales($xbolsones,$segmentos);
-    return response()->json($obj);
-  }
+ 
 
   public function getVentasExportacion($xbolsones,$segmentos) {
     $obj = dashboard_model::getVentasExportacion($xbolsones,$segmentos);

@@ -17,8 +17,8 @@
         "info": false,
         "bPaginate": true,
         "lengthMenu": [
-            [10,20, -1],
-            [10,20, "Todo"]
+            [5,20, -1],
+            [5,20, "Todo"]
         ],
         "language": {
             "zeroRecords": "NO HAY COINCIDENCIAS",
@@ -50,203 +50,153 @@
         vTablePedido.search(this.value).draw();
     });
     
-    function OpenModal(Promo){
-        var addMultiRow = document.querySelector(Selectors.ADD_ITEM_RUTA);
-        var modal = new window.bootstrap.Modal(addMultiRow);
-        modal.show();
+if ( $("#id_spinner_load").hasClass('visible') ) {
+        $("#id_spinner_load").removeClass('visible');
+        $("#id_spinner_load").addClass('invisible');
+}
 
-        
-        $('#id_num_prom').html(Promo.id);
-        $('#id_lbl_nombre').html(Promo.Titulo);
-        
-        $('#nombre_ruta_modal').html(Promo.vendor.NOMBRE);        
-        $('#nombre_ruta_zona_modal').html(Promo.vendor.VENDEDOR + " | " + Promo.zona.Zona);
-        $('#id_lbl_fechas').html("Valido desde " + Promo.fecha_ini + " al " + Promo.fecha_end);
-        
-        //BluidTable(Detalles)
-        getDetalles(Promo.id)
-    }
-    function getDetalles(IdPromo) {
-        $.ajax({
-                url: "getDetalles",
-                type: 'GET',
-                data: {
-                    IdPromo         : IdPromo
-                },
-                async: true,
-                success: function(response) {
-                    BluidTable(response)
-                }
-            })
-    }
-    
-    function BluidTable(Obj) {
-        data_array = Obj
-        dta_table_header = [
-            {"title": "Index","data": "id"},
-            {"data": "Articulo",
-                "render": function(data, type, row, meta) {
-                return `<div class="d-flex align-items-center position-relative">                                        
-                            <div class="flex-1 ">
-                                <h6 class="mb-0 fw-semi-bold"><div class="stretched-link text-primary">`+ row.Descripcion +`</div></h6>
-                                <p class="text-500 fs--2 mb-0">`+ row.Articulo +`  </p>
-                            </div>
-                        </div>`
-            }},
-            {"data": "",
-                "render": function(data, type, row, meta) {
-                return `<div class="pe-4 border-sm-end border-200">                                    
-                                    <div class="d-flex align-items-center">
-                                        <h5 class="fs-0 text-900 mb-0 me-2">`+ numeral(row.Precio).format('0,0,00.00')  +` </h5>
-                                    </div>
-                                </div> `
-            }},
-            {"data": "",
-                "render": function(data, type, row, meta) {
-                return `<div class="pe-4 border-sm-end border-200">                                    
-                                    <div class="d-flex align-items-center">
-                                        <h5 class="fs-0 text-900 mb-0 me-2">`+ row.NuevaBonificacion +` </h5>
-                                    </div>
-                                </div> `
-            }},
-            {"data": "",
-                "render": function(data, type, row, meta) {
-                return `<div class="pe-4 border-sm-end border-200">
-                                    <div class="d-flex align-items-center">
-                                        <h5 class="fs-0 text-900 mb-0 me-2">`+  numeral(row.ValorVinneta).format('0,0,00.00')  +` </h5>
-                                    </div>
-                                </div> `
-            }},
-            {"data": "",
-                "render": function(data, type, row, meta) {
-                return `<div class="pe-4 border-sm-end border-200">
-                                    <div class="d-flex align-items-center">
-                                        <h5 class="fs-0 text-900 mb-0 me-2">`+ numeral(row.Promedio_VAL).format('0,0,00.00') +`</h5>
-                                    </div>
-                                </div> `
-            }},
-            {"data": "",
-                "render": function(data, type, row, meta) {
-                return `<div class="pe-4 border-sm-end border-200">
-                                    <div class="d-flex align-items-center">
-                                        <h5 class="fs-0 text-900 mb-0 me-2">`+  numeral(row.ValMeta).format('0,0,00.00') +` </h5>
-                                    </div>
-                                </div> `
-            }},
-            {"data": "",
-                "render": function(data, type, row, meta) {
-                return `<div class="pe-4 border-sm-end border-200">
-                                    
-                                    <div class="d-flex align-items-center">
-                                        <h5 class="fs-0 text-900 mb-0 me-2">`+  numeral(row.Venta).format('0,0,00.00') +` </h5>
-                                        <span class="badge rounded-pill bg-primary text-light">`+  numeral(row.PromVenta).format('0,0,00.00') +`%</span>
-                                    </div>
-                                </div> `
-            }},
-            {"data": "",
-                "render": function(data, type, row, meta) {
-                return `<div class="pe-4 border-sm-end border-200">
-                                    <div class="d-flex align-items-center">
-                                        <h5 class="fs-0 text-900 mb-0 me-2">`+ row.Promedio_UND +`</h5>
-                                    </div>
-                                </div> `
-            }},
-            {"data": "",
-                "render": function(data, type, row, meta) {
-                return `<div class="pe-4 border-sm-end border-200">
-                                    <div class="d-flex align-items-center">
-                                        <h5 class="fs-0 text-900 mb-0 me-2">`+ row.MetaUnd +` </h5>
-                                    </div>
-                                </div> `
-            }},
-            {"data": "",
-                "render": function(data, type, row, meta) {
-                return `<div class="pe-4 border-sm-end border-200">
-                                    <div class="d-flex align-items-center">
-                                        <h5 class="fs-0 text-900 mb-0 me-2"> `+ row.VentaUND +` </h5>
-                                        <span class="badge rounded-pill bg-primary text-light">`+ numeral(row.PromVentaUND).format(0,0.00) +` %</span>
-                                    </div>
-                                </div> `
-            }},                    
-        ]
-        table_render('#tbl_excel',data_array,dta_table_header,false)
-    }
 
-    function table_render(Table,datos,Header,Filter){
+$(document).on('click', '#exp_more', function(ef) {
+    var table = $('#table_promociones').DataTable();
+    var tr = $(this).closest('tr');
+    var row = table.row(tr);
+    var articulo = $(this).attr('idArt');
+    var ini = $(this).attr('ini');
+    var ends = $(this).attr('ends');
+    var meta = $(this).attr('met');
+    var data = table.row($(this).parents('tr')).data();
+
+    if (row.child.isShown()) {
+        row.child.hide();
+        tr.removeClass('shown');
         
-        var txt_ttMetaValor = 0 ;
-        var txt_ttVenta     = 0 ;
-        var txt_ttMetaUND   = 0 ;
-        var txt_ttVentaUND  = 0 ;
+    } else {
+        //VALIDA SI EN LA TABLA HAY TABLAS SECUNDARIAS ABIERTAS
+        table.rows().eq(0).each( function ( idx ) {
+            var row = table.row( idx );
 
-        $(Table).DataTable({
-            "data": datos,
-            "destroy": true,
-            "info": false,
-            "bPaginate": true,
-            "order": [
-                [0, "asc"]
-            ],
-            "lengthMenu": [
-                [5,10, -1],
-                [5,10, "Todo"]
-            ],
-            "language": {
-                "zeroRecords": "NO HAY COINCIDENCIAS",
-                "paginate": {
-                    "first": "Primera",
-                    "last": "Última ",
-                    "next": "Siguiente",
-                    "previous": "Anterior"
-                },
-                "lengthMenu": "MOSTRAR _MENU_",
-                "emptyTable": "-",
-                "search": "BUSCAR"
-            },
-            'columns': Header,
-            "columnDefs": [
-                {
-                    "visible": false,
-                    "searchable": false,
-                    "targets": [0]
-                },
-                { "width":"150%", "targets": [ 1 ] }
-            ],
-            "createdRow": function( row, data, dataIndex ) {    
-                var intVal = function ( i ) {
-                    return typeof i === 'string' ?
-                    i.replace(/[^0-9.]/g, '')*1 :
-                    typeof i === 'number' ?
-                    i : 0;
-                };
-                txt_ttMetaValor += intVal(data.ValMeta)
-                txt_ttVenta += intVal(data.Venta)
-                txt_ttMetaUND += intVal(data.MetaUnd)
-                txt_ttVentaUND += intVal(data.VentaUND)
-                
-
-              
-            },
-            rowCallback: function( row, data, index ) {
-                if ( data.Index < 0 ) {
-                    $(row).addClass('table-danger');
-                } 
+            if ( row.child.isShown() ) {
+                row.child.hide();                
             }
-        });
-        $('#id_ttMetaValor').text("C$ " + numeral(txt_ttMetaValor).format('0,0.00'));
-        $('#id_ttVenta').text("C$ " + numeral(txt_ttVenta).format('0,0.00'));
-        $('#id_ttMetaUND').text(numeral(txt_ttMetaUND).format('0,0'));
-        $('#id_ttVentaUND').text(numeral(txt_ttVentaUND).format('0,0'));
-        if(!Filter){
-            $(Table+"_length").hide();
-            $(Table+"_filter").hide();
-        }
+        } );
 
+        format(row.child, articulo, ini, ends, meta);
+        tr.addClass('shown');
+        
     }
 
-    if ( $("#id_spinner_load").hasClass('visible') ) {
-            $("#id_spinner_load").removeClass('visible');
-            $("#id_spinner_load").addClass('invisible');
+    
+
+});
+
+
+
+function format ( callback, articulo, ini, ends, meta) {
+    var thead = tbody = '';
+    const anno = new Date();
+    
+    tabla = `<table class="table table-striped table-bordered table-sm">
+        <thead class="text-center bg-secondary text-light">
+            <tr> <th class="text-center"><b>Cargando...</b></th>
+            </tr>
+        </thead>
+    </table>`;
+
+    callback(tabla).show();
+
+                   
+    $.ajax({//AGREGAR PARAMETRO DE FECHA DE INICIO Y FI
+        type: "get",
+        url: "getPromoMes",
+        data:{
+            articulo: articulo,
+            ini:    ini,
+            ends:   ends
+        },
+        success: function ( data ) { 
+            var meses = ["ENE.", "FEB.", "MAR.", "ABR.", "MAY.", "JUN.", "JUL.", "AGO.", "SEP.", "OCT.", "NOV.", "DIC."];
+
+            thead +=`<table class="table table-striped table-bordered table-sm">
+                <thead class="text-center bg-secondary text-light">
+                    <tr>
+                        <th class="center"></th>`;
+
+                        $.each(data[0],function(key, registro) { 
+                            thead +=  '<th class="text-center">' + meses[registro.mes-1] + ' ' + registro.years + '</th>';
+                        });
+                        
+                        
+            thead += `</tr>
+                </thead>
+                <tbody>`; 
+           if (data.length==0) {
+                tbody +=`<tr>
+                            <td colspan='13'><center><b>CERO VENTAS</b></center></td>
+                        </tr>`;
+                callback(thead + tbody).show();
+            }
+
+                tbody +='<tr>' +
+                        '<td class="text-center bg-secondary text-light">C$</td>';
+                        $.each(data[0],function(key, registro) { 
+                            tbody +=  '<td class="text-center">' + Number(Number(registro.VENTA_NETA).toFixed(2)).toLocaleString('en') + '</td>';
+                        });
+                tbody += '</tr>'+
+                        '<tr>' +
+                        '<td class="text-center bg-secondary text-light">UND</td>';
+                        $.each(data[0],function(key, registro) { 
+                            porc = (Number(registro.CANTIDAD_FACT).toFixed(0)/meta) * 100;
+                            if((meta - Number(registro.CANTIDAD_FACT).toFixed(0)) <= 0){  
+                                tbody +=  '<td class="text-center"><font color="green">' + Number(Number(registro.CANTIDAD_FACT).toFixed(2)).toLocaleString('en') + '</font> / ' + Number(Number(meta).toFixed(2)).toLocaleString('en') + ' (' +Number(porc).toFixed(1)+'%)</td>';
+                            }else{
+                                tbody +=  '<td class="text-center"><font color="red">' + Number(Number(registro.CANTIDAD_FACT).toFixed(2)).toLocaleString('en') + '</font> / ' + Number(Number(meta).toFixed(2)).toLocaleString('en') + ' (' +Number(porc).toFixed(1)+'%)</td>';
+                            }
+                        });
+                tbody += '</tr>';
+               
+            tbody += `</tbody></table>`;
+            
+            temp = `
+                <div style="
+                margin: 0 auto;
+                height: auto;
+                width:100%;
+                overflow: auto">
+                <pre dir="ltr" style="margin: 0px;padding:6px;">
+                    `+thead+tbody+`
+                </pre>
+                </div>`;
+
+            callback(temp).show();            
+        },
+        error: function(XMLHttpRequest, textStatus, errorThrown) {
+            if (textStatus == 'parsererror') {
+                textStatus = 'Technical error: Unexpected response returned by server. Sending stopped.';
+            }
+            alert(textStatus);
+       }
+
+    });
+}
+
+function executeProcess(offset, batch = false) {
+    
+ 
+    $.ajax({ 
+        type: 'POST',
+        dataType: "json",
+        url : "process.php", 
+        data: {
+            id_process: 1,
+            offset: offset,
+            batch: batch
+        },
+        success: function(response) {
+           
+ 
+          
         }
+    });
+}
     
 </script>

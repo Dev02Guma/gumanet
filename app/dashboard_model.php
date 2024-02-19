@@ -21,6 +21,7 @@ use PHPExcel_Style;
 use PHPExcel_Style_Border;
 use Session;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\Request;
 
 class dashboard_model extends Model {
     public static function getDataGraficas($mes, $anio, $xbolsones) {
@@ -103,7 +104,7 @@ class dashboard_model extends Model {
         );
 
         $array_merge = array_merge($dtaBodega, $dtaTop10Cl, $dtaTop10Pr, $dtaVtasMes, $dtaRecupera, $dtaCompMesesVentas, $dtaCompMesesItems, $dtaVentasXCateg, $dtaClientes, $dtaProyectos,$dtaVtnDiarias,$dtaDolares);
-        //$array_merge = array_merge($dtaDolares);
+        //$array_merge = array_merge($dtaVtnDiarias);
         return $array_merge;
         $sql_server->close();
     }
@@ -167,7 +168,7 @@ class dashboard_model extends Model {
 
         switch ($company_user) {
             case '1':
-                $sql_exec = " EXEC gnet_vnts_diaria_generico ".$mes.", ".$anio.", 'VtasTotal_UMK', ".$Segmento." "; 
+                $sql_exec = " EXEC gnet_vnts_diaria_generico_dev ".$mes.", ".$anio.", 'view_master_pedidos_umk_v2', ".$Segmento." "; 
                 break;
             case '2':
                 $sql_exec = " EXEC gnet_vnts_diaria_gp ".$mes.", ".$anio." ";
@@ -223,6 +224,7 @@ class dashboard_model extends Model {
 
                 $json[$i]['name']       = $key['dey'];
                 $json[$i]['articulo']   = $key['dey'];
+                $json[$i]['FACTURAS']       = $key['FACTURA'];
 
                 if ( $company_user==4 ) {
                     $tem_ = ($xbolsones) ? intval($key['Cantidad']): (float) number_format(floatval($key['MontoVenta']),2,".","");
@@ -251,9 +253,14 @@ class dashboard_model extends Model {
         $array = array();
         $line = '';
         $meta = 0;
-        $fecha = new DateTime($anio.'-'.$mes.'-01');
+        $fecha = date($anio.'-'.$mes.'-01');
         $idPeriodo = Metacuota_gumanet::where(['Fecha' => $fecha,'IdCompany'=> $company_user])->pluck('IdPeriodo');
         $i=0;
+
+        $fechaInicio = date('Y-m-d',strtotime($fecha));
+        $fechaFin = date('Y-m-t',strtotime($fecha));
+
+        
 
         $segmentos[0] = array(
             'name' => 'Instituciones',
@@ -269,13 +276,13 @@ class dashboard_model extends Model {
 
         $segmentos[2] = array(
             'name' => 'Farmacias',
-            'line' => "'F03','F05','F06','F07','F08','F09','F10','F11','F13','F14','F15','F20'",
-            'ruta' => ['F03','F05','F06','F07','F08','F09','F10','F11','F13','F14','F15','F20']
+            'line' => "'F03','F05','F06','F07','F08','F09','F10','F11','F13','F14','F19','F20','F21','F22','F24'",
+            'ruta' => ['F03','F05','F06','F07','F08','F09','F10','F11','F13','F14','F19','F20','F21','F22','F24']
         );
 
         switch ($company_user) {
             case '1':
-                $proyectos = proyectos_model::orderBy('priori', 'asc')->get();
+                //$proyectos = proyectos_model::orderBy('priori', 'asc')->get();
 
                 
                 foreach ($segmentos as $key) {
@@ -291,7 +298,7 @@ class dashboard_model extends Model {
                         ($r === end($rutas))?$line .= ''."'".$r['ruta']."'".'':$line .= ''."'".$r['ruta']."'".',';
                     }*/
 
-                    $sql_exec = "SELECT
+                    /*$sql_exec = "SELECT
                                 SUM(venta) as total
                                 FROM
                                     Softland.dbo.VtasTotal_UMK (nolock)
@@ -300,8 +307,20 @@ class dashboard_model extends Model {
                                 AND [P. Unitario] > 0
                                 GROUP BY
                                     [P. Unitario],
-                                    Cantidad";
+                                    Cantidad";*/
 
+                    $retVal = ($key['name'] === 'Farmacias') ? "" : 'AND T0.CLIENTE NOT IN (SELECT CLIENTE FROM view_cadena_de_farmacia)' ;
+
+                    $sql_exec = "SELECT
+                                    SUM(TOTAL_LINEA) as total
+                                    FROM
+                                            PRODUCCION.dbo.view_master_pedidos_umk_v2 T0
+                                    WHERE
+                                            T0.FECHA_PEDIDO BETWEEN '".$fechaInicio."' AND '".$fechaFin."'  AND T0.VENDEDOR  IN (".$key['line']." )
+                                            ".$retVal."
+                                    GROUP BY T0.VENDEDOR";
+                    
+                                            
                     $rutas =     $key['ruta'];
                     
                     $query = $sql_server->fetchArray($sql_exec,SQLSRV_FETCH_ASSOC);
@@ -309,7 +328,7 @@ class dashboard_model extends Model {
                     if ( count($idPeriodo)>0 ) {
                         $meta =  Gn_couta_x_producto::where('IdPeriodo', $idPeriodo)
                                     ->where(function ($query) use ($rutas) {                                     
-                                        $query->whereIn('CodVendedor', $rutas);
+                                        $query->whereIn('codVendedor', $rutas);
                                     })->sum('val');
                     }
 
@@ -319,6 +338,18 @@ class dashboard_model extends Model {
                     $line = '';
                     $i++;
                 }
+
+                $query = DB::connection('sqlsrv')->select('EXEC PRODUCCION.dbo.gnet_cal_cadena_farmacia "'.$fechaInicio.'","'.$fechaFin.'"');
+
+
+                $array[$i]['proyecto'] = 'Cadena_farmacia';
+                $array[$i]['real'] = $query[0]->Venta;
+                $array[$i]['meta'] = $query[0]->Meta;
+            
+                
+
+                
+
             
 
                 return $array;
@@ -357,10 +388,10 @@ class dashboard_model extends Model {
             'ruta' => ['F04']
         );
 
-        $segmentos[2] = array(
+         $segmentos[2] = array(
             'name' => 'Farmacias',
-            'line' => "'F01','F02','F04','F12'",
-            'ruta' => ['F03','F05','F06','F07','F08','F09','F10','F11','F13','F14','F15','F20','F21']
+            'line' => "'F03','F05','F06','F07','F08','F09','F10','F11','F13','F14','F19','F20','F21','F22','F24'",
+            'ruta' => ['F03','F05','F06','F07','F08','F09','F10','F11','F13','F14','F19','F20','F21','F22','F24']
         );
 
         switch ($company_user) {
@@ -1156,7 +1187,7 @@ class dashboard_model extends Model {
             
             $json[$i]["UNIDADES"]           = number_format($fila["UNIDADES"], 2);
             $json[$i]["PromedioActual"]           = number_format($PromedioActual, 2);
-            $json[$i]["TIEMPO_ESTIMADO"]           = number_format($TIEMPO_ESTIMADO, 2);
+            $json[$i]["TIEMPO_ESTIMADO"]    = $TIEMPO_ESTIMADO;
             
 
             
@@ -1200,13 +1231,13 @@ class dashboard_model extends Model {
                         
                     }
                 }
-                $sql_exec =" SELECT Ruta, SUM ( VENTA ) AS Monto, SUM ( Cantidad ) AS Cantidad 
+                $sql_exec =" SELECT Ruta, SUM ( VENTA ) AS Monto, SUM ( Cantidad ) AS Cantidad,COUNT ( DISTINCT FACTURA ) AS FACTURA 
                 FROM Softland.DBO.VtasTotal_UMK ( nolock ) 
                 WHERE DAY ( DIA ) =".$dia." AND MONTH ( DIA ) = ".$mes."  AND YEAR ( DIA ) = ".$anio."  AND [P. Unitario] > 0  AND Ruta NOT IN ( 'F01', 'F12' ) AND  ".$qSegmento."
                 GROUP BY Ruta ORDER BY Ruta";
                 break;
             case '2':
-                $sql_exec =" SELECT Ruta, SUM ( VENTA ) AS Monto, SUM ( Cantidad ) AS Cantidad 
+                $sql_exec =" SELECT Ruta, SUM ( VENTA ) AS Monto, SUM ( Cantidad ) AS Cantidad ,COUNT ( DISTINCT FACTURA ) AS FACTURA
                 FROM Softland.DBO.GP_VtasTotal_UMK ( nolock ) 
                 WHERE DAY ( DIA ) =".$dia." AND MONTH ( DIA ) = ".$mes."  AND YEAR ( DIA ) = ".$anio."  AND [P. Unitario] > 0 
                 GROUP BY Ruta ORDER BY Ruta";
@@ -1215,7 +1246,7 @@ class dashboard_model extends Model {
                 $sql_exec = "";
                 break;     
             case '4':
-                $sql_exec =" SELECT Ruta, SUM ( VENTA ) AS Monto, SUM ( Cantidad ) AS Cantidad 
+                $sql_exec =" SELECT Ruta, SUM ( VENTA ) AS Monto, SUM ( Cantidad ) AS Cantidad ,COUNT ( DISTINCT FACTURA ) AS FACTURA
                 FROM Softland.DBO.INV_VtasTotal_UMK_Temporal ( nolock ) 
                 WHERE DAY ( DIA ) =".$dia." AND MONTH ( DIA ) = ".$mes."  AND YEAR ( DIA ) = ".$anio."  AND [P. Unitario] > 0 
                 GROUP BY Ruta ORDER BY Ruta";
@@ -1226,7 +1257,7 @@ class dashboard_model extends Model {
         }
 
 
-
+   
         $query = $sql_server->fetchArray($sql_exec,SQLSRV_FETCH_ASSOC);
 
         $i = 0;
@@ -1234,9 +1265,10 @@ class dashboard_model extends Model {
 
         foreach ($query as $fila) {
             $VENDEDOR = dashboard_model::buscarVendedorXRuta($fila["Ruta"], $company_user);                        
-            $json[$i]["RUTA"] = '<a href="#!" onclick="get_Detalle_Venta_dia('.$dia.','.$mes.','.$anio.','."'".$fila["Ruta"]."'".', '."'".$VENDEDOR."'".')" >'.$fila["Ruta"].'</a>';
-            $json[$i]["VENDE"] = $VENDEDOR;
-            $json[$i]["REALE"] = "C$ ".number_format($fila["Monto"],2);
+            $json[$i]["RUTA"]       = '<a href="#!" onclick="get_Detalle_Venta_dia('.$dia.','.$mes.','.$anio.','."'".$fila["Ruta"]."'".', '."'".$VENDEDOR."'".')" >'.$fila["Ruta"].'</a>';
+            $json[$i]["VENDE"]      = $VENDEDOR;
+            $json[$i]["REALE"]      = "C$ ".number_format($fila["Monto"],2);
+            $json[$i]["FACTURA"]    = number_format($fila["FACTURA"],0);
             $i++;
         }
         $sql_server->close();
@@ -1811,14 +1843,20 @@ class dashboard_model extends Model {
             //$clientesMeta = clientes_x_rutas::sum('cantidad');
             $sql_count="SELECT T0.CLIENTE  FROM Softland.umk.FACTURA T0  WHERE YEAR ( T0.FECHA ) = YEAR ( GETDATE( ) ) - 1 	GROUP BY T0.CLIENTE";
             $qCount = $sql_server->fetchArray($sql_count, SQLSRV_FETCH_ASSOC);
+
+            $dtSett = date($anio.'-'.$mes.'-01');
+            $dtIni = date('Y-m-d',strtotime($dtSett));
+            $dtEnd = date('Y-m-t',strtotime($dtSett));
+            $CadenaFarmacia = DB::connection('sqlsrv')->select('EXEC PRODUCCION.dbo.gnet_cal_cadena_farmacia "'.$dtIni.'","'.$dtEnd.'"');
+            
             $clientesMeta = count($qCount);
 
             if (count($metas)>0) {
                 $array[0]['title'] = 'real';
-                $array[0]['data'] = $metas[0]['data'];
+                $array[0]['data'] = $metas[0]['data'] + $CadenaFarmacia[0]->Venta;
 
                 $array[1]['title'] = 'meta';
-                $array[1]['data'] = $metas[1]['data'];
+                $array[1]['data'] = $metas[1]['data'] +  $CadenaFarmacia[0]->Meta;
 
                 $array[2]['title'] = 'clientesMeta';
                 $array[2]['data'] = $clientesMeta;
@@ -2084,6 +2122,155 @@ class dashboard_model extends Model {
         return $json;
         $sql_server->close();
     }
+
+    public static function getSaleInstitucion(Request $request) {
+        $nMes  = $request->input('mes');
+        $nAnio = $request->input('annio'); 
+        $sql_server = new \sql_server();
+        $sql_exec = "SELECT
+                        T0.CLIENTE,
+                        T0.NOMBRE,
+                        SUM ( T0.TOTAL_LINEA ) AS TOTAL
+                    FROM
+                        view_master_pedidos_umk_v2 T0
+                    WHERE MONTH(T0.FECHA_PEDIDO)  = ".$nMes." AND YEAR(T0.FECHA_PEDIDO) = ".$nAnio." AND T0.VENDEDOR IN ( 'F02' ) 
+                    GROUP BY
+                        T0.CLIENTE,T0.NOMBRE
+                    ORDER BY
+                        TOTAL DESC";
+        $query = $sql_server->fetchArray($sql_exec, SQLSRV_FETCH_ASSOC);
+        $json = array();
+        
+        foreach($query as $key => $value) {
+            $json[$key]['NUMBER'] = $key + 1;
+            $json[$key]['CLIENTE'] = $value['CLIENTE'];
+            $json[$key]['CADENA'] = $value['NOMBRE'];
+            $json[$key]['VENDE']  = $value['TOTAL'];
+        }
+        
+        $sql_server->close();           
+        return $json;
+    }
+    
+    public static function getSaleCadena(Request $request) {
+
+        $nMes  = $request->input('mes');
+        $nAnio = $request->input('annio'); 
+
+        $sql_server = new \sql_server();
+        
+
+        $sql_exec = "SELECT
+                        T1.CADENA,
+                        SUM(T0.TOTAL_LINEA) AS TOTAL
+                    FROM
+                        view_master_pedidos_umk_v2 T0
+                        INNER JOIN tbl_cadena_de_farmacia T1 ON T0.CLIENTE = T1.CLIENTE
+                            WHERE MONTH(FECHA_PEDIDO)  = ".$nMes." AND YEAR(FECHA_PEDIDO) = ".$nAnio."
+                    GROUP BY
+                        T1.CADENA
+                    ORDER BY
+                        TOTAL DESC";
+
+        $query = $sql_server->fetchArray($sql_exec, SQLSRV_FETCH_ASSOC);
+        $json = array();
+        
+        foreach($query as $key => $value) {
+            $json[$key]['NUMBER'] = $key + 1;
+            $json[$key]['CADENA'] = $value['CADENA'];
+            $json[$key]['VENDE']  = $value['TOTAL'];
+        }
+        
+        $sql_server->close();           
+        return $json;
+
+    }
+
+    public static function getSaleCadenaDetalle(Request $request) {
+
+        $nMes  = $request->input('mes');
+        $nAnio = $request->input('annio');
+        $nCadena = $request->input('cadena');
+
+        $sql_server = new \sql_server();
+        
+
+        $sql_exec = "SELECT
+                        T2.ARTICULO,
+                        T2.DESCRIPCION,
+                        SUM ( T0.CANTIDAD_PEDIDA ) AS CANTIDAD,
+                        T2.UNIDAD_ALMACEN,
+                        SUM(T0.TOTAL_LINEA) AS VALOR
+                    FROM
+                        view_master_pedidos_umk_v2 T0
+                        INNER JOIN tbl_cadena_de_farmacia T1 ON T0.CLIENTE = T1.CLIENTE
+                        INNER JOIN iweb_articulos T2 ON T0.ARTICULO = T2.ARTICULO
+                    WHERE MONTH(FECHA_PEDIDO)  = ".$nMes." AND YEAR(FECHA_PEDIDO) = ".$nAnio." AND T1.CADENA = '".$nCadena."'
+                    GROUP BY
+                        T2.ARTICULO,
+                        T2.DESCRIPCION,
+                        T2.UNIDAD_ALMACEN
+                    ORDER BY
+                        VALOR DESC";
+
+        $query = $sql_server->fetchArray($sql_exec, SQLSRV_FETCH_ASSOC);
+        $json = array();
+        
+        foreach($query as $key => $value) {
+            $json[$key]['ARTICULO'] = $value['ARTICULO'];
+            $json[$key]['DESCRIPCION'] = strtoupper($value['DESCRIPCION']);
+            $json[$key]['CANTIDAD']  = number_format($value['CANTIDAD'],2,'.',',');
+            $json[$key]['UNIDAD_ALMACEN'] = $value['UNIDAD_ALMACEN'];
+            $json[$key]['VALOR']  = number_format($value['VALOR'],2,'.',',');
+        }
+        
+        $sql_server->close();  
+        return $json;
+
+    }
+
+    public static function getSaleDetalleInsta(Request $request) {
+
+        $nMes  = $request->input('mes');
+        $nAnio = $request->input('annio');
+        $nCadena = $request->input('cadena');
+
+        $sql_server = new \sql_server();
+        
+
+        $sql_exec = "SELECT
+                        T2.ARTICULO,
+                        T2.DESCRIPCION,
+                        SUM ( T0.CANTIDAD_PEDIDA ) AS CANTIDAD,
+                        T2.UNIDAD_ALMACEN,
+                        SUM(T0.TOTAL_LINEA) AS VALOR
+                    FROM
+                        view_master_pedidos_umk_v2 T0
+                        INNER JOIN iweb_articulos T2 ON T0.ARTICULO = T2.ARTICULO
+                    WHERE MONTH(FECHA_PEDIDO)  = ".$nMes." AND YEAR(FECHA_PEDIDO) = ".$nAnio." AND T0.CLIENTE = '".$nCadena."'
+                    GROUP BY
+                        T2.ARTICULO,
+                        T2.DESCRIPCION,
+                        T2.UNIDAD_ALMACEN
+                    ORDER BY
+                        VALOR DESC";
+
+        $query = $sql_server->fetchArray($sql_exec, SQLSRV_FETCH_ASSOC);
+        $json = array();
+        
+        foreach($query as $key => $value) {
+            $json[$key]['ARTICULO'] = $value['ARTICULO'];
+            $json[$key]['DESCRIPCION'] = strtoupper($value['DESCRIPCION']);
+            $json[$key]['CANTIDAD']  = number_format($value['CANTIDAD'],2,'.',',');
+            $json[$key]['UNIDAD_ALMACEN'] = $value['UNIDAD_ALMACEN'];
+            $json[$key]['VALOR']  = number_format($value['VALOR'],2,'.',',');
+        }
+        
+        $sql_server->close();  
+        return $json;
+
+    }
+
 
     public static function ventaXCategorias($mes, $anio, $cate) {
         $sql_server = new \sql_server();

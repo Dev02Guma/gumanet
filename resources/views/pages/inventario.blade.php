@@ -244,13 +244,16 @@
                 </div>
                 <table id="tblTrans" class="table table-bordered mt-2">
                     <thead class="bg-blue text-light">
-                    <tr>
-                        <th>Fecha</th>
-                        <th>Lote</th>
-                        <th>Tipo</th>
-                        <th>Cantidad</th>
-                        <th>Referencia</th>
-                    </tr>
+                      <tr>
+                          <th>Fecha</th>
+                          <th>Lote</th>
+                          <th>Factura</th>
+                          <th>Tipo</th>
+                          <th>Cantidad</th>
+                          <th>Referencia</th>
+                          <th>Código</th>
+                          <th>Cliente</th>
+                      </tr>
                     </thead>
                     <tbody id="tbody1">
                       <tr>

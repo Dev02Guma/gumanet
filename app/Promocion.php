@@ -9,7 +9,8 @@ use Illuminate\Support\Facades\DB;
 
 class Promocion extends Model
 {
-    protected $table = "gumadesk.promocions";
+    protected $table = "promocions";
+    protected $connection = 'mysql_stat';
     public function Vendor(){
         return $this->belongsTo('App\Vendedor','Ruta','VENDEDOR');
     }

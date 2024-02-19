@@ -212,6 +212,7 @@ Route::get('rePrint', 'vinetaliq_controller@rePrint');
 Route::get('clean', 'vinetaliq_controller@getClear');
 
 //RUTAS PARA EL DETALLE DE ORDENES
+Route::get('/DetalleOrdenesDT', 'DetalleOrdenController@getDetalleOrdenes');  
 Route::get('/getMateriaPrima/{numOrden}','DetalleOrdenController@getMateriaPrima');
 Route::get('/getMOD/{numOrden}','DetalleOrdenController@getMOD');
 Route::get('/getQuimicos/{numOrden}','DetalleOrdenController@getQuimicos');
@@ -250,9 +251,32 @@ Route::post('AnularFactura', 'exportacion_controller@AnularFactura')->name('Anul
 Route::get('/ArticuloDetalles/{articulo}/{unidad}','inventario_controller@getArticuloDetalles')->name('ArticuloDetalles');;
 
 Route::get('Promocion', 'PromocionController@getPromocion')->name('Promocion');
-Route::get('SavePromo', 'PromocionController@SavePromo')->name('SavePromo');
-Route::get('SaveDetalles', 'PromocionController@SaveDetalles')->name('SaveDetalles');
-Route::get('getDetalles', 'PromocionController@getDetalles')->name('getDetalles');
-Route::post('DeleteItems', 'PromocionController@DeleteItems')->name('DeleteItems');
-Route::post('rmPromocion', 'PromocionController@rmPromocion')->name('rmPromocion');
-Route::post('updtFechas', 'PromocionController@updtFechas')->name('updtFechas');
+Route::get('getPromoMes', 'PromocionController@getPromoMes')->name('getPromoMes');
+
+Route::get('inventarioInnova', 'InnovaController@inventarioInnova')->name('inventarioInnova');
+Route::get('getKerdex', 'InnovaController@getKerdex')->name('getKerdex');
+Route::get('getResumenKardex', 'InnovaController@getResumenKardex')->name('getRasumenKardex');
+Route::get('getMateriaPrima', 'InnovaController@getMateriaPrima')->name('getMateriaPrima');
+
+
+Route::get('getStatsInn', 'InnovaController@getStatsInn')->name('getStatsInn');
+Route::get('saveInnStat', 'InnovaController@saveInnStat')->name('saveInnStat');
+
+Route::post('getSaleCadena', 'dashboard_controller@getSaleCadena');
+Route::post('getSaleCadenaDetalle', 'dashboard_controller@getSaleCadenaDetalle')->name('getSaleCadenaDetalle');
+Route::post('getSaleInstitucion', 'dashboard_controller@getSaleInstitucion');
+Route::post('getSaleDetalleInsta', 'dashboard_controller@getSaleDetalleInsta')->name('getSaleDetalleInsta');
+
+
+// TODAS LAS RUTAS DEL REORDER POINT
+Route::get('ReporderPoint', 'ReOrderPointController@ReOrderPoint')->name('ReporderPoint');
+Route::get('getData', 'ReOrderPointController@getData')->name('getData');
+Route::get('dtGraf/{articulo}','ReOrderPointController@getDataGrafica')->name('dtGraf/{articulo}');
+
+
+// ROUTER DE PROYECTO 71 & 89
+Route::get('Presupuesto', 'BudgetController@ViewBudget')->name('Presupuesto');
+Route::get('dtProyect', 'BudgetController@dtProyect')->name('dtProyect');
+Route::get('dtArticulo', 'BudgetController@dtArticulo')->name('dtArticulo');
+
+

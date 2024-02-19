@@ -10,12 +10,19 @@
       <div class="col-sm-12">
         <p class="font-weight-normal mt-0 mb-0 text-left ml-3"><strong class="text-muted">Usuario: </strong>{{ Auth::User()->email }}</p>
         <p id="companny_id" class="font-weight-normal mt-0 mb-0 text-left ml-3" hidden="true">{{ Session::get('company_id') }}</p>
-        <p class="font-weight-normal text-left ml-3"><strong class="text-muted">Unidad: </strong>{{ Session::get('companyName')}}</p>
+        <p class="font-weight-normal mt-0 mb-0 text-left ml-3"><strong class="text-muted">Unidad: </strong>{{ Session::get('companyName')}}</p>
+        <p class="font-weight-normal mt-1 mb-1 text-left ml-3">
+        <a class="text-danger font-weight-bold" href="{{ route('logout') }}" onclick="event.preventDefault(); document.getElementById('logout-form').submit();"><span data-feather="log-out" class="mr-3"></span> Cerrar sesion
+          </a>
+        </p>
+
+       
+        
       </div>
     </div>
     <hr style="padding:0; margin:0;"></hr>
     <div class="row mt-4">
-      <div class="col-sm-12 my-custom-scrollbar my-custom-scrollbar-primary">
+      <div class="col-sm-12">
         <ul class="nav flex-column">
        
           @foreach ($menus as $menu)

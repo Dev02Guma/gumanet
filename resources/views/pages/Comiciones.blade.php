@@ -60,7 +60,7 @@
     <div class="card border-0 shadow-sm mt-3 ">
       <div class="card-body col-sm-12 p-0 mb-2">	
         <div class="p-0 px-car">
-          <div class="flex-between-center border border-1 border-300 rounded-2">
+          <div class="flex-between-center scrollbar border border-1 border-300 rounded-2">
             <table id="table_comisiones" class="table table-striped table-bordered table-sm mt-3 fs--1" width="100%">
               <thead>
                 <tr class="bg-blue text-light">
@@ -109,7 +109,7 @@ MODAL
           <div class="row col-md-4">
           <div class="d-flex align-items-center position-relative mt-0">
                         <div class="avatar avatar-xl ">
-                          <img class="rounded-circle mr-3 ml-4" src="http://186.1.15.164.sslip.io/estadistica/images/user/avatar-4.jpg" width="30px">
+                          <img class="rounded-circle mr-3 ml-4" src="{{ asset('images/avatar-4.jpg') }}" width="30px">
                         </div>
                           <div class="flex-1 ms-3">
                             <h6 class="mb-0 fw-semi-bold">

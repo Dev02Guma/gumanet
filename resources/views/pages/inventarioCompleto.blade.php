@@ -59,6 +59,7 @@
               <a class="nav-item nav-link" id="navCostos" data-toggle="tab" href="#nav-costos" role="tab" aria-controls="nav-trans" aria-selected="false">Costos</a>
               <a class="nav-item nav-link" id="navMargen" data-toggle="tab" href="#nav-margen" role="tab" aria-controls="nav-margen" aria-selected="false">Margen</a>
             @endif
+            <a class="nav-item nav-link" id="navTransaccion" data-toggle="tab" href="#nav-trans" role="tab" aria-controls="nav-trans" aria-selected="false">Transacciones</a>
             <a class="nav-item nav-link" id="navOtros" data-toggle="tab" href="#nav-otros" role="tab" aria-controls="nav-otros" aria-selected="false">Otros</a>
             <a class="nav-item nav-link" id="navIndicadores" data-toggle="tab" href="#nav-Indicadores" role="tab" aria-controls="nav-Indicadores" aria-selected="false">Indicadores</a>            
             <a class="nav-item nav-link" id="navVinneta" data-toggle="tab" href="#nav-Vinneta" role="tab" aria-controls="nav-Vineta" aria-selected="false">Viñeta</a>
@@ -121,6 +122,68 @@
                       <tr >
                         <td class="bg-blue text-light"><b>Costo Ultimo.</b></td>
                         <td id="id_ult_prec" class="dt-right">0</td>
+                      </tr>
+                    </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="tab-pane fade" id="nav-trans" role="tabpanel" aria-labelledby="navTransaccion">
+            <div class="row">
+              <div class="col-sm-12">
+                <div class="card" style="border-top: none">
+                  <div class="card-body">
+                    <div class="row">
+                      <div class="col-sm-3">
+                        <div class="form-group">
+                          <label for="f1">Desde</label>
+                          <input type="text" class="input-fecha" id="f1">
+                        </div>
+                      </div>
+                      <div class="col-sm-3">
+                        <div class="form-group">
+                          <label for="f2">Hasta</label>
+                          <input type="text" class="input-fecha" id="f2">
+                        </div>
+                      </div>
+                      <div class="col-sm-3">
+                        <div class="form-group">
+                          <label for="catArt">Tipo</label>
+                          <select class="custom-select custom-select-sm" id="catArt">
+                            <option selected value="Físico">Físico</option>
+                            <option value="Costo">Costo</option>
+                            <option value="Compra">Compra</option>
+                            <option value="Aprobación">Aprobación</option>
+                            <option value="Traspaso">Traspaso</option>
+                            <option value="Venta">Venta</option>
+                            <option value="Reservación">Reservación</option>
+                            <option value="Consumo">Consumo</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div class="col-sm-3">
+                        <a href="#!" id="btnSearch" class="btn btn-primary btn-sm mt-4">Buscar</a>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <table id="tblTrans" class="table table-bordered mt-2">
+                    <thead class="bg-blue text-light">
+                      <tr>
+                          <th>Fecha</th>
+                          <th>Lote</th>
+                          <th>Factura</th>
+                          <th>Tipo</th>
+                          <th>Cantidad</th>
+                          <th>Referencia</th>
+                          <th>Código</th>
+                          <th>Cliente</th>
+                      </tr>
+                    </thead>
+                    <tbody id="tbl_transacciones">
+                      <tr>
+                        <td colspan="5"><center>No hay datos que mostrar</center></td>
                       </tr>
                     </tbody>
                 </table>

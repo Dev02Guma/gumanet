@@ -75,8 +75,8 @@ class Comision extends Model{
 
         
         if(date('n') == $Mes){
-            DB::connection('sqlsrv')->select('EXEC PRODUCCION.dbo.fn_comision_articulo_new "'.$Mes.'","'.$Anno.'","'.$Ruta.'"');
-            $Query_Articulos = 'EXEC PRODUCCION.dbo.fn_comision_calc_8020 "'.$Mes.'","'.$Anno.'","'.$Ruta.'", "'.'N/D'.'" ';
+            DB::connection('sqlsrv')->select('EXEC PRODUCCION.dbo.fn_comision_articulo_new_dev "'.$Mes.'","'.$Anno.'","'.$Ruta.'"');
+            $Query_Articulos = 'EXEC PRODUCCION.dbo.fn_comision_calc_8020_dev "'.$Mes.'","'.$Anno.'","'.$Ruta.'", "'.'N/D'.'" ';
             $Query_Clientes  = 'EXEC PRODUCCION.dbo.fn_comision_calc_BonoCobertura "'.$Mes.'","'.$Anno.'","'.$Ruta.'"';
         }else{
             $Query_Articulos = "SELECT * FROM PRODUCCION.dbo.table_comision_calc_8020 T0 WHERE T0.VENDEDOR = '".$Ruta."' AND T0.nMes = ".$Mes." AND T0.nYear = ".$Anno."";
@@ -100,46 +100,72 @@ class Comision extends Model{
         
         
         $Array_articulos_cumplen = array_filter($query,function($item){
-            if($item->isCumpl=='SI'){
+            if(($item->Lista=='SKU_20_A' || $item->Lista=='SKU_20_B' || $item->Lista=='SKU_20_C') && ($item->MetaUND > 0 && $item->VentaVAL > 0)){
                 return $item;
             }
         });
 
 
         $Array_articulos_lista80 = array_filter($query,function($item){
-            if($item->Lista=='80' ){
-                return $item;
-            }
-        });
-
-        $Array_articulos_lista20 = array_filter($query,function($item){
-            if($item->Lista=='20'){
+            if($item->Lista=='SKU_80' ){
                 return $item;
             }
         });
 
 
-        $Array_countItem80 = array_filter($Array_articulos_cumplen,function($item){
-            if($item->Lista=='80' ){
+        $Lista_SKU_20_A = array_filter($query,function($item){
+            if($item->Lista=='SKU_20_A'){
                 return $item;
             }
         });
+        $Lista_SKU_20_B = array_filter($query,function($item){
+            if($item->Lista=='SKU_20_B'){
+                return $item;
+            }
+        });
+        $Lista_SKU_20_C = array_filter($query,function($item){
+            if($item->Lista=='SKU_20_C'){
+                return $item;
+            }
+        });
+
         
 
         $count_articulos_lista80            = count(array_filter($query,function($item){
-                                                    if($item->Lista=='80' && $item->VentaVAL > 0){
-                                                        return $item;
-                                                    }
-                                                })); 
+            if($item->Lista=='SKU_80' && $item->MetaUND > 0 && $item->VentaVAL > 0){
+                return $item;
+            }
+        })); 
+
         $sum_venta_articulos_lista80        = array_sum(array_column($Array_articulos_lista80,'VentaVAL'));
-        $factor_comision_venta_lista80      = 3;
-        
-        $count_articulos_lista20            = count(array_filter($Array_articulos_cumplen,function($item){
-                                                if($item->Lista=='20'){
-                                                    return $item;
-                                                }
-                                            })); 
-        $sum_venta_articulos_lista20        = array_sum(array_column($Array_articulos_lista20,'VentaVAL'));
+        $factor_comision_venta_lista80      = 2;
+
+
+
+
+        $count_SKU_20_A                     = count(array_filter($Array_articulos_cumplen,function($item){
+                if($item->Lista=='SKU_20_A'){
+                    return $item;
+                }
+            })); 
+        $count_SKU_20_B                     = count(array_filter($Array_articulos_cumplen,function($item){
+                if($item->Lista=='SKU_20_B'){
+                    return $item;
+                }
+            }));    
+        $count_SKU_20_C                     = count(array_filter($Array_articulos_cumplen,function($item){
+                if($item->Lista=='SKU_20_C'){
+                    return $item;
+                }
+            }));     
+
+        $count_articulos_lista20            = $count_SKU_20_A + $count_SKU_20_B + $count_SKU_20_C; 
+
+        $SUM_SKU_20_A        = array_sum(array_column($Lista_SKU_20_A,'VentaVAL'));
+        $SUM_SKU_20_B        = array_sum(array_column($Lista_SKU_20_B,'VentaVAL'));
+        $SUM_SKU_20_C        = array_sum(array_column($Lista_SKU_20_C,'VentaVAL'));
+
+        $sum_venta_articulos_lista20 = $SUM_SKU_20_A + $SUM_SKU_20_B + $SUM_SKU_20_C;
 
         //RESTA LAS NOTAS DE CREDITO QUE TIENE LA RUTA AL MES APLICADO
 
@@ -156,10 +182,10 @@ class Comision extends Model{
     
         $Total_articulos_cumplen            = $count_articulos_lista80  + $count_articulos_lista20; 
         $sum_venta_articulos_Total          = $sum_venta_articulos_lista80 + $sum_venta_articulos_lista20;
-        $factor_comision_venta_Total        = $factor_comision_venta_lista80 + $factor_comision_venta_lista20;
+        $factor_comision_venta_Total        = $factor_comision_venta_lista80 + (7+5+2);
 
         $Comision80 = ($sum_venta_articulos_lista80 * $factor_comision_venta_lista80) / 100;
-        $Comision20 = ($sum_venta_articulos_lista20 * $factor_comision_venta_lista20) / 100;
+        $Comision20 = ( ($SUM_SKU_20_A * 7) / 100 ) + ( ($SUM_SKU_20_B * 5) / 100 ) + ( ($SUM_SKU_20_C * 2) / 100 ) ;
 
         $ttComision = $Comision80 + $Comision20;
 
@@ -172,11 +198,23 @@ class Comision extends Model{
                 $factor_comision_venta_lista80,
                 number_format($Comision80,2,'.','')
             ],
-            'Lista20' => [
-                $count_articulos_lista20,
-                number_format($sum_venta_articulos_lista20, 2,'.',''),
-                $factor_comision_venta_lista20,
-                number_format($Comision20,2,'.','')
+            'Lista20A' => [
+                $count_SKU_20_A,
+                number_format($SUM_SKU_20_A, 2,'.',''),
+                '7',
+                number_format(( ($SUM_SKU_20_A * 7) / 100 ),2,'.','')
+            ],
+            'Lista20B' => [
+                $count_SKU_20_B,
+                number_format($SUM_SKU_20_B, 2,'.',''),
+                '5',
+                number_format(( ($SUM_SKU_20_B * 5) / 100 ),2,'.','')
+            ],
+            'Lista20C' => [
+                $count_SKU_20_C,
+                number_format($SUM_SKU_20_C, 2,'.',''),
+                '2',
+                number_format(( ($SUM_SKU_20_C * 2) / 100 ),2,'.','')
             ],
             'Total' => [
                 $Total_articulos_cumplen,
@@ -210,11 +248,6 @@ class Comision extends Model{
         $RutaArray['NotaCredito_val80']          = $NotaCredito_val80 ;
         $RutaArray['NotaCredito_val20']          = $NotaCredito_val20 ;
         $RutaArray['NotaCredito_total']          = $NotaCredito_total ;
-        
-
-        $RutaArray['NotaCredito_val80']          = number_format($NotaCredito_val80,2) ;
-        $RutaArray['NotaCredito_val20']          = number_format($NotaCredito_val20,2) ;
-        $RutaArray['NotaCredito_total']          = number_format($NotaCredito_total,2) ;
         
 
         
@@ -277,23 +310,99 @@ class Comision extends Model{
 
 
     public static function ZonaRuta($ruta){
-        $zona = DB::table('gumanet.zonas')->where('Ruta', $ruta)->pluck('Zona');
+        $zona = DB::connection('mysql')->table('zonas')->where('Ruta', $ruta)->pluck('Zona');
 
         return $zona;
     }
 
     public static function getHistoryItem($Mes, $Anno, $Ruta){
         $json = array();
-        $i = 0;
-        
-        $query      = DB::connection('sqlsrv')->select('EXEC PRODUCCION.dbo.fn_comision_calc_8020 "'.$Mes.'","'.$Anno.'","'.$Ruta.'", "'.'N/D'.'" ');
 
-        if(count($query) > 0){
-            foreach($query as $item){
-                $json[] = $item;
+        $afact = array();
+        $Lista80    = 0;
+        $Lista20    = 0;
+        $ListaC80   = 0;
+        $ListaC20   = 0;
+
+        DB::connection('sqlsrv')->select('EXEC PRODUCCION.dbo.fn_comision_articulo_new_dev "'.$Mes.'","'.$Anno.'","'.$Ruta.'"');
+        $query = DB::connection('sqlsrv')->select('EXEC PRODUCCION.dbo.fn_comision_calc_8020_dev "'.$Mes.'","'.$Anno.'","'.$Ruta.'", "'.'N/D'.'" ');
+        
+        // Extract article codes from query results.
+        foreach ($query as $p){
+            $afact[] = $p->ARTICULO;
+
+            if ($p->Lista == 'SKU_80') {
+                $Lista80++;
             }
+            if ($p->Lista == 'SKU_80' && $p->VentaUND > '0.0') {
+                $ListaC80++;
+            }
+
+            if(($p->Lista=='SKU_20_A' || $p->Lista=='SKU_20_B' || $p->Lista=='SKU_20_C')) {
+                $Lista20++;
+            }
+            if(($p->Lista=='SKU_20_A' || $p->Lista=='SKU_20_B' || $p->Lista=='SKU_20_C') && ($p->VentaUND > 0)){
+                $ListaC20++;
+            }
+            
         }
 
+        // Retrieve metadata from database using Eloquent ORM.
+        $Meta = Meta::whereRaw('MONTH(Fecha) = ? AND YEAR(Fecha) = ?', [$Mes, $Anno])->first(); 
+        
+        // Filter details using article codes from query results.
+        $detalles = $Meta->detalles()
+                    ->whereNotIn('CodProducto',$afact)
+                    ->where('CodVendedor',$Ruta)
+                    ->get();
+
+        $json = array(
+            'LISTA_80'          => $Lista80,
+            'LISTA_80C_FACT'    => $ListaC80,
+            'LISTA_20'          => $Lista20,
+            'LISTA_20_FACT'     => $ListaC20
+        );
+
+         // Build JSON array using metadata and query results.
+         foreach ($detalles as $key => $value) {  
+            $json['dt'][$key] = array(
+                'ROW_ID' => '9999' . $key,
+                'VENDEDOR' => $Ruta,
+                'ARTICULO' => $value->CodProducto,
+                'DESCRIPCION' => $value->NombreProducto,
+                'Venta' => '0.00',
+                'Aporte' => '0.00',
+                'Acumulado' => '0.00',
+                'Lista' => '20',
+                'MetaUND' => $value->Meta,
+                'VentaUND' => '0.00',
+                'VentaVAL' => '0.00',
+                'Cumple' => '0.00',
+                'isCumpl' => 'NO'
+            );
+        }
+
+        // Add query results to JSON array.
+        foreach ($query as $key => $value) {
+
+            $json['dt'][$key] = array(
+                'ROW_ID' => $value->ROW_ID,
+                'VENDEDOR' => $value->VENDEDOR,
+                'ARTICULO' => $value->ARTICULO,
+                'DESCRIPCION' => $value->DESCRIPCION,
+                'Venta' => $value->Venta,
+                'Aporte' => $value->Aporte,
+                'Acumulado' => $value->Acumulado,
+                'Lista' => $value->Lista,
+                'MetaUND' => $value->MetaUND,
+                'VentaUND' => $value->VentaUND,
+                'VentaVAL' => $value->VentaVAL,
+                'Cumple' => $value->Cumple,
+                'isCumpl' => $value->isCumpl
+            );
+            
+        }
+        
         return $json;
     }
 }

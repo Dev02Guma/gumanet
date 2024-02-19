@@ -175,9 +175,10 @@ class recibos_controller extends Controller {
         //$obj = $query->get();
 
 
-        foreach ($obj as $qR => $key) {
+        foreach ($query as $qR => $key) {
+
            
-            $data[$i]['IMAGEN'] = Storage::temporaryUrl('Adjuntos-Recibos/'.$key->Nombre_imagen, now()->addMinutes(5));
+            $data[$i]['IMAGEN'] = Storage::Disk('s3')->temporaryUrl('Adjuntos-Recibos/'.$key->Nombre_imagen, now()->addMinutes(5));
 
             $i++;
 
@@ -220,7 +221,7 @@ class recibos_controller extends Controller {
             $query->whereIn('status', array($Stat));
         }
 
-        $obj = $query->orderBy('id', 'ASC')->get();
+        $obj = $query->orderBy('recibo', 'ASC')->get();
 
     
         foreach ($obj as $qR => $key) {

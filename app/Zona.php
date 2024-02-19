@@ -6,5 +6,6 @@ use Illuminate\Database\Eloquent\Model;
 
 class Zona extends Model
 {
-    protected $table = "gumadesk.zonas";
+    protected $table = "zonas";
+    protected $connection = 'mysql_stat';
 }

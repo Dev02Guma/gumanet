@@ -153,7 +153,7 @@ function attach_file(idRecibo){
 
     $.ajax({
         url: 'getAttachFile',
-        type: 'post',
+        type: 'get',
         data: {
             iRecibo     : idRecibo
         },

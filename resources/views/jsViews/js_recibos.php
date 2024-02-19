@@ -67,101 +67,101 @@ function Requestdata(){
 
 function dataVinneta(f1, f2,Ruta,Cliente,Stat) {
 
-$('#dtVinneta').DataTable({
-    'ajax':{
-        'url':'getRecibos',
-        'dataSrc': '',
-        data: {
-            'f1' : f1,
-            'f2' : f2,
-            'RU' : Ruta,
-            'CL' : Cliente,
-            'St' : Stat,
-        }
-    },
-    "destroy" : true,
-    "info":    false,
-    "lengthMenu": [[10,-1], [10,"Todo"]],
-    "language": {
-        "zeroRecords": "NO HAY COINCIDENCIAS",
-        "paginate": {
-            "first":      "Primera",
-            "last":       "Última ",
-            "next":       "Siguiente",
-            "previous":   "Anterior"
+    $('#dtVinneta').DataTable({
+        'ajax':{
+            'url':'getRecibos',
+            'dataSrc': '',
+            data: {
+                'f1' : f1,
+                'f2' : f2,
+                'RU' : Ruta,
+                'CL' : Cliente,
+                'St' : Stat,
+            }
         },
-        "lengthMenu": "MOSTRAR _MENU_",
-        "emptyTable": "REALICE UNA BUSQUEDA UTILIZANDO LOS FILTROS DE FECHA",
-        "search":     "BUSCAR"
-    },
-    'columns': [
-        { "title": "DETALLES",          "data": "DETALLE"},            
-        { "title": "Nº RECIBO",         "data": "RECIBO" },
-        { "title": "CLIENTE",           "data": "CLIENTE" },
-        { "title": "NOMBRE",            "data": "NOMBRE_CLIENTE" },
-        { "title": "FECHA",             "data": "FECHA" },
-        { "title": "VENDEDOR",          "data": "VENDEDOR" },
-        { "title": "TOTAL",             "data": "TOTAL" ,render: $.fn.dataTable.render.number( ',', '.', 0  , 'C$ ' )},
-        { "title": "ACCIONES",          "data": "BOTONES"},
-        { "title": "STATUS",            "data": "STATUS"},
-        
+        "destroy" : true,
+        "info":    false,
+        "lengthMenu": [[10,-1], [10,"Todo"]],
+        "language": {
+            "zeroRecords": "NO HAY COINCIDENCIAS",
+            "paginate": {
+                "first":      "Primera",
+                "last":       "Última ",
+                "next":       "Siguiente",
+                "previous":   "Anterior"
+            },
+            "lengthMenu": "MOSTRAR _MENU_",
+            "emptyTable": "REALICE UNA BUSQUEDA UTILIZANDO LOS FILTROS DE FECHA",
+            "search":     "BUSCAR"
+        },
+        'columns': [
+            { "title": "DETALLES",          "data": "DETALLE"},            
+            { "title": "Nº RECIBO",         "data": "RECIBO" },
+            { "title": "CLIENTE",           "data": "CLIENTE" },
+            { "title": "NOMBRE",            "data": "NOMBRE_CLIENTE" },
+            { "title": "FECHA",             "data": "FECHA" },
+            { "title": "VENDEDOR",          "data": "VENDEDOR" },
+            { "title": "TOTAL",             "data": "TOTAL" ,render: $.fn.dataTable.render.number( ',', '.', 0  , 'C$ ' )},
+            { "title": "ACCIONES",          "data": "BOTONES"},
+            { "title": "STATUS",            "data": "STATUS"},
+            
 
-    ],
-    "columnDefs": [
-        {"className": "dt-center", "targets": [0,1,2,3,4,5,7 ]},
-        {"className": "dt-right", "targets": [ 6 ]},
-        { "width": "5%", "targets": [0,1,2,4,5,6 ] },
-        { "width": "8%", "targets": [ 7 ] },
-        { "visible":false, "searchable": false,"targets": [8] }
-    ],
-    "createdRow": function( row, data, dataIndex ) {
-            if ( data.STATUS == 4) {        
-                $(row).addClass('tbl_rows_recibo_color');
-            }
-
-    },
-    "footerCallback": function ( row, data, start, end, display ) {
-        var api = this.api();
-
-        var intVal = function ( i ) {
-                return typeof i === 'string' ?
-                i.replace(/[^0-9.]/g, '')*1 :
-                typeof i === 'number' ?
-                i : 0;
-            };
-
-            var Pendiete    = 0;
-            var Ingresado   = 0;
-            var Verificado  = 0;
-            var Total       = 0;
-
-            total = api.column( 6 ).data().reduce( function (a, b){
-                return intVal(a) + intVal(b);
-            }, 0 );
-
-            for (var i = 0; i < data.length; i++) {
- 
-                if (data[i].STATUS == "Pendiente")
-                    Pendiete += intVal(data[i].TOTAL);
-                else if(data[i].STATUS == "Ingresado"){
-                    Ingresado += intVal(data[i].TOTAL);
-                }else{
-                    Verificado += intVal(data[i].TOTAL);
+        ],
+        "columnDefs": [
+            {"className": "dt-center", "targets": [0,1,2,3,4,5,7 ]},
+            {"className": "dt-right", "targets": [ 6 ]},
+            { "width": "5%", "targets": [0,1,2,4,5,6 ] },
+            { "width": "8%", "targets": [ 7 ] },
+            { "visible":false, "searchable": false,"targets": [8] }
+        ],
+        "createdRow": function( row, data, dataIndex ) {
+                if ( data.STATUS == 4) {        
+                    $(row).addClass('tbl_rows_recibo_color');
                 }
-            }
 
-            //Total = Pendiete + Ingresado + Verificado;
-            Total = Pendiete + Ingresado + Verificado;
+        },
+        "footerCallback": function ( row, data, start, end, display ) {
+            var api = this.api();
 
-            $('#id_valor_pendiente').text("C$ " + numeral(Pendiete).format('0,0.00'));
-            $('#id_valor_ingresado').text("C$ " + numeral(Ingresado).format('0,0.00'));
-            $('#id_valor_verificado').text("C$ " + numeral(Verificado).format('0,0.00'));
-            $('#id_valor_Total').text("C$ " + numeral(Total).format('0,0.00'));
-    },
-});
+            var intVal = function ( i ) {
+                    return typeof i === 'string' ?
+                    i.replace(/[^0-9.]/g, '')*1 :
+                    typeof i === 'number' ?
+                    i : 0;
+                };
 
-$("#dtVinneta_length").hide();
-$("#dtVinneta_filter").hide();
+                var Pendiete    = 0;
+                var Ingresado   = 0;
+                var Verificado  = 0;
+                var Total       = 0;
+
+                total = api.column( 6 ).data().reduce( function (a, b){
+                    return intVal(a) + intVal(b);
+                }, 0 );
+
+                for (var i = 0; i < data.length; i++) {
+    
+                    if (data[i].STATUS == "Pendiente")
+                        Pendiete += intVal(data[i].TOTAL);
+                    else if(data[i].STATUS == "Ingresado"){
+                        Ingresado += intVal(data[i].TOTAL);
+                    }else{
+                        Verificado += intVal(data[i].TOTAL);
+                    }
+                }
+
+                //Total = Pendiete + Ingresado + Verificado;
+                Total = Pendiete + Ingresado + Verificado;
+
+                $('#id_valor_pendiente').text("C$ " + numeral(Pendiete).format('0,0.00'));
+                $('#id_valor_ingresado').text("C$ " + numeral(Ingresado).format('0,0.00'));
+                $('#id_valor_verificado').text("C$ " + numeral(Verificado).format('0,0.00'));
+                $('#id_valor_Total').text("C$ " + numeral(Total).format('0,0.00'));
+        },
+    });
+
+    $("#dtVinneta_length").hide();
+    $("#dtVinneta_filter").hide();
 }
 
 $("#BuscarVinneta").click( function() {

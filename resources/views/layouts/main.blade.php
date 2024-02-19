@@ -45,8 +45,9 @@
 <link rel="stylesheet" type="text/css" href="{{ url('css/daterangepicker.css') }}">
 <link rel="stylesheet" type="text/css" href="{{ url('css/jquery.dataTables.min.css') }}">
 <link rel="stylesheet" type="text/css" href="{{ url('css/bootstrap-select.css') }}">
+<link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap4.min.css">
 <!--Import Google Icon Font-->
-<link href="http://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 </head>
 <body>
 @include('layouts.menu')
@@ -149,6 +150,14 @@
 
 <script src="{{ url('js/exporting.js') }}"></script>
 <script src="{{ url('js/export-data.js') }}"></script>
+
+
+
+
+
+<script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+
+<script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap4.min.js"></script>
 
 @yield('metodosjs')
 </body>

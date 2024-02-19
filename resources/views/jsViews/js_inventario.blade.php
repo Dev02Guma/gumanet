@@ -504,6 +504,7 @@ function getBonificados(articulo) {
 
 $("#btnSearch").click(function() {    
     var tbody = '';
+    var Total = 0 ;
     $.ajax({
         type: "POST",
         url: "transacciones",
@@ -526,11 +527,23 @@ $("#btnSearch").click(function() {
                     tbody +=`<tr>
                                 <td>`+item['FECHA']+`</td>
                                 <td>`+item['LOTE']+`</td>
+                                <td>`+item['APLICACION']+`</td>
                                 <td>`+item['DESCRTIPO']+`</td>
-                                <td>`+item['CANTIDAD']+`</td>
+                                <td class="text-right">`+item['CANT']+`</td>
                                 <td>`+item['REFERENCIA']+`</td>
+                                <td>`+item['CODIGO_CLIENTE']+`</td>
+                                <td>`+item['NOMBRE']+`</td>
                             </tr>`;
+
+                            Total += numeral(item['CANTIDAD']).value(); 
                 });
+                Total = numeral(Total).format('0,00');
+                tbody +=`<tr class="bg-blue text-light">
+                            <td class="text-light" colspan='4'> TOTAL UNIDADES DESPLAZADAS</td>
+                            
+                            <td class="text-light text-right" >`+Total+`</td>
+                            <td class="text-right" colspan='3'></td>
+                        </tr>`;
             }
             $("#tbody1").append(tbody);
         }

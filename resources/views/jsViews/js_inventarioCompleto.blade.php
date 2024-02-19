@@ -1,6 +1,8 @@
 <script>
 $(document).ready(function() {
     fullScreen();
+    inicializaControlFecha();
+    var articulo_g = 0;
     //AGREGO LA RUTA AL NAVEGADOR
     $("#item-nav-01").after(`<li class="breadcrumb-item active"><a href="{{url('/Inventario')}}">Inventario</a></li><li class="breadcrumb-item active">Inventario completo</li>`);
 
@@ -178,7 +180,7 @@ $(document).ready(function() {
 
 });
 function getDetalleArticulo(Articulos,Descripcion,Undiad) {
-
+    articulo_g = Articulos;
 	$("#tArticulo").html(Descripcion+`<p class="text-muted" id="id_cod_articulo">`+Articulos+`</p>`);
 	
 	var target = '#nav-bod';
@@ -241,6 +243,56 @@ function getDetalleArticulo(Articulos,Descripcion,Undiad) {
     })
 
 }
+
+$("#btnSearch").click(function() {    
+    var tbody = '';
+    var Total = 0 ;
+    $.ajax({
+        type: "POST",
+        url: "transacciones",
+        data:{
+            f1: $("#f1").val(),
+            f2: $("#f2").val(),
+            art: articulo_g,
+            tp: $( "#catArt option:selected" ).val()            
+        },
+        success: function (data) {
+            if (data.length==0) {
+                $("#tbl_transacciones").empty();
+                tbody +=`<tr>
+                            <td colspan='5'><center>No hay datos que mostrar</center></td>
+                        </tr>`;
+                mensaje('No se encontraron registros con los datos proporcionados', 'error');
+            }else {                
+                $("#tbl_transacciones").empty();
+                $.each(data, function(i, item) {
+                    tbody +=`<tr>
+                                <td>`+item['FECHA']+`</td>
+                                <td>`+item['LOTE']+`</td>
+                                <td>`+item['APLICACION']+`</td>
+                                <td>`+item['DESCRTIPO']+`</td>
+                                <td class="text-right">`+item['CANT']+`</td>
+                                <td>`+item['REFERENCIA']+`</td>
+                                <td>`+item['CODIGO_CLIENTE']+`</td>
+                                <td>`+item['NOMBRE']+`</td>
+                            </tr>`;
+
+                            Total += numeral(item['CANTIDAD']).value(); 
+                });
+
+                
+                tbody +=`<tr class="bg-blue text-light">
+                                <td class="text-light" colspan='4'> TOTAL UNIDADES DESPLAZADAS</td>
+                                
+                                <td class="text-light text-right" >`+Total+`</td>
+                                <td class="text-right" colspan='3'></td>
+                            </tr>`;
+            }
+            $("#tbl_transacciones").append(tbody);
+        }
+    });
+});
+    
 function getDataBodega(datos) {
     $("#tblBodega").dataTable({
         responsive: true,

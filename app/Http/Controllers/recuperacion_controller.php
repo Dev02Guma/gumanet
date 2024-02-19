@@ -71,6 +71,8 @@ class recuperacion_controller extends Controller
 
 
             $meta =  str_replace(['[',']'],'',$meta);
+            $meta = trim($meta,'"');
+
 
 
                 if ($meta == '' || is_null($meta)) {
@@ -295,8 +297,9 @@ class recuperacion_controller extends Controller
         
         foreach ($query as $fila) {
             $meta = meta_recuperacion_exl::where(['fechaMeta'=>$fecha, 'idCompanny'=> $request->session()->get('company_id'), 'ruta' => $fila["VENDEDOR"]])->pluck('meta');
-           
+    
              $meta =  str_replace(['[',']'],'',$meta);
+             $meta = trim($meta,'"');
 
 
                 if ($meta == "") {
@@ -306,10 +309,12 @@ class recuperacion_controller extends Controller
 
                 } 
 
+
+
               
             $json[$i]["RECU_RUTA"]          = $fila["VENDEDOR"];
             $json[$i]["RECU_VENDE"]         =  '<span style="text-align: left; float: left">'.$fila["NOMBRE"].'</span>';
-            $json[$i]['RECU_META'] =  '<input type="text" onkeyup="getAttr(this)" style="text-align: right" class="form-control" value="C$'.number_format($meta,2).'" id ="recu_meta_'.$fila['VENDEDOR'].'">';
+            $json[$i]['RECU_META'] =  '<input type="text" onkeyup="getAttr(this)" style="text-align: right" class="form-control" value="'.number_format($meta,2).'" id ="recu_meta_'.$fila['VENDEDOR'].'">';
             //$json[$i]["RECU_META"]          =  '<span id ="recu_meta_'.$fila['VENDEDOR'].'">C$'.number_format($meta,2).'</span>';
             $json[$i]["RECU_CONTADO"]       = '<input type="text" onkeyup="getAttr(this)" style="text-align: right" class="form-control" value="C$0.00" id ="recu_contado_'.$fila['VENDEDOR'].'">';
             $json[$i]["RECU_CREDITO"]       = '<input type="text" onkeyup="getAttr(this)" style="text-align: right" class="form-control" value="C$0.00" id ="recu_credito_'.$fila['VENDEDOR'].'">';

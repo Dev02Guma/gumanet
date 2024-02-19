@@ -803,7 +803,9 @@ class inventario_model extends Model {
 
         //BODEGA DE ARTICULO SEGUN UNIDAD DE NEGOCIO
         $i = 0;
-        $sql_bodegas = "SELECT * FROM gnet_master_bodegas WHERE ARTICULO = '".$Articulo."' AND UNIDAD = '".$Unidad."' AND BODEGA not in ('004')";
+        $sql_bodegas = "SELECT ARTICULO,BODEGA,UNIDAD,NOMBRE,SUM (CANT_DISPONIBLE) AS CANT_DISPONIBLE FROM gnet_master_bodegas WHERE ARTICULO = '".$Articulo."' AND UNIDAD = '".$Unidad."' AND BODEGA not in ('004') GROUP BY  ARTICULO,BODEGA,UNIDAD,NOMBRE";
+
+
         $rBodegas = $sql_server->fetchArray($sql_bodegas, SQLSRV_FETCH_ASSOC);
         foreach ($rBodegas as $fila) {
             $json_bodega[$i]["id"]                 = $i;
@@ -1856,11 +1858,17 @@ class inventario_model extends Model {
         $i=0;
         $json = array();
         foreach($query as $fila){
-            $json[$i]["FECHA"] = date_format($fila["FECHA"],"d/m/Y");
-            $json[$i]["LOTE"] = $fila["LOTE"];
-            $json[$i]["DESCRTIPO"] = $fila["DESCRTIPO"];
-            $json[$i]["CANTIDAD"] = number_format($fila["CANTIDAD"],2);
-            $json[$i]["REFERENCIA"] = $fila["REFERENCIA"];
+
+
+            $json[$i]["FECHA"]          = date_format($fila["FECHA"],"d/m/Y");
+            $json[$i]["LOTE"]           = $fila["LOTE"];
+            $json[$i]["APLICACION"]     = $fila["APLICACION"];
+            $json[$i]["DESCRTIPO"]      = ($fila["BONIFICADO"]=='S')? 'BONIFICADO' : strtoupper($fila["DESCRTIPO"]) ;
+            $json[$i]["CANT"]           = ($fila["BONIFICADO"]=='S') ? '<span class="text-success">* '. number_format($fila["CANTIDAD"],0) .'</span>' : number_format($fila["CANTIDAD"],0) ;
+            $json[$i]["CANTIDAD"]           = number_format($fila["CANTIDAD"],2);
+            $json[$i]["REFERENCIA"]     = $fila["REFERENCIA"];
+            $json[$i]["CODIGO_CLIENTE"] = $fila["CODIGO_CLIENTE"];
+            $json[$i]["NOMBRE"]         = $fila["NOMBRE"];
             $i++;
         }
 
