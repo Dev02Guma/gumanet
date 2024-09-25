@@ -16,6 +16,9 @@ use App\tbl_temporal;
 use DataTables;
 use DB;
 use Illuminate\Http\Request;
+use CodersFree\Date\Date;
+
+
 class inventario_model extends Model {
     
     public static function getArticulos() {        
@@ -283,18 +286,11 @@ class inventario_model extends Model {
         $query = array();
         $i=0;
 
-        
-
-       
-
-        
-
         $query1 = $sql_server->fetchArray( $sql_exec ,SQLSRV_FETCH_ASSOC);
         foreach ($query1 as $key) {
 
             $ArticuloVinneta      = ArticuloVinneta::WHERE('ARTICULO',$key['ARTICULO'])->get();
             $retVal = (count($ArticuloVinneta) >0) ? 'VIÑETA' : '' ;
-
 
             $query[$i]['ARTICULO']          = $key['ARTICULO'];
             $query[$i]['DESCRIPCION']       = $key['DESCRIPCION'];
@@ -307,6 +303,8 @@ class inventario_model extends Model {
 
         return $query;
     }
+
+   
 
     public static function getInventarioTotalizado() {
         $sql_server = new \sql_server();        
@@ -1034,6 +1032,23 @@ class inventario_model extends Model {
 
         $sql_server->close();
         return $json;
+    }
+
+    public static function getInfoMific($articulo) 
+    {
+
+        $Array    = array();
+        
+        $Precios_mific =  PreciosMific::where('ARTICULO',$articulo)->limit(1)->get();
+        
+        foreach ($Precios_mific as $k => $v) {
+            $Array = [
+                'Precio_mific_farmacia'     => "C$ " .number_format($v->MIFIC_FARMACIA,4),
+                'Precio_mific_public'       => "C$ " .number_format($v->MIFIC_PUBLICO,4),
+            ];        
+        }    
+        return $Array;
+        
     }
 
     public static function getOtrosArticulos($articulo) {
@@ -1858,14 +1873,13 @@ class inventario_model extends Model {
         $i=0;
         $json = array();
         foreach($query as $fila){
-
-
+            $json[$i]["DETALLE"]        = '<a id="id_info_trans" class="class_info_trans" href="#!"><i class="material-icons expan_more">expand_more</i></a>';
             $json[$i]["FECHA"]          = date_format($fila["FECHA"],"d/m/Y");
             $json[$i]["LOTE"]           = $fila["LOTE"];
             $json[$i]["APLICACION"]     = $fila["APLICACION"];
             $json[$i]["DESCRTIPO"]      = ($fila["BONIFICADO"]=='S')? 'BONIFICADO' : strtoupper($fila["DESCRTIPO"]) ;
             $json[$i]["CANT"]           = ($fila["BONIFICADO"]=='S') ? '<span class="text-success">* '. number_format($fila["CANTIDAD"],0) .'</span>' : number_format($fila["CANTIDAD"],0) ;
-            $json[$i]["CANTIDAD"]           = number_format($fila["CANTIDAD"],2);
+            $json[$i]["CANTIDAD"]       = number_format($fila["CANTIDAD"],2);
             $json[$i]["REFERENCIA"]     = $fila["REFERENCIA"];
             $json[$i]["CODIGO_CLIENTE"] = $fila["CODIGO_CLIENTE"];
             $json[$i]["NOMBRE"]         = $fila["NOMBRE"];

@@ -119,6 +119,9 @@ return [
             'charset' => 'utf8',
             'prefix' => '',
             'prefix_indexes' => true,
+            'options'   => [
+                PDO::SQLSRV_ATTR_QUERY_TIMEOUT => 300 // 300 segundos = 5 minutos
+            ],
         ],
 
     ],

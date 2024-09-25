@@ -67,7 +67,7 @@ $(document).ready(function() {
     graf_Comportamiento_sku_anual();
     graf_Ticket_promedio();
 
-    grafVentasMensuales(tipo);
+    grafVentasMensuales(tipo,0);
     grafRealVentasMensuales(tipo,0);
     fn_grafica_ventas_exportacion(tipo,0);
     reordenandoPantalla();
@@ -1422,7 +1422,7 @@ $("#customSwitch1").change( function() {
     if ($(this).is(':checked')) {
         switchStatus = $(this).is(':checked');
         $.cookie( 'xbolsones' , 'yes_bolsones');
-        grafVentasMensuales(1);
+        grafVentasMensuales(1,0);
         grafRealVentasMensuales(1,0);
         fn_grafica_ventas_exportacion(1,0);
         actualizandoGraficasDashboard(mes, anio, 1);
@@ -1430,7 +1430,7 @@ $("#customSwitch1").change( function() {
     else {
         switchStatus = $(this).is(':checked');
         $.cookie( 'xbolsones' , 'not_bolsones');
-        grafVentasMensuales(0);
+        grafVentasMensuales(0,0);
         grafRealVentasMensuales(0,0);
         fn_grafica_ventas_exportacion(0,0);
         actualizandoGraficasDashboard(mes, anio, 0);
@@ -1519,7 +1519,7 @@ function actualizandoGraficasDashboard(mes, anio, xbolsones) {
                     dta                 =   [];
                     title               =   [];
                     Segmento            =   '';
-                    SegFarmacia         =   []; 
+                    SegFarmacia         =   [];
                     SegMayoristas       =   [];
                     SegInstituciones    =   [];
                     Segmentos           =   [];
@@ -1563,7 +1563,8 @@ function actualizandoGraficasDashboard(mes, anio, xbolsones) {
                     Segmento += '<option value="0">Todos</option>'+
                             '<option value="1">Farmacias</option>'+
                             '<option value="2">Mayoristas</option>'+
-                            '<option value="3">Instituciones</option>';
+                            '<option value="3">Instituciones</option>'+
+                            '<option value="4">Cadenas de Farmacias</option>';
 
                     Segmentos.push({
                             name :"InfoExtra",
@@ -1597,7 +1598,7 @@ function actualizandoGraficasDashboard(mes, anio, xbolsones) {
                     }
 
 
-                    $("#opcSegmentos,#OpcSegmClt,#opc_seg_graf01,#opc_seg_graf02").empty().append(Segmento).selectpicker('refresh');
+                    $("#opcSegmentos,#OpcSegmClt,#opc_seg_graf01,#opc_seg_graf02,#opc_seg_graf03").empty().append(Segmento).selectpicker('refresh');
 
 
                     productos.xAxis.categories = title;
@@ -2746,7 +2747,7 @@ function grafRealVentasMensuales(xbolsones,segmentos) {
     ventasRealMensuales.series = [];
     $.getJSON("dataRealVtsMensuales/"+xbolsones+"/"+segmentos, function(json) {
         var newseries;
-        
+        console.log(json)
         $.each(json, function (i, item) {
             temporal = (xbolsones)?'<span style="color:black"><b>{point.y:,.2f}</b></span>':'<span style="color:black"><b>C$ {point.y:,.2f}</b></span>';
 
@@ -2965,7 +2966,7 @@ function graf_Ticket_promedio() {
         
     
 }
-function grafVentasMensuales(xbolsones) {
+function grafVentasMensuales(xbolsones,segmento) {
 
     var temporal = "";
     $("#grafVtsMes")
@@ -2985,7 +2986,7 @@ function grafVentasMensuales(xbolsones) {
 
     ventasMensuales.series = [];
 
-    $.getJSON("dataVentasMens/"+xbolsones, function(json) {
+    $.getJSON("dataVentasMens/"+xbolsones+"/"+segmento, function(json) {
         var newseries;
         var sumTotales = [];
         var temp = 0;
@@ -3167,13 +3168,13 @@ $("#select-cate").change(function() {
 })
 
 
-$("#opc_seg_graf01,#opc_seg_graf02").change( function() {
+$("#opc_seg_graf01,#opc_seg_graf02,#opc_seg_graf03").change( function() {
     mes         = $("#opcMes option:selected").val();         
     anio        = $("#opcAnio option:selected").val();  
     Segmento    = this.value;
     xbolsones   = 1;
     var id = $(this).attr('id');
-
+    
 
     if (id=='opc_seg_graf01') {
         $("#grafVtsDiario")
@@ -3243,8 +3244,14 @@ $("#opc_seg_graf01,#opc_seg_graf02").change( function() {
         });
         
     } else {
-        grafRealVentasMensuales(xbolsones,Segmento)
-        fn_grafica_ventas_exportacion(xbolsones,Segmento);
+        if(id=='opc_seg_graf02'){
+            grafRealVentasMensuales(xbolsones,Segmento)
+            fn_grafica_ventas_exportacion(xbolsones,Segmento);
+        }else{
+            if(id=='opc_seg_graf03'){
+                grafVentasMensuales(xbolsones,Segmento);
+            }
+        }
     }
 
     

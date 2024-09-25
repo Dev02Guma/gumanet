@@ -9,7 +9,7 @@ SkusAnual = {
         },
         exporting: {enabled: false},
         title: {
-            text: `<p class="font-weight-bolder">VENTAS EN PROMEDIO </p>`
+            text: `<p class="font-weight-bolder">PRESUPESTO UNIDADES VS EJECUTADO </p>`
         },
         xAxis: {
             categories: []
@@ -46,7 +46,7 @@ SkusAnual = {
         },
         tooltip: {},
         legend: {
-            enabled:false,
+            enabled:true,
             align: 'center',
             verticalAlign: 'top',
             borderWidth: 0
@@ -68,25 +68,42 @@ SkusAnual = {
         }
     };
 
-function bluid_char(ARTICULO) {
+function isValue(value, def, is_return) {
+    if ( $.type(value) == 'null'
+        || $.type(value) == 'undefined'
+        || $.trim(value) == '(en blanco)'
+        || $.trim(value) == ''
+        || ($.type(value) == 'number' && !$.isNumeric(value))
+        || ($.type(value) == 'array' && value.length == 0)
+        || ($.type(value) == 'object' && $.isEmptyObject(value)) ) {
+        return ($.type(def) != 'undefined') ? def : false;
+    } else {
+        return ($.type(is_return) == 'boolean' && is_return === true ? value : true);
+    }
+}
+
+function bluid_char(ARTICULO,Pro, tipo) {
+    
     var temporal = "";
+
     $("#grafSkuAnual").empty().append(`<div style="height:400px; background:#ffff; padding:20px">
                 <div class="d-flex align-items-center">
                     <strong class="text-info">Cargando...</strong>
                     <div class="spinner-border ml-auto text-primary" role="status" aria-hidden="true"></div>
                 </div>
             </div>`);
-
-
-    $("#anioAcumulado").empty();
-    $("#porcentaje").empty();
-    
-    f1 = $("#f1").val();
-    f2 = $("#f2").val();
+    if (Pro === 1) {
+        f1 = $("#f1").val();
+        f2 = $("#f2").val();
+    } else {
+        f1 = $("#f1_p71").val();
+        f2 = $("#f2_p71").val();
+    }
 
     SkusAnual.series = [];
     SkusAnual.xAxis.categories = [];
-    $.getJSON("dtArticulo?f1="+f1+"&f2="+f2+"&ARTICULO=" + ARTICULO, function(json) {
+    
+    $.getJSON("dtArticulo?f1="+f1+"&f2="+f2+"&ARTICULO=" + ARTICULO+"&Pro=" + Pro +"&tipo="+tipo, function(json) {
         var SeriesVenta;
         var SeriesMetas;
         var sumTotales = [];
@@ -96,38 +113,50 @@ function bluid_char(ARTICULO) {
         var anio_ = parseInt(date.getFullYear());
         var mes_ = parseInt(date.getMonth()+1);
 
+        units = "";
+        monto = "";
+        if(tipo == 1){
+            units = 'Units';
+        }
+        if(tipo == 2){
+            monto = 'C$';
+        }
+
         var VENTAS  = []
         var METAS   = []
+        var LEGNS   = []
 
         
         $.each(json[0]['FECHA'], function (i, item) {
-         
-            temporal = '<span style="color:black"><b>{point.y:,.0f} Items </b></span>';
+            VENTAS.push(parseFloat( isValue(json[0][item.mes],0,true) ));
+            METAS.push(parseFloat( isValue(json[0].UND_MES,0,true) ));
+            LEGNS.push(item.mes)
+            SkusAnual.xAxis.categories.push(item.mes);
+        })    
 
-            VENTAS.push(parseFloat(json[0][item.mes]));
-            METAS.push(parseFloat(json[0].UND_MES));
+       
 
-            SeriesVenta = {};
-            SeriesVenta.data = VENTAS;
-            SeriesVenta.name = 'VENTAS';
-            SeriesVenta.color = colors_[1];
-            SkusAnual.series.push(SeriesVenta);
+        SeriesVenta = {};
+        SeriesVenta.data = VENTAS;
+        SeriesVenta.name = 'EJECUTADO';
+        SeriesVenta.color = colors_[1];
+        SkusAnual.series.push(SeriesVenta);
 
+        if (Pro != 2) {
             SeriesVenta = {};
             SeriesVenta.data = METAS;
-            SeriesVenta.name = 'METAS';
+            SeriesVenta.name = 'PRESUPUESTO';
             SeriesVenta.color = colors_[2];
             SkusAnual.series.push(SeriesVenta);
-            
-            SkusAnual.xAxis.categories.push(item.mes);
+        }
+        
+        
 
-            SkusAnual.tooltip = {
-                pointFormat : temporal
-            };
+        SkusAnual.tooltip = {
+            pointFormat : '<b>'+monto+' <span style="color:black"><b>{point.y:,.0f} '+units+' </b></span>'
+        };
 
-            var chart = new Highcharts.Chart(SkusAnual);
-            
-        })    
+        var chart = new Highcharts.Chart(SkusAnual);
     })    
         
     

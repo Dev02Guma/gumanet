@@ -182,6 +182,7 @@ return [
         Yajra\DataTables\DatatablesServiceProvider::class,
         Vsmoraes\Pdf\PdfServiceProvider::class,
         Barryvdh\DomPDF\ServiceProvider::class,
+        Jenssegers\Date\DateServiceProvider::class,
         
 
     ],
@@ -237,6 +238,7 @@ return [
         'Datatables' => Yajra\Datatables\Facades\DataTables::class,
         'PDF' => Barryvdh\DomPDF\Facade::class,
         'GPDF' => Vsmoraes\Pdf\PdfFacade::class,
+        'Date' => Jenssegers\Date\Date::class,
     ],
 
 ];

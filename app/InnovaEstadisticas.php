@@ -24,14 +24,29 @@ class InnovaEstadisticas extends Model
         $data = array(); 
         $key = 0;
 
-        $Targets = ["VUENO", "CHOLIN 6000", "GENÉRICO", "ECO PLUS"];
+
+        $Targets_groups = array(
+            "VUENO" => "PAPEL HIGIENICO VUENO 1000 HOJAS SENCILLAS 1X24" ,
+            "VUENO" => "PAPEL HIGIENICO VUENO, 6x4" ,
+            "VUENO" => "SERVILLETA CUADRADA (VUENO), 18 X 1" ,
+            "CHOLIN 6000" => "BOLSON CHOLIN GIGANTE 6PACK" ,
+            "GENÉRICO" => "PH GENERICO" ,
+            "ECO PLUS" => "PH ECO PLUS, BLANCO, 1000HS, 24 X 1 ROLLO" ,
+            "CHELET NATURAL" => "PAPEL HIGI NICO CHELET NATURAL 1X12" ,
+            "CHELET NATURAL" => "PAPEL HIGI NICO CHELET NATURAL 1X24" ,
+            "VUENISIMO" => "PAPEL HIGIENICO VUENISIMO, 6x4",
+            "LYMPION PROFESIONAL" => "PT LYMPION PROFESIONAL B3" ,
+            "TOALLA DE COCINA BLANCA" =>"TOALLA DE COCINA BLANCA, 8/1" 
+        );
+
+        $Targets = ["VUENO", "CHOLIN 6000", "GENÉRICO", "ECO PLUS",'CHELET NATURAL','VUENISIMO','LYMPION PROFESIONAL','TOALLA DE COCINA BLANCA'];
 
         foreach ($Targets as $item) {
 
-            $index_key = array_search($item, array_column($resul_stat_sale, 'DESCRIPCION'));  
+            $index_key      = array_search($item, array_column($resul_stat_sale, 'DESCRIPCION'));  
+            $Target         = $item;
 
             $Cantidad       = ($index_key !== false) ? $resul_stat_sale[$index_key]->CANTIDAD : 0 ;
-            $Target         = $item;
             $Venta_SinIVA   = ($index_key !== false) ? $resul_stat_sale[$index_key]->VENTA_SIN_IVA : 0 ;
             $Venta_ConIVA   = ($index_key !== false) ? $resul_stat_sale[$index_key]->VENTA_CON_IVA : 0 ;
             $AVG_SinIVA     = ($index_key !== false) ? $resul_stat_sale[$index_key]->AVG_SIN_IVA : 0 ;

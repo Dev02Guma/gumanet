@@ -105,65 +105,65 @@ MODAL
 	<div class="modal-dialog modal-xl">
 		<div class="modal-content">
 		<div class="modal-header bg-blue text-light" >
-    <div class="row col-md-12">
-          <div class="row col-md-4">
-          <div class="d-flex align-items-center position-relative mt-0">
-                        <div class="avatar avatar-xl ">
-                          <img class="rounded-circle mr-3 ml-4" src="{{ asset('images/avatar-4.jpg') }}" width="30px">
-                        </div>
-                          <div class="flex-1 ms-3">
-                            <h6 class="mb-0 fw-semi-bold">
-                              <a class="stretched-link text-900 fw-semi-bold" href="#!">
-                                <div class="stretched-link text-light" id="nombre_ruta_modal"></div>
-                              </a>
-                            </h6>
-                            <p class="text-white-50 fs--2 mb-0" id="nombre_ruta_zona_modal"></p>
-                          </div>
-                      </div>
-        </div>
-          <div class="col-md-8 border-left">
-            <div class="row ">
-            <div class="col-sm-3 ">
-                <div class="form-group">                
-                  <b><label for="f2">SKUS 80</label></b></br>
-                  <label for="f1" id="lbl_80"> </label><span class="badge rounded-pill badge-light text-primary ml-2" id="id_prom_ls80"> 80 %</span>
+      <div class="row col-md-12">
+            <div class="row col-md-4">
+              <div class="d-flex align-items-center position-relative mt-0">
+                <div class="avatar avatar-xl ">
+                  <img class="rounded-circle mr-3 ml-4" src="{{ asset('images/avatar-4.jpg') }}" width="30px">
                 </div>
-              </div>	<div class="col-sm-3 border-left">
-                <div class="form-group">                
-                  <b><label for="f2">SKUS 20</label></b></br>
-                  <label for="f1" id="lbl_20"> </label><span class="badge rounded-pill badge-light text-primary ml-2" id="id_prom_ls20" >20 %</span>
-                </div>
-              </div>	
-              <div class="col-sm-2 border-left">
-                <div class="form-group">                
-                  <b><label for="f1">META UND</label></b></br>
-                  <label for="f1" id="lbl_meta"></label>
-                </div>
+                  <div class="flex-1 ms-3">
+                    <h6 class="mb-0 fw-semi-bold">
+                      <a class="stretched-link text-900 fw-semi-bold" href="#!">
+                        <div class="stretched-link text-light" id="nombre_ruta_modal"></div>
+                      </a>
+                    </h6>
+                    <p class="text-white-50 fs--2 mb-0" id="nombre_ruta_zona_modal"></p>
+                  </div>
               </div>
-              <div class="col-sm-2 border-left">
-                <div class="form-group">                
-                  <b><label for="f1">VENTA UND</label></b></br>
-                  <label for="f1" id="lbl_venta"></label>
-                </div>
-              </div>
-              <div class="col-sm-2.5 border-left">
-                <div class="form-group ml-2">                
-                  <b><label for="f2" > VENTA VALOR</label></b></br>
-                  <label for="f1" id="lbl_val"> </label>
-                </div>
-              </div>
-                          
             </div>
-          </div>
-          <div class="col-md-12">
-    <div class="input-group" style="padding-top: 10px;">
-            <div class="input-group-prepend">
-              <span class="input-group-text" id="basic-addon1"><i data-feather="search"></i></span>
-            </div>								
-            <input type="text" id="id_txt_History" class="form-control" placeholder="Buscar...">
-            <input type="text" id="id_txt_History2" class="form-control" placeholder="Buscar...">
-          </div>
-    </div>
+            <div class="col-md-8 border-left">
+              <div class="row ">
+              <div class="col-sm-3 ">
+                  <div class="form-group">                
+                    <b><label for="f2">SKUS 80</label></b></br>
+                    <label for="f1" id="lbl_80"> </label><span class="badge rounded-pill badge-light text-primary ml-2" id="id_prom_ls80"> 80 %</span>
+                  </div>
+                </div>	<div class="col-sm-3 border-left">
+                  <div class="form-group">                
+                    <b><label for="f2">SKUS 20</label></b></br>
+                    <label for="f1" id="lbl_20"> </label><span class="badge rounded-pill badge-light text-primary ml-2" id="id_prom_ls20" >20 %</span>
+                  </div>
+                </div>	
+                <div class="col-sm-2 border-left">
+                  <div class="form-group">                
+                    <b><label for="f1">META UND</label></b></br>
+                    <label for="f1" id="lbl_meta"></label>
+                  </div>
+                </div>
+                <div class="col-sm-2 border-left">
+                  <div class="form-group">                
+                    <b><label for="f1">VENTA UND</label></b></br>
+                    <label for="f1" id="lbl_venta"></label>
+                  </div>
+                </div>
+                <div class="col-sm-2.5 border-left">
+                  <div class="form-group ml-2">                
+                    <b><label for="f2" > VENTA VALOR</label></b></br>
+                    <label for="f1" id="lbl_val"> </label>
+                  </div>
+                </div>
+                            
+              </div>
+            </div>
+            <div class="col-md-12">
+              <div class="input-group" style="padding-top: 10px;">
+              <div class="input-group-prepend">
+                <span class="input-group-text" id="basic-addon1"><i data-feather="search"></i></span>
+              </div>								
+              <input type="text" id="id_txt_History" class="form-control" placeholder="Buscar...">
+              <input type="text" id="id_txt_History2" class="form-control" placeholder="Buscar...">
+            </div>
+      </div>
     </div>
    
 		</div>

@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="{{ url('css/bootstrap.min.css') }}">
 <!-- Mi CSS -->
 <link rel="stylesheet" href="{{ url('css/style.css') }}">
+
 <style>
     .bd-placeholder-img {
         font-size: 1.125rem;
@@ -38,6 +39,8 @@
 
   
 
+  
+
 </style>
 <!-- Custom styles for this template -->
 <link rel="stylesheet" href="{{ url('css/dashboard.css') }}">
@@ -45,7 +48,11 @@
 <link rel="stylesheet" type="text/css" href="{{ url('css/daterangepicker.css') }}">
 <link rel="stylesheet" type="text/css" href="{{ url('css/jquery.dataTables.min.css') }}">
 <link rel="stylesheet" type="text/css" href="{{ url('css/bootstrap-select.css') }}">
+
 <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap4.min.css">
+
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/fixedcolumns/3.3.2/css/fixedColumns.dataTables.min.css">
+
 <!--Import Google Icon Font-->
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 </head>
@@ -135,8 +142,9 @@
 <script src="{{ url('js/ext/daterangepicker.js') }}"></script>
 <script src="{{ url('js/jquery.dataTables.min.js') }}"></script>
 <script src="{{ url('js/js_general.js') }}"></script>
-<script src="{{ url('js/sweetalert2.all.js') }}"></script>
-<script src="{{ url('js/sweetalert2.all.min.js') }}"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 <script src="{{ url('js/jquery.cookie.js') }}"></script>
 <script src="{{ url('js/Numeral.js') }}"></script>
 <script src="{{ url('js/xlsx.full.min.js') }}"></script>
@@ -151,13 +159,16 @@
 <script src="{{ url('js/exporting.js') }}"></script>
 <script src="{{ url('js/export-data.js') }}"></script>
 
-
-
+<script src="https://cdn.jsdelivr.net/npm/vue@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 
 
 <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
 
 <script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap4.min.js"></script>
+
+<script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/fixedcolumns/3.3.2/js/dataTables.fixedColumns.min.js"></script>
+
 
 @yield('metodosjs')
 </body>
