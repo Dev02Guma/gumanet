@@ -93,6 +93,7 @@ function fullScreen() {
 
 feather.replace();
 
+
 function inicializaControlFecha() {
     $('input[class="input-fecha"]').daterangepicker({
         "locale": {

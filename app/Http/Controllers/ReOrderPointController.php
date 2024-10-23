@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\ReOrderPoint;
+use App\ContribucionPorCanales;
 
 class ReOrderPointController extends Controller
 {
@@ -20,8 +21,20 @@ class ReOrderPointController extends Controller
 		$obj = ReOrderPoint::getArticulo();
 		return response()->json($obj);
     }
-    public function getDataGrafica($Articulos) {
-    $obj = ReOrderPoint::getDataGrafica($Articulos);
-    return response()->json($obj);
+    public function getDataGrafica($Articulos,$Canal) {
+        $obj = ReOrderPoint::getDataGrafica($Articulos,$Canal);
+        return response()->json($obj);
+    }
+    public function CalcReorder() {
+        $obj = ReOrderPoint::CalcReorder();
+        return response()->json($obj);
+    }
+    public function ExportToExcel() {
+        $obj = ReOrderPoint::ExportToExcel();
+        return $obj;
+    }
+    public function ExportToExcelCanales() {
+        $obj = ContribucionPorCanales::ExportToExcel();
+        return $obj;
     }
 }

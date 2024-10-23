@@ -22,6 +22,7 @@ use PHPExcel_Style_Border;
 use Session;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB as FacadesDB;
 
 class dashboard_model extends Model {
     public static function getDataGraficas($mes, $anio, $xbolsones) {
@@ -204,9 +205,14 @@ class dashboard_model extends Model {
                             if ($Segmento==3) {
                                //TODAS LAS RUTAS DEL SEGMENTO INSTITUCION
                                 $Meta_Mes = Gn_couta_x_producto::where(['IdPeriodo'=> $dias_habiles[1]])->whereIn('CodVendedor', ['F02'])->sum('val');
+                            }else{
+                                if ($Segmento==4) {
+                                    //TODAS LOS SEGMENTOS
+                                    $Meta_Mes = Gn_couta_x_producto::where(['IdPeriodo'=> $dias_habiles[1]])->whereNotIn('CodVendedor', ['F04','F02','F01','F12'])->sum('val');
+                                }
                             }
                             
-                        }
+                        } 
                         
                     }
                 }
@@ -276,8 +282,8 @@ class dashboard_model extends Model {
 
         $segmentos[2] = array(
             'name' => 'Farmacias',
-            'line' => "'F03','F05','F06','F07','F08','F09','F10','F11','F13','F14','F19','F20','F21','F22','F24'",
-            'ruta' => ['F03','F05','F06','F07','F08','F09','F10','F11','F13','F14','F19','F20','F21','F22','F24']
+            'line' => "'F03','F05','F06','F07','F08','F09','F10','F11','F13','F14','F18','F19','F20','F21','F22','F24'",
+            'ruta' => ['F03','F05','F06','F07','F08','F09','F10','F11','F13','F14','F18','F19','F20','F21','F22','F24']
         );
 
         switch ($company_user) {
@@ -287,29 +293,7 @@ class dashboard_model extends Model {
                 
                 foreach ($segmentos as $key) {
                     
-                    /*$rutas = proyectosDetalle_model::select('rutas.vendedor as ruta')
-                            ->where('proyectos_rutas.proyecto_id', $key['id'])
-                            ->where('rutas.estado', 1)
-                            ->join('rutas', 'proyectos_rutas.ruta_id', '=', 'rutas.id')
-                            ->get()
-                            ->toArray();
-
-                    foreach ($rutas as $r) {
-                        ($r === end($rutas))?$line .= ''."'".$r['ruta']."'".'':$line .= ''."'".$r['ruta']."'".',';
-                    }*/
-
-                    /*$sql_exec = "SELECT
-                                SUM(venta) as total
-                                FROM
-                                    Softland.dbo.VtasTotal_UMK (nolock)
-                                WHERE
-                                    [Año] = ".$anio." AND nmes = ".$mes." AND Ruta IN(".$key['line'].")
-                                AND [P. Unitario] > 0
-                                GROUP BY
-                                    [P. Unitario],
-                                    Cantidad";*/
-
-                    $retVal = ($key['name'] === 'Farmacias') ? "" : 'AND T0.CLIENTE NOT IN (SELECT CLIENTE FROM view_cadena_de_farmacia)' ;
+                    $retVal = ($key['name'] === 'Farmacias') ? 'AND T0.CLIENTE NOT IN (SELECT CLIENTE FROM view_cadena_de_farmacia)' : '' ;
 
                     $sql_exec = "SELECT
                                     SUM(TOTAL_LINEA) as total
@@ -319,7 +303,6 @@ class dashboard_model extends Model {
                                             T0.FECHA_PEDIDO BETWEEN '".$fechaInicio."' AND '".$fechaFin."'  AND T0.VENDEDOR  IN (".$key['line']." )
                                             ".$retVal."
                                     GROUP BY T0.VENDEDOR";
-                    
                                             
                     $rutas =     $key['ruta'];
                     
@@ -1058,6 +1041,8 @@ class dashboard_model extends Model {
         $request = Request();
         $json = array();
         $company_user = Company::where('id',$request->session()->get('company_id'))->first()->id;
+        $qCliente = "";
+        $qCliente2 = "";
 
         $RutaSegmento = "";
 
@@ -1073,6 +1058,8 @@ class dashboard_model extends Model {
                     if ($Segmento==1) {
                         //TODAS LAS RUTAS DEL SEGMENTO FARMACIA
                         $qSegmento =" Ruta NOT IN ('F04','F02','F01','F12') ";
+                        $qCliente = " AND T2.[Cod. Cliente] NOT IN (SELECT CLIENTE FROM PRODUCCION.dbo.view_cadena_de_farmacia)";
+                        $qCliente2 = " AND T1.[Cod. Cliente] NOT IN (SELECT CLIENTE FROM PRODUCCION.dbo.view_cadena_de_farmacia) ";
                     } else {
                         if ($Segmento==2) {
                            //TODAS LAS RUTAS DEL SEGMENTO MAYORISTA
@@ -1081,6 +1068,13 @@ class dashboard_model extends Model {
                             if ($Segmento==3) {
                                //TODAS LAS RUTAS DEL SEGMENTO INSTITUCION
                                 $qSegmento =" Ruta IN ('F02') ";
+                            } else{
+                                if ($Segmento==4) {
+                                    //TODAS LAS RUTAS DEL SEGMENTO FARMACIA
+                                    $qSegmento =" Ruta NOT IN ('F04','F02','F01','F12') ";
+                                    $qCliente = " AND T2.[Cod. Cliente] IN (SELECT CLIENTE FROM PRODUCCION.dbo.view_cadena_de_farmacia) ";
+                                    $qCliente2 = " AND T1.[Cod. Cliente] IN (SELECT CLIENTE FROM PRODUCCION.dbo.view_cadena_de_farmacia) ";
+                                }
                             }
                             
                         }
@@ -1096,12 +1090,13 @@ class dashboard_model extends Model {
                                 isnull(sum(T1.venta),0) MontoVenta,
                                 AVG (T1.[P. Unitario]) as AVG_,         
                                 T1.[Costo Unitario] AS COSTO_PROM,
-                                isnull((SELECT SUM(T2.cantidad) FROM  Softland.dbo.VtasTotal_UMK T2 WHERE (T2.[P. Unitario] = 0) and (".$mes." = T2.nMes) AND (".$anio." = T2.[Año]) AND  ".$qSegmento."  $Sql_Dia  AND ARTICULO = T1.ARTICULO  ), 0) AS Cantida_boni,
+                                isnull((SELECT SUM(T2.cantidad) FROM  Softland.dbo.VtasTotal_UMK T2 WHERE (T2.[P. Unitario] = 0) and (".$mes." = T2.nMes) AND (".$anio." = T2.[Año]) AND  ".$qSegmento."  $Sql_Dia  AND ARTICULO = T1.ARTICULO  ".$qCliente."), 0) AS Cantida_boni,
                                 t3.UNIDADES
                                 from Softland.dbo.VtasTotal_UMK T1 
                                 INNER JOIN iweb_articulos T3 ON T1.ARTICULO = T3.ARTICULO 
                                 Where ".$mes." = T1.nMes and $anio = T1.[Año] and T1.[P. Unitario] > 0
                                 AND  T1.".$qSegmento." $Sql_Dia
+                                ".$qCliente2."
                                 group by T1.Articulo,T1.Descripcion,T1.[Costo Unitario], t3.UNIDADES
                                 order by MontoVenta desc;";
 
@@ -1207,6 +1202,7 @@ class dashboard_model extends Model {
         $idPeriodo = '';
         $qSegmento ="";
         $company_user = Company::where('id',$request->session()->get('company_id'))->first()->id;
+        $qCliente = "";
         switch ($company_user) {
             case '1': 
                 if ($Segmento==0) {
@@ -1217,6 +1213,7 @@ class dashboard_model extends Model {
                     if ($Segmento==1) {
                         //TODAS LAS RUTAS DEL SEGMENTO FARMACIA
                         $qSegmento =" Ruta NOT IN ('F04','F02','F01','F12') ";
+                        $qCliente = " AND [Cod. Cliente] NOT IN (SELECT CLIENTE FROM PRODUCCION.dbo.view_cadena_de_farmacia) ";
                     } else {
                         if ($Segmento==2) {
                            //TODAS LAS RUTAS DEL SEGMENTO MAYORISTA
@@ -1225,6 +1222,12 @@ class dashboard_model extends Model {
                             if ($Segmento==3) {
                                //TODAS LAS RUTAS DEL SEGMENTO INSTITUCION
                                 $qSegmento =" Ruta IN ('F02') ";
+                            } else{
+                                if ($Segmento==4) {
+                                    //TODAS LAS RUTAS DEL SEGMENTO FARMACIA
+                                    $qSegmento =" Ruta NOT IN ('F04','F02','F01','F12') ";
+                                    $qCliente = " AND [Cod. Cliente] IN (SELECT CLIENTE FROM PRODUCCION.dbo.view_cadena_de_farmacia) ";
+                                }
                             }
                             
                         }
@@ -1234,6 +1237,7 @@ class dashboard_model extends Model {
                 $sql_exec =" SELECT Ruta, SUM ( VENTA ) AS Monto, SUM ( Cantidad ) AS Cantidad,COUNT ( DISTINCT FACTURA ) AS FACTURA 
                 FROM Softland.DBO.VtasTotal_UMK ( nolock ) 
                 WHERE DAY ( DIA ) =".$dia." AND MONTH ( DIA ) = ".$mes."  AND YEAR ( DIA ) = ".$anio."  AND [P. Unitario] > 0  AND Ruta NOT IN ( 'F01', 'F12' ) AND  ".$qSegmento."
+                ".$qCliente."
                 GROUP BY Ruta ORDER BY Ruta";
                 break;
             case '2':
@@ -1779,7 +1783,7 @@ class dashboard_model extends Model {
         if ( $company_user==4 ) {
             $tem_ = ($xbolsones)?array_sum(array_column($query, 'Cantidad')):array_sum(array_column($query, 'Monto'));
         }else {
-            $tem_ = array_sum(array_column($query, 'Monto'));
+            $tem_ = array_sum(array_column($query, 'total'));
         }
 
         $json[0]['data'] = $tem_;
@@ -1853,10 +1857,10 @@ class dashboard_model extends Model {
 
             if (count($metas)>0) {
                 $array[0]['title'] = 'real';
-                $array[0]['data'] = $metas[0]['data'] + $CadenaFarmacia[0]->Venta;
+                $array[0]['data'] = $metas[0]['data'];// + $CadenaFarmacia[0]->Venta;
 
                 $array[1]['title'] = 'meta';
-                $array[1]['data'] = $metas[1]['data'] +  $CadenaFarmacia[0]->Meta;
+                $array[1]['data'] = $metas[1]['data'];// +  $CadenaFarmacia[0]->Meta;
 
                 $array[2]['title'] = 'clientesMeta';
                 $array[2]['data'] = $clientesMeta;
@@ -2615,18 +2619,18 @@ class dashboard_model extends Model {
         return  $json;        
     }
 
-    public static function getVentasMensuales($xbolsones) {
+    public static function getVentasMensuales($xbolsones,$segmento) {
         $sql_server = new \sql_server();
         $sql_exec = '';
         $request = Request();
         $company_user = Company::where('id',$request->session()->get('company_id'))->first()->id;
         $i = 0;
-
+        
         $meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
         
         switch ($company_user) {
             case '1':
-            $sql = 'EXECUTE UMK_GN_VENTAS_MENSUALES';
+            $sql = "EXECUTE UMK_GN_VENTAS_MENSUALES2 '".$segmento."'";
             break;
 
             case '2':
@@ -2894,6 +2898,7 @@ class dashboard_model extends Model {
         $anio = intval( date('Y') );
         $qSegmento ="";
         $View  = "VtasTotal_UMK";
+        $qCliente = "";
 
         $Filtros ="AND Ruta NOT IN('F01', 'F12')";
 
@@ -2907,6 +2912,7 @@ class dashboard_model extends Model {
             if ($Segmento==1) {
                 //TODAS LAS RUTAS DEL SEGMENTO FARMACIA
                 $qSegmento =" AND Ruta NOT IN ('F04','F02','F01','F12') ";
+                $qCliente = "AND [Cod. Cliente] NOT IN (SELECT CLIENTE FROM PRODUCCION.dbo.view_cadena_de_farmacia) ";
             } else {
                 if ($Segmento==2) {
                    //TODAS LAS RUTAS DEL SEGMENTO MAYORISTA
@@ -2915,6 +2921,12 @@ class dashboard_model extends Model {
                     if ($Segmento==3) {
                        //TODAS LAS RUTAS DEL SEGMENTO INSTITUCION
                         $qSegmento =" AND Ruta IN ('F02') ";
+                    } else{
+                        if ($Segmento==4) {
+                            //TODAS LAS RUTAS DEL SEGMENTO FARMACIA
+                            $qSegmento =" AND Ruta NOT IN ('F04','F02','F01','F12') ";
+                            $qCliente = "AND [Cod. Cliente] IN (SELECT CLIENTE FROM PRODUCCION.dbo.view_cadena_de_farmacia)";
+                        }
                     }
                     
                 }
@@ -2933,6 +2945,7 @@ class dashboard_model extends Model {
         $sql_exec = "SELECT ISNULL( CAST( SUM(".$campo.") AS FLOAT), 0 ) AS montoVenta, nMes AS mes 
                     FROM Softland.dbo.".$View." (nolock)
                     WHERE [Año] IN (YEAR(GETDATE())) AND [P. Unitario] > 0 ".$Filtros.$qSegmento."
+                    ".$qCliente."
                     GROUP BY Mes,Año,nMes
                     ORDER BY nMes";
         $qReal = $sql_server->fetchArray($sql_exec, SQLSRV_FETCH_ASSOC);
@@ -2949,6 +2962,7 @@ class dashboard_model extends Model {
         $sql_tendencia ="SELECT CAST( ( AVG ( T0.SubTotal ) * 24 ) AS FLOAT ) montoVenta,T0.mes 
                             FROM( SELECT nMes AS mes, SUM ( ".$campo." ) SubTotal FROM Softland.dbo.".$View." ( nolock ) WHERE YEAR([Dia]) = YEAR(GETDATE())
                                     AND [P. Unitario] > 0 ".$Filtros.$qSegmento."
+                                    ".$qCliente."
                                     GROUP BY nMes,DAY ( Dia ) 
                                 ) T0 GROUP BY T0.mes;";
         
@@ -2977,5 +2991,103 @@ class dashboard_model extends Model {
         $array[2]['data'] = $real;
 
         return $array;
+    }
+
+    public static function getComportamientoMensual($fechaIni, $fechaFin, $articulo){
+
+        $resultados = DB::connection("sqlsrv")->select('EXEC PRODUCCION.dbo.gnet_comportamiento_mensual_articulo ?, ?, ?', [$fechaIni, $fechaFin,$articulo]);
+        
+        $comportamiento = array();
+        $categorias = array();
+        $cantidadItem = $cantidadVentas = $costoUnitario = $precioProm = $porcentaje = 0;
+        $array_item = array();
+        
+
+        foreach ($resultados as $resultado) {
+            $cantidadVentas = $resultado->TotalVenta;
+            $costoUnitario = $resultado->costoUnitario;
+            foreach ($resultado as $columna => $valor) {
+                if ($columna !== 'ARTICULO' && $columna !== 'costoUnitario' && $columna !== 'TotalVenta' ) {
+                    
+                    array_push($comportamiento, floatval($valor));
+                    array_push($categorias, $columna);
+                    $cantidadItem += $valor;
+                    $array_item[] = floatval($valor);
+                }
+            }
+        }
+        
+        $average = array_sum($array_item) / count($array_item);
+
+        if($cantidadItem > 0){
+            $precioProm = floatval($cantidadVentas) / floatval($cantidadItem);
+        }
+        
+        $contribucion = floatval($cantidadVentas) - (floatval($cantidadItem) * floatval($costoUnitario));
+        
+        if($contribucion > 0){
+            $porcentaje = number_format((floatval($cantidadVentas) / floatval($contribucion)) * 100,2,'.','');
+        }
+
+        $json[0]['title'] = 'Unidades Facturadas (Incluyen Bonificados)';
+        $json[0]['precioPromedio'] = number_format($precioProm,2,'.',',');
+        $json[0]['costoUnitario'] =  number_format($costoUnitario,2,'.',',');
+        $json[0]['contribucion'] = number_format($contribucion,2,'.',',');
+        $json[0]['porcentajeContribucion'] = $porcentaje;
+        $json[0]['average'] = number_format($average,2,'.',',');
+        $json[0]['data'] = $comportamiento;
+        $json[0]['categories'] = $categorias;
+        
+        return $json;
+    }
+
+    public static function getComportamientoMensualVentas($fechaIni, $fechaFin, $articulo){
+
+        $resultados = DB::connection("sqlsrv")->select('EXEC PRODUCCION.dbo.gnet_comportamiento_mensual_articulo_venta ?, ?, ?', [$fechaIni, $fechaFin,$articulo]);
+        
+        $comportamiento = array();
+        $categorias = array();
+        $array_item = array();
+        $cantidadItem = $cantidadVentas = $costoUnitario = $precioProm = $porcentaje = 0;
+        
+
+        foreach ($resultados as $resultado) {
+
+            $cantidadItem = $resultado->CANTIDAD;
+            $costoUnitario = $resultado->costoUnitario;
+
+            foreach ($resultado as $columna => $valor) {
+                if ($columna !== 'ARTICULO' && $columna !== 'costoUnitario' && $columna !== 'CANTIDAD' ) {
+                    
+                    array_push($comportamiento, floatval($valor));
+                    array_push($categorias, $columna);
+                    $cantidadVentas += floatval($valor);
+                    $array_item[] = floatval($valor);
+                }
+            }
+       
+        }
+
+        $average = array_sum($array_item) / count($array_item);
+
+        if($cantidadItem > 0){
+            $precioProm = floatval($cantidadVentas) / floatval($cantidadItem);
+        }
+        
+        $contribucion = floatval($cantidadVentas) - (floatval($cantidadItem) * floatval($costoUnitario));
+        
+        if($contribucion > 0){
+            $porcentaje = number_format((floatval($cantidadVentas) / floatval($contribucion)) * 100,2,'.','');
+        }
+
+        $json[0]['title'] = 'Articulos desplazados';
+        $json[0]['precioPromedio'] = number_format($precioProm,2,'.',',');
+        $json[0]['costoUnitario'] =  number_format($costoUnitario,2,'.',',');
+        $json[0]['contribucion'] = number_format($contribucion,2,'.',',');
+        $json[0]['porcentajeContribucion'] = $porcentaje;
+        $json[0]['average'] = number_format($average,2,'.',',');
+        $json[0]['data'] = $comportamiento;
+        $json[0]['categories'] = $categorias;
+        return $json;
     }
 }

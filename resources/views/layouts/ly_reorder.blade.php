@@ -10,24 +10,86 @@
 <link rel="stylesheet" href="{{ url('css/bootstrap.min.css') }}">
 <!-- Mi CSS -->
 <link rel="stylesheet" href="{{ url('css/style.css') }}">
-
-
-<link rel="stylesheet" href="{{ url('css/dashboard.css') }}">
-<link rel="stylesheet" href="{{ url('css/fuente.css') }}">
-
-<link rel="stylesheet" type="text/css" href="{{ url('css/daterangepicker.css') }}">
-<link rel="stylesheet" type="text/css" href="{{ url('css/jquery.dataTables.min.css') }}">
-
-<link href="https://cdn.datatables.net/fixedcolumns/3.2.2/css/fixedColumns.dataTables.min.css" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/3.1.2/css/buttons.dataTables.css">
 
 <style>
-  span.btn-change-color {
-    background-color: #0072bc;
-  }
-</style>
+    .bd-placeholder-img {
+        font-size: 1.125rem;
+        text-anchor: middle;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+    }
+    @media (min-width: 768px) {
+        .bd-placeholder-img-lg {
+            font-size: 3.5rem;
+        }
+    }
 
+  .tbl_rows_recibo_color{
+      background-color: #F7CFCF !important;
+  }
+  .tbl_rows_recibo_ingress{
+      background-color: #c8f5bf !important;
+  }
+
+  .tbl_rows_done{
+      color: #c7c7c7
+  }
+
+.btn-outline-primary 
+{
+  color: #007bff !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  border-radius: 35px !important;
+  border: 1px solid rgba(0, 123, 255, 0.75) !important;   
+}
+
+.btn-outline-success 
+{
+  color: #28a745 !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  border-radius: 35px !important;
+  border: 1px solid rgba(40, 167, 69, 0.75) !important;   
+}
+
+.btn-outline-secondary 
+{
+  color: #868e96 !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  border-radius: 35px !important;
+  border: 1px solid rgba(134, 142, 150, 0.75) !important;   
+}
+
+
+  .dt-layout-cell.dt-layout-start {    
+    width: 900px !important;
+  }
+  
+  .table.dataTable  {
+    font-family: Verdana, Geneva, Tahoma, sans-serif;
+    font-size: 12px;
+  }
+
+  
+
+</style>
+<!-- Custom styles for this template -->
+<link rel="stylesheet" href="{{ url('css/dashboard.css') }}">
+<link rel="stylesheet" href="{{ url('css/fuente.css') }}">
+<link rel="stylesheet" type="text/css" href="{{ url('css/daterangepicker.css') }}">
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/2.1.5/css/dataTables.dataTables.css">
+
+<link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap4.min.css">
+
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/fixedcolumns/5.0.1/css/fixedColumns.dataTables.css">
+
+<!--Import Google Icon Font-->
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 </head>
 <body>
 @include('layouts.menu')
@@ -97,23 +159,39 @@
     </div>
   </div>
 </div>
-<script src="https://code.jquery.com/jquery-3.7.0.js"></script>
-<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
-<script src="https://cdn.datatables.net/fixedcolumns/4.3.0/js/dataTables.fixedColumns.min.js"></script>
 
-<script src="{{ url('js/ext/moment.js') }}"></script>
 <script src="{{ url('js/ext/feather.min.js') }}"></script>
-<script src="{{ url('js/ext/daterangepicker.js') }}"></script>
-<script src="{{ url('js/js_general.js') }}"></script>
+<script src="{{ url('js/ext/Chart.min.js') }}"></script>
+
+<script src="https://code.jquery.com/jquery-3.7.1.js"></script>>
+
 <script src="{{ url('js/highcharts.js') }}"></script>
-<script src="{{ url('js/bootstrap.bundle.min.js') }}"></script>
-<script src="{{ url('js/bootstrap.bundle.js') }}"></script>
-<script src="{{ url('js/bootstrap.min.js') }}"></script>
-<script src="{{ url('js/bootstrap-select.js') }}"></script>
 <script src="{{ url('js/bootstrap.js') }}"></script>
+<script src="{{ url('js/ext/moment.js') }}"></script>
+<script src="{{ url('js/ext/daterangepicker.js') }}"></script>
+
+<script src="{{ url('js/js_general.js') }}"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script src="{{ url('js/Numeral.js') }}"></script>
 
 <script src="{{ url('js/jquery.cookie.js') }}"></script>
-<script src="{{ url('js/Numeral.js') }}"></script>
+<script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<script src="https://cdn.datatables.net/2.1.5/js/dataTables.js"></script>
+<script src="https://cdn.datatables.net/buttons/3.1.2/js/dataTables.buttons.js"></script>
+<script src="https://cdn.datatables.net/buttons/3.1.2/js/buttons.dataTables.js"></script>
+<script src="https://cdn.datatables.net/buttons/3.1.2/js/buttons.colVis.min.js"></script>
+<script src="https://cdn.datatables.net/fixedcolumns/5.0.1/js/dataTables.fixedColumns.js"></script>
+<script src="https://cdn.datatables.net/fixedcolumns/5.0.1/js/fixedColumns.dataTables.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+<script src="https://cdn.datatables.net/buttons/3.1.2/js/buttons.html5.min.js"></script>
+
 
 
 @yield('metodosjs')

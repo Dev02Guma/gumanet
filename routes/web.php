@@ -20,6 +20,19 @@ Route::post('/getTasksProjects','infraestructura_controller@getTasksProjects');
 
 //RUTAS MENU
 Route::get('/Inventario','inventario_controller@index');
+Route::get('/Inventario/Transito/{id}','inventario_controller@InventarioTransito')->name('/Comiciones/Inventario');
+Route::get('/getTransito/{id}', 'inventario_controller@getTransito')->name("getTransito");
+Route::post('/SaveTransito', 'inventario_controller@SaveTransito')->name("SaveTransito");
+Route::post('/SaveTransitoNew', 'inventario_controller@SaveTransitoNew')->name("SaveTransitoNew");
+Route::post('/SaveTransitoConCodigo', 'inventario_controller@SaveTransitoConCodigo')->name("SaveTransitoConCodigo");
+Route::post('/DeleteArticuloTransito', 'inventario_controller@DeleteArticuloTransito')->name("/DeleteArticuloTransito");
+Route::post('/Inventario/Transito/SaveTransitoExcel', 'inventario_controller@SaveTransitoExcel')->name('SaveTransitoExcel');
+
+
+//RUTA DE PRODUCCION
+Route::post('/getInfoArticulo', 'inventario_controller@getInfoArticulo')->name("getInfoArticulo");
+
+
 Route::get('/Metas','metas_controller@index');
 Route::get('/Usuario','usuario_controller@index');
 Route::get('/Reportes','reportes_controller@index');
@@ -70,6 +83,7 @@ Route::get('/objOtros/{articulo}','inventario_controller@getOtrosArticulos');
 Route::get('/objVineta/{articulo}','inventario_controller@getVineta');
 Route::get('/objBonificado/{articulo}','inventario_controller@getArtBonificados');
 Route::get('/objIndicadores/{articulo}','inventario_controller@objIndicadores');
+Route::get('/getInfoMific/{articulo}','inventario_controller@getInfoMific');
 
 Route::post('/transacciones','inventario_controller@transaccionesDetalle');
 Route::post('/lotes','inventario_controller@getLotesArticulo');
@@ -127,7 +141,7 @@ Route::get('/Grafselect/{mes}/{anio}/{xbolsones}/{segmento}','dashboard_controll
 Route::get('/detailsAllCls/{mes}/{anio}/{categoria}/{bolson}','dashboard_controller@getAllClientsByCategory');
 
 
-Route::get('/dataVentasMens/{xbolsones}','dashboard_controller@getVentasMensuales');
+Route::get('/dataVentasMens/{xbolsones}/{segmento}','dashboard_controller@getVentasMensuales');
 
 
 Route::get('/dtaComportamientoAnuales/{xbolsones}','dashboard_controller@getComportamiento');
@@ -137,6 +151,8 @@ Route::get('/top10Cls','dashboard_controller@getTop10Clientes');
 Route::get('/valBodegas','dashboard_controller@getValBodegas');
 Route::post('/dataCate', 'dashboard_controller@ventaXCategorias');
 Route::get('/getRecuRowsByRoutes/{mes}/{anio}/{pageName}','dashboard_controller@getRecuRowsByRoutes');
+
+Route::get('/getComportamientoMensual/{fechaIni}/{fechaFin}/{articulo}/{op}','dashboard_controller@getComportamientoMensual');
 
 //RUTAS REPORTES VENTAS
 Route::post('/ventasDetalle','reportes_controller@detalleVentas');
@@ -269,13 +285,24 @@ Route::post('getSaleDetalleInsta', 'dashboard_controller@getSaleDetalleInsta')->
 
 
 // TODAS LAS RUTAS DEL REORDER POINT
-Route::get('ReporderPoint', 'ReOrderPointController@ReOrderPoint')->name('ReporderPoint');
+Route::get('ReOrder', 'ReOrderPointController@ReOrderPoint')->name('ReOrder');
 Route::get('getData', 'ReOrderPointController@getData')->name('getData');
-Route::get('dtGraf/{articulo}','ReOrderPointController@getDataGrafica')->name('dtGraf/{articulo}');
+Route::get('CalcReorder', 'ReOrderPointController@CalcReorder')->name('CalcReorder');
+Route::get('dtGraf/{articulo}/{canal}','ReOrderPointController@getDataGrafica')->name('dtGraf/{articulo}/{canal}');
 
+Route::get('ExportToExcel', 'ReOrderPointController@ExportToExcel')->name('ExportToExcel');
+Route::get('ExportToExcelCanales', 'ReOrderPointController@ExportToExcelCanales')->name('ExportToExcelCanales');
+
+Route::get('canales','dashboard_controller@canalXcontribucion')->name('canales');
+Route::get('canalData','dashboard_controller@canalData')->name('canalData');
+Route::get('calcularCanales/{fechaIni}/{fechaEnd}','dashboard_controller@calcularCanales')->name('calcularCanales/{fechaIni}/{fechaEnd}');
+Route::get('periodoCanales','dashboard_controller@periodoCanales')->name('periodoCanales');
+Route::get('get12Canales/{articulo}/{canal}/{opcion}','dashboard_controller@getDataCanal')->name('get12Canales/{articulo}/{canal}/{opcion}');
 
 // ROUTER DE PROYECTO 71 & 89
-Route::get('Presupuesto', 'BudgetController@ViewBudget')->name('Presupuesto');
+Route::get('Presupuesto89', 'BudgetController@Budget89')->name('Presupuesto89');
+Route::get('Presupuesto71', 'BudgetController@Budget71')->name('Presupuesto71');
+
 Route::get('dtProyect', 'BudgetController@dtProyect')->name('dtProyect');
 Route::get('dtArticulo', 'BudgetController@dtArticulo')->name('dtArticulo');
 

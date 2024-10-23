@@ -7,14 +7,21 @@
 @section('content')
 <div class="container-fluid">
   <div class="row mb-5">
-    <div class="col-md-10">
+    <div class="col-md-6">
       <h4 class="h4">Inventario</h4>
     </div>
-    <div class="col-md-2">
-      @if( Auth::User()->email=='asaenz@unimarksa.com' || Auth::User()->email=='admin@gmail.com' )
+    @if( Auth::User()->email=='asaenz@unimarksa.com' || Auth::User()->email=='admin@gmail.com' || Auth::User()->email=='asisp@unimarksa.com' )    
+      <div class="col-md-2">
         <a id="" href="{{url('/invCompleto')}}" class="btn btn-primary btn-block">Inventario Completo</a>
-      @endif
-    </div>
+      </div>
+      
+      <div class="col-md-2">
+        <a id="" href="{{url('/Inventario/Transito/1')}}" class="btn btn-primary btn-block">Transito Con Codigo</a>
+      </div>
+      <div class="col-md-2">
+        <a id="" href="{{url('/Inventario/Transito/0')}}" class="btn btn-primary btn-block">Transito Sin Codigo</a>
+      </div>
+    @endif
   </div>
   <div class="row mt-3">
     <div class="col-sm-9">
@@ -157,12 +164,14 @@
             <a class="nav-item nav-link" id="navOtros" data-toggle="tab" href="#nav-otros" role="tab" aria-controls="nav-otros" aria-selected="false">Otros</a>
             <a class="nav-item nav-link" id="navIndicadores" data-toggle="tab" href="#nav-Indicadores" role="tab" aria-controls="nav-Indicadores" aria-selected="false">Indicadores</a>
             <a class="nav-item nav-link" id="navVinneta" data-toggle="tab" href="#nav-Vinneta" role="tab" aria-controls="nav-Vineta" aria-selected="false">Viñeta</a>
-
-            
+            <a class="nav-item nav-link" id="navComportamiento" data-toggle="tab" href="#nav-Comportamiento" role="tab" aria-controls="nav-Comportamiento" aria-selected="false">Comportamiento</a>
+            <a class="nav-item nav-link" id="navTransito" data-toggle="tab" href="#nav-Transito" role="tab" aria-controls="nav-Transito" aria-selected="false">Transito</a>
+            <a class="nav-item nav-link" id="navMific" data-toggle="tab" href="#nav-Mific" role="tab" aria-controls="nav-Mific" aria-selected="false">Mific</a>
             
           </div>
         </nav>
         <div class="tab-content" id="nav-tabContent">
+
           <div class="tab-pane fade show active" id="nav-bod" role="tabpanel" aria-labelledby="navBodega">
             <div class="row">
                 <div class="col-sm-12">
@@ -180,6 +189,7 @@
                 </div>
             </div>
           </div>
+
           <div class="tab-pane fade" id="nav-prec" role="tabpanel" aria-labelledby="navPrecios">
             <div class="row">
               <div class="col-sm-12">
@@ -194,6 +204,7 @@
               </div>
             </div>
           </div>
+
           <div class="tab-pane fade" id="nav-boni" role="tabpanel" aria-labelledby="navBonificados">
             <table id="tblBonificados" class="table table-bordered mt-3">
               <thead class="bg-blue text-light">
@@ -203,9 +214,11 @@
               </thead>
             </table>
           </div>
+
           <div class="tab-pane fade" id="nav-trans" role="tabpanel" aria-labelledby="navTransaccion">
             <div class="row">
               <div class="col-sm-12">
+             
                 <div class="card" style="border-top: none">
                   <div class="card-body">
                     <div class="row">
@@ -240,27 +253,39 @@
                         <a href="#!" id="btnSearch" class="btn btn-primary btn-sm mt-4">Buscar</a>
                       </div>
                     </div>
+                    <div class="row" >
+                      <div class="col-sm-4 text-center border-top">
+                        <label for="lbl1" class="mt-1"><B>UNITS FACTURADAS</B></label></br>
+                        <label for="lbl1" id="id_count_venta">0</label>
+                      </div>
+                      <div class="col-sm-4 text-center border-top">
+                        <label for="lbl2" class="mt-1"><B>UNITS BONIFICADAS</B></label></br>
+                        <label for="lbl2" id="id_count_bonif">0</label>
+                      </div>
+                      <div class="col-sm-4 text-center border-top">
+                        <label for="lbl3" class="mt-1"><B>UNITS DESPLAZADAS</B></label></br>
+                        <label for="lbl3" id="id_units_desp">0</label>
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <table id="tblTrans" class="table table-bordered mt-2">
-                    <thead class="bg-blue text-light">
-                      <tr>
-                          <th>Fecha</th>
-                          <th>Lote</th>
-                          <th>Factura</th>
-                          <th>Tipo</th>
-                          <th>Cantidad</th>
-                          <th>Referencia</th>
-                          <th>Código</th>
-                          <th>Cliente</th>
-                      </tr>
-                    </thead>
-                    <tbody id="tbody1">
-                      <tr>
-                        <td colspan="5"><center>No hay datos que mostrar</center></td>
-                      </tr>
-                    </tbody>
-                </table>
+                <table id="tblTrans_dev" class="table table-bordered">
+                        <thead class="bg-blue text-light">
+                          <tr>
+                            <th></th>
+                            <th>FECHA</th>
+                            <th>LOTE</th>
+                            <th>FACTURA</th>
+                            <th>TIPO</th>
+                            <th>CANTIDAD</th>
+                            <th>REFERENCIA</th>
+                            <th>CODIGO</th>
+                            <th>CLIENTE</th>
+                            <th>-</th>
+                        </tr>
+                        </thead>
+                    </table>
+                
               </div>
             </div>
           </div>
@@ -269,7 +294,7 @@
             <div class="row">
               <div class="col-sm-12">                
                 <table id="tblCostos" class="table table-bordered mt-3">
-                  <tbody id="tbody1">
+                  <tbody>
                       <tr>
                         <td class="bg-blue text-light"><b>Costo Promedio.</b></td>
                         <td id="id_prec_prom" class ="dt-right">0</td>
@@ -411,6 +436,117 @@
                 </table>
               </div>
             </div>
+          </div>
+
+          <div class="tab-pane fade" id="nav-Comportamiento" role="tabpanel" aria-labelledby="navComportamiento">
+            <div class="row">
+              <div class="col-sm-12" >
+                <div class="card" style="border-top: none">
+                  <div class="card-body">
+                    <div class="row">
+                    
+                      <div class="col-sm-3">
+                        <div class="form-group">
+                          <label for="fci">Desde</label>
+                          <input type="text" class="input-fecha" id="fci">
+                        </div>
+                      </div>
+                      <div class="col-sm-3">
+                        <div class="form-group">
+                          <label for="fcf">Hasta</label>
+                          <input type="text" class="input-fecha" id="fcf">
+                        </div>
+                      </div>
+                      <div class="col-md-4">
+                        <div class="form-group">
+                          <label for="orderComportamiento" class="text-muted">Filtrar por</label>
+                          <select class="form-control" id="orderComportamiento">
+                            <option value="1">UNIDADES</option>
+                            <option value="2">MONTO FACTURADO</option>
+                          </select>
+                        </div>
+                        
+                      </div>
+                        <div class="col-sm-1">
+                          <a href="#!" id="btnSearchComport" class="btn btn-primary btn-sm mt-4">Buscar</a>
+                        </div>                      
+                    </div>
+                    
+                    <div class="row" style="display:none">
+                      <div class="col-sm-3 text-center border-top">
+                        <label for="lbl1" class="mt-4"><B>PRECIO PROMEDIO</B></label></br>
+                        <label for="lbl1" id="lbl1">0</label>
+                      </div>
+                      <div class="col-sm-3 text-center border-top">
+                        <label for="lbl2" class="mt-4"><B>COST. UNITS. PROM.</B></label></br>
+                        <label for="lbl2" id="lbl2">0</label>
+                      </div>
+                      <div class="col-sm-3 text-center border-top">
+                        <label for="lbl3" class="mt-4"><B>CONTRIBUCION</B></label></br>
+                        <label for="lbl3" id="lbl3">0</label>
+                      </div>
+                      <div class="col-sm-3 text-center border-top">
+                        <label for="lbl4" class="mt-4"><B>% CONTRIBUCION</B></label></br>
+                        <label for="lbl4" id="lbl4">0</label>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                    <div class="graf col-sm-12 mt-3">
+                    <div class="col-sm-12 text-right ">
+                        <label id="lbl_promedio" class="text-muted">0.00</label>
+                      </div>
+                        <input type="text" id="idArti" style="display: none;">
+                        <div id="comportamientoMen" style="width: 100%; margin: 0 auto;"></div>
+                    </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="tab-pane fade" id="nav-Transito" role="tabpanel" aria-labelledby="navTransito">
+            <div class="row">
+              <div class="col-sm-12 mt-3" >
+                <div class="table-responsive" >                        
+                  <table class="table table-hover table-striped overflow-hidden" id="tbl_transito_articulo" >
+                  <thead class="bg-blue text-light">
+                    <tr>
+                      <th>FECHA PEDIDO</th>                        
+                      <th>FECHA ESTIMADA</th>                      
+                      <th>DOCUMENTO</th>
+                      <th>MERCADO</th>
+                      <th>MIFIC</th>
+                      <th>PRECIO MIFIC</th>
+                      <th>CANTIDAD</th>
+                      <th>CANT PEDIDO</th>
+                      <th>CANT TRANSITO</th>
+                      <th>OBSERVACIONES</th>
+                    </tr>
+                  </thead>
+                  </table>  
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="tab-pane fade" id="nav-Mific" role="tabpanel" aria-labelledby="navOtros">
+            <div class="row">
+              <div class="col-sm-12">                
+                <table id="tblCostos" class="table table-bordered mt-3">
+                  <tbody id="tbody1">
+                      <tr>
+                        <td class="bg-blue text-light"><b>PRECIO MIFIC FARMACIA.</b></td>
+                        <td id="id_precio_mific_farmacia" class ="dt-right">0</td>
+                      </tr>
+                      <tr >
+                        <td class="bg-blue text-light"><b>PRECIO MIFIC PUBLICO.</b></td>
+                        <td id="id_precio_mific_public" class="dt-right">0</td>
+                      </tr>
+                      
+                    </tbody>
+                </table>
+              </div>
+            </div>            
           </div>
 
         </div>
