@@ -16,6 +16,9 @@ use App\tbl_temporal;
 use DataTables;
 use DB;
 use Illuminate\Http\Request;
+use CodersFree\Date\Date;
+
+
 class inventario_model extends Model {
     
     public static function getArticulos() {        
@@ -283,18 +286,11 @@ class inventario_model extends Model {
         $query = array();
         $i=0;
 
-        
-
-       
-
-        
-
         $query1 = $sql_server->fetchArray( $sql_exec ,SQLSRV_FETCH_ASSOC);
         foreach ($query1 as $key) {
 
             $ArticuloVinneta      = ArticuloVinneta::WHERE('ARTICULO',$key['ARTICULO'])->get();
             $retVal = (count($ArticuloVinneta) >0) ? 'VIÑETA' : '' ;
-
 
             $query[$i]['ARTICULO']          = $key['ARTICULO'];
             $query[$i]['DESCRIPCION']       = $key['DESCRIPCION'];
@@ -307,6 +303,8 @@ class inventario_model extends Model {
 
         return $query;
     }
+
+   
 
     public static function getInventarioTotalizado() {
         $sql_server = new \sql_server();        
@@ -1036,6 +1034,23 @@ class inventario_model extends Model {
         return $json;
     }
 
+    public static function getInfoMific($articulo) 
+    {
+
+        $Array    = array();
+        
+        $Precios_mific =  PreciosMific::where('ARTICULO',$articulo)->limit(1)->get();
+        
+        foreach ($Precios_mific as $k => $v) {
+            $Array = [
+                'Precio_mific_farmacia'     => "C$ " .number_format($v->MIFIC_FARMACIA,4),
+                'Precio_mific_public'       => "C$ " .number_format($v->MIFIC_PUBLICO,4),
+            ];        
+        }    
+        return $Array;
+        
+    }
+
     public static function getOtrosArticulos($articulo) {
         
         $sql_server     = new \sql_server();
@@ -1502,24 +1517,24 @@ class inventario_model extends Model {
                     }
                 }
 
-            $sql_exec_anual = "SELECT 
-                        T1.Articulo,T1.Descripcion,T1.Clasificacion6,
-                        count(T1.articulo) As NºVentaMes,
-                        isnull(sum(T1.cantidad),0) Cantidad,
-                        isnull(sum(T1.venta),0) MontoVenta,
-                        AVG (T1.[P. Unitario]) as AVG_,         
-                        T1.[Costo Unitario] AS COSTO_PROM,
-                        isnull((SELECT TOP 1 SUM(T2.cantidad) AS Cantidad FROM Softland.dbo.VtasTotal_UMK T2  WHERE ".$anio." = T2.[Año] AND T2.[P. Unitario] <= 0 AND T2.Articulo = T1.Articulo and ".$qSegmento." GROUP BY  T2.Articulo),0) AS Cantida_boni,
-                        
-                        T3.total,
-                        T3.UNIDADES
-            
-                        FROM Softland.dbo.VtasTotal_UMK T1 
-                        INNER JOIN iweb_articulos T3 ON T1.ARTICULO = T3.ARTICULO 
-                        Where ".$anio." = T1.[Año] and T1.[P. Unitario] > 0 AND T1.Articulo = '".$articulo."'
-                        AND  Ruta NOT IN('F01', 'F12') AND  ".$qSegmento." 
-                        group by T1.Articulo,T1.Descripcion,T1.Clasificacion6,T1.año,T1.[Costo Unitario],T3.total,T3.UNIDADES
-                        order by MontoVenta desc";
+                $sql_exec_anual = "SELECT 
+                            T1.Articulo,T1.Descripcion,T1.Clasificacion6,
+                            count(T1.articulo) As NºVentaMes,
+                            isnull(sum(T1.cantidad),0) Cantidad,
+                            isnull(sum(T1.venta),0) MontoVenta,
+                            AVG (T1.[P. Unitario]) as AVG_,         
+                            T1.[Costo Unitario] AS COSTO_PROM,
+                            isnull((SELECT TOP 1 SUM(T2.cantidad) AS Cantidad FROM Softland.dbo.VtasTotal_UMK T2  WHERE ".$anio." = T2.[Año] AND T2.[P. Unitario] <= 0 AND T2.Articulo = T1.Articulo and ".$qSegmento." GROUP BY  T2.Articulo),0) AS Cantida_boni,
+                            
+                            T3.total,
+                            T3.UNIDADES
+                
+                            FROM Softland.dbo.VtasTotal_UMK T1 
+                            INNER JOIN iweb_articulos T3 ON T1.ARTICULO = T3.ARTICULO 
+                            Where ".$anio." = T1.[Año] and T1.[P. Unitario] > 0 AND T1.Articulo = '".$articulo."'
+                            AND  Ruta NOT IN('F01', 'F12') AND  ".$qSegmento." 
+                            group by T1.Articulo,T1.Descripcion,T1.Clasificacion6,T1.año,T1.[Costo Unitario],T3.total,T3.UNIDADES
+                            order by MontoVenta desc";
 
                         
 
@@ -1609,22 +1624,22 @@ class inventario_model extends Model {
                 order by MontoVenta desc";
 
                 
-    $sql_exec_mensual = "SELECT                         
-                T1.Articulo,T1.Descripcion,
-                count(T1.articulo) As NºVentaMes,
-                isnull(sum(T1.cantidad),0) Cantidad,
-                isnull(sum(T1.venta),0) MontoVenta,
-                AVG (T1.[P. Unitario]) as AVG_,         
-                T1.[Costo Unitario] AS COSTO_PROM,
-                isnull((SELECT TOP 1 SUM(T2.cantidad) AS Cantidad FROM Softland.dbo.INV_VtasTotal_UMK_Temporal T2  WHERE ".$mes." = T2.nMes AND ".$anio." = T2.[Año] AND T2.[P. Unitario] <= 0 AND T2.Articulo = T1.Articulo  GROUP BY  T2.Articulo),0) AS Cantida_boni,
-                T3.total,
-                T3.UNIDADES
+                $sql_exec_mensual = "SELECT                         
+                            T1.Articulo,T1.Descripcion,
+                            count(T1.articulo) As NºVentaMes,
+                            isnull(sum(T1.cantidad),0) Cantidad,
+                            isnull(sum(T1.venta),0) MontoVenta,
+                            AVG (T1.[P. Unitario]) as AVG_,         
+                            T1.[Costo Unitario] AS COSTO_PROM,
+                            isnull((SELECT TOP 1 SUM(T2.cantidad) AS Cantidad FROM Softland.dbo.INV_VtasTotal_UMK_Temporal T2  WHERE ".$mes." = T2.nMes AND ".$anio." = T2.[Año] AND T2.[P. Unitario] <= 0 AND T2.Articulo = T1.Articulo  GROUP BY  T2.Articulo),0) AS Cantida_boni,
+                            T3.total,
+                            T3.UNIDADES
 
-                FROM Softland.dbo.INV_VtasTotal_UMK_Temporal T1 
-                INNER JOIN inn_iweb_articulos T3 ON T1.ARTICULO = T3.ARTICULO 
-                Where ".$mes." = T1.nMes and ".$anio." = T1.[Año] and T1.[P. Unitario] > 0 AND T1.Articulo = '".$articulo."'
-                group by T1.Articulo,T1.Descripcion,T1.mes,T1.año,T1.[Costo Unitario],T3.total,T3.UNIDADES
-                order by MontoVenta desc";
+                            FROM Softland.dbo.INV_VtasTotal_UMK_Temporal T1 
+                            INNER JOIN inn_iweb_articulos T3 ON T1.ARTICULO = T3.ARTICULO 
+                            Where ".$mes." = T1.nMes and ".$anio." = T1.[Año] and T1.[P. Unitario] > 0 AND T1.Articulo = '".$articulo."'
+                            group by T1.Articulo,T1.Descripcion,T1.mes,T1.año,T1.[Costo Unitario],T3.total,T3.UNIDADES
+                            order by MontoVenta desc";
 
                 break;        
             default:                
@@ -1858,14 +1873,13 @@ class inventario_model extends Model {
         $i=0;
         $json = array();
         foreach($query as $fila){
-
-
+            $json[$i]["DETALLE"]        = '<a id="id_info_trans" class="class_info_trans" href="#!"><i class="material-icons expan_more">expand_more</i></a>';
             $json[$i]["FECHA"]          = date_format($fila["FECHA"],"d/m/Y");
             $json[$i]["LOTE"]           = $fila["LOTE"];
             $json[$i]["APLICACION"]     = $fila["APLICACION"];
             $json[$i]["DESCRTIPO"]      = ($fila["BONIFICADO"]=='S')? 'BONIFICADO' : strtoupper($fila["DESCRTIPO"]) ;
             $json[$i]["CANT"]           = ($fila["BONIFICADO"]=='S') ? '<span class="text-success">* '. number_format($fila["CANTIDAD"],0) .'</span>' : number_format($fila["CANTIDAD"],0) ;
-            $json[$i]["CANTIDAD"]           = number_format($fila["CANTIDAD"],2);
+            $json[$i]["CANTIDAD"]       = number_format($fila["CANTIDAD"],2);
             $json[$i]["REFERENCIA"]     = $fila["REFERENCIA"];
             $json[$i]["CODIGO_CLIENTE"] = $fila["CODIGO_CLIENTE"];
             $json[$i]["NOMBRE"]         = $fila["NOMBRE"];

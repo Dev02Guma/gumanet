@@ -182,7 +182,11 @@
         </div>
         
 
-
+        <div class="row mt-3 justify-content-end" >
+            <div class="col-sm-2">
+                    <select class="form-control form-control-sm" id="opc_seg_graf03" ></select>
+            </div>              
+        </div>
         <div class="row" id="ct04">
             <div class="graf col-sm-12 mt-3">
                 <div class="container-vms" id="grafVtsMes" style="width: 100%; margin: 0 auto"></div>
