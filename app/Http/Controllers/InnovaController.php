@@ -43,6 +43,11 @@ class InnovaController extends Controller
 
     public function saveInnStat()
     {
-        InnovaEstadisticas::saveInnStat(7, 2023);
+
+        $mes = 04;
+        $anio = 2025;
+
+        InnovaEstadisticas::saveInnStat($mes, $anio);
     }
+    
 }

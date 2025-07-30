@@ -18,7 +18,6 @@ $(document).ready(function() {
         primerDia = final.getFullYear()+'-'+(final.getMonth()+1)+'-'+(final.getDate()+dia);
     }
 
-    console.log('primerDia: ' + primerDia + ' ultimoDia: ' + ultimoDia);
 
     tblKardex(primerDia, ultimoDia);
 });
@@ -105,9 +104,7 @@ function tblKardex(primerDia, ultimoDia) {
                 
                 table +=`</tbody></table>`;
 
-   			$('#kardex')
-   			.empty()
-   			.append(table);
+   			$('#kardex').empty().append(table);
             
             $('#tbl_kardex').DataTable({
                 "destroy" : true,
@@ -165,7 +162,7 @@ function tblKardex(primerDia, ultimoDia) {
             });
             $("#tbl_kardex_length").hide();
             $("#tbl_kardex_filter").hide();
-            $("#id_Status").hide();
+            
 
             $('#id_txt_buscar').on('keyup', function() {        
                 var vTablePedido = $('#tbl_kardex').DataTable();
@@ -174,7 +171,7 @@ function tblKardex(primerDia, ultimoDia) {
         }
     });
 
-    
+    $("#id_Status").hide();
 }
 
 function tblMateriaPrima(){

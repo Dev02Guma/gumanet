@@ -1,6 +1,6 @@
-FROM gumadesarrollo/php:7.4-nginx-sqlsrv-prod
+FROM  kooldev/php:7.4-nginx-sqlsrv-prod
 
-ARG ARG_APP_NAME=gumanet
+ARG ARG_APP_NAME=gnet
 
 ENV APP_NAME=${ARG_APP_NAME} \
     PHP_FPM_LISTEN=/run/php-fpm.sock \
@@ -13,17 +13,12 @@ ENV APP_NAME=${ARG_APP_NAME} \
     NGINX_FASTCGI_BUFFERS='8 8k' \
     NGINX_FASTCGI_BUFFER_SIZE='16k'
 
-COPY default.tmpl /kool/default.tmpl
-
-WORKDIR /app
-
-RUN mkdir ${ARG_APP_NAME}
-
 WORKDIR /app/${ARG_APP_NAME}
 
-COPY . .
-RUN composer install --ignore-platform-reqs
+COPY default.tmpl /kool/default.tmpl
 
-RUN chmod -R 777 storage
+COPY . .
+
+RUN chmod -R 777 storage 
 
 EXPOSE 80

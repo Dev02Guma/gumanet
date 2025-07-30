@@ -3,6 +3,7 @@ namespace App\Http\Controllers;
 
 use Auth;
 use App\inventario_model;
+use App\PreciosMific;
 use Illuminate\Http\Request;
 use App\Models;
 use PHPExcel;
@@ -14,7 +15,11 @@ use PHPExcel_Style_Fill;
 use App\Company;
 use App\InnovaKardex;
 use App\InnovaModel;
+use App\ArticulosTransito;
+use App\InventarioUnificadoTransito;
 use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Redis;
 
 class inventario_controller extends Controller
 {
@@ -34,15 +39,15 @@ class inventario_controller extends Controller
 		);
 		
 		if($companie == 4){
-      $inventario = InnovaModel::getAll();
+			$inventario = InnovaModel::getAll();
 			return view('pages.inventarioINN', compact('inventario'));
 		}else{
 			return view('pages.inventario', $data);
 		}
 	}
 	public function getArticuloDetalles($Articulo,$Unidad) {
-	$obj = inventario_model::getArticuloDetalles($Articulo,$Unidad);
-	return response()->json($obj);
+		$obj = inventario_model::getArticuloDetalles($Articulo,$Unidad);
+		return response()->json($obj);
 	}
     public function agregarDatosASession(){
         $request = Request();
@@ -80,14 +85,212 @@ class inventario_controller extends Controller
 		return response()->json($obj);
     }
 
+	public function getInfoArticulo(Request $request)
+    {  
+		$ID_ROW = $request->ID_ROW;
+		$datos_articulo =  [];
+
+		$ArticuloTransito 	=  (is_null($ID_ROW))? ArticulosTransito::where('Articulo',$request->Articulo)->get() : ArticulosTransito::where('Id_transito',$ID_ROW)->get();
+		$PreciosMific		=  PreciosMific::where('ARTICULO',$request->Articulo)->limit(1)->first();
+
+		
+
+		foreach ($ArticuloTransito as $p => $k) {
+
+			$PrecioPublico 	= number_format($k->Precio_mific_public,4);
+			$PrecioFarmacia = number_format($k->Precio_mific_farmacia,4);
+
+			if ($PrecioFarmacia == 0.0000) {				
+				$PrecioPublico 	= number_format(($PreciosMific->MIFIC_FARMACIA ?? 0 ),4);
+				$PrecioFarmacia = number_format(($PreciosMific->MIFIC_PUBLICO ?? 0),4);
+			}
+
+			$datos_articulo['data'][$p] = [
+				'Articulo'          => $k->Articulo,
+				'fecha_estimada'	=> $k->fecha_estimada,
+				'fecha_pedido'      => $k->fecha_pedido,
+				'documento'         => $k->documento,
+				'cantidad'          => number_format($k->cantidad,0,'.',''),
+				'cantidad_pedido'          	=> number_format($k->cantidad_pedido,0,'.',''),
+				'cantidad_transito'          => number_format($k->cantidad_transito,0,'.',''),
+				'mercado'         	=> $k->mercado,
+				'mific'             => $k->mific,
+				'Estado'             => $k->Estado,
+				'Precio_mific_farmacia'    => $PrecioFarmacia,
+				'Precio_mific_public'      => $PrecioPublico,
+				'Nuevo'          	=> $k->Nuevo,
+				'Descripcion'       => strtoupper($k->Descripcion),
+				'observaciones'     => $k->observaciones,
+				'estado_compra'		=> $k->estado_compra,
+				'via_transito'		=> $k->via_transporte
+			];
+		}
+		return response()->json($datos_articulo);
+	}
+
+	public function DeleteArticuloTransito(Request $request){
+		$obj = ArticulosTransito::DeleteArticuloTransito($request);
+        return response()->json($obj);
+	}
+	public function SaveTransito(Request $request)
+    {  
+		$NumRow = $request->NumRow;
+
+		$request->validate([
+			'Articulo' 				=> 'required',
+			'Descripcion' 			=> 'required',
+            'fecha_estimada' 		=> 'required',
+            'fecha_pedido' 			=> 'required',
+            'documento' 			=> 'required',
+            'cantidad' 				=> 'required',
+			'CantidadTransito' 		=> 'required',
+            'mercado' 				=> 'required',
+            'mific' 				=> 'required',
+			'select_estado' 		=> 'required',
+			'precio_mific_f' 		=> 'required',
+			'precio_mific_p' 		=> 'required',
+            'observaciones' 		=> 'required',
+        ]);
+
+		
+		$articuloTransito = ArticulosTransito::find($NumRow);
+		
+	
+
+		if ($articuloTransito) {
+			$articuloTransito->update([
+				'Descripcion' 				=> $request->Descripcion,
+				'fecha_estimada' 			=> $request->fecha_estimada,
+				'fecha_pedido' 				=> $request->fecha_pedido,
+				'documento' 				=> $request->documento,
+				'cantidad_pedido' 			=> $request->cantidad,
+				'cantidad_transito' 		=> $request->CantidadTransito,
+				'mercado' 					=> $request->mercado,
+				'mific' 					=> $request->mific,
+				'estado_compra' 			=> $request->select_estado,
+				'observaciones' 			=> $request->observaciones,
+				'Precio_mific_farmacia' 	=> $request->precio_mific_f,
+				'Precio_mific_public' 		=> $request->precio_mific_p,
+				'via_transporte'    		=> $request->via_transito,
+			]);
+	
+			$message = 'Información actualizada correctamente';
+
+		} else {
+			
+			ArticulosTransito::create([
+				'Articulo' 				=> $Articulo,
+				'Descripcion' 			=> $request->Descripcion,
+				'fecha_estimada' 		=> $request->fecha_estimada,
+				'fecha_pedido' 			=> $request->fecha_pedido,
+				'documento' 			=> $request->documento,
+				'cantidad_pedido' 		=> $request->cantidad,
+				'cantidad_transito' 	=> $request->CantidadTransito,
+				'mercado' 				=> $request->mercado,
+				'mific' 				=> $request->mific,
+				'estado_compra' 		=> $request->select_estado,
+				'observaciones' 		=> $request->observaciones,
+				'Precio_mific_farmacia' => $request->precio_mific_f,
+				'Precio_mific_public' 	=> $request->precio_mific_p,
+				'Nuevo' 				=> 'N',
+				'via_transporte'    	=> $request->via_transito,
+			]);
+	
+			$message = 'Información guardada correctamente';
+		}
+	
+
+        return response()->json(['message' => 'Información guardada correctamente']);
+	
+    }
+
+	public function SaveTransitoNew(Request $request)
+    {  
+
+		$ARTICULO  = mt_rand(10000000, 99999999).'-N';
+
+		ArticulosTransito::create([
+			'Articulo' 		=> $ARTICULO,
+			'Descripcion'	=> $request->Articulo,
+            'observaciones' => 'Creacion del Codigo',
+			'Nuevo' 		=> 'S',
+        ]);
+
+        return response()->json(['message' => 'Información guardada correctamente']);
+	
+    }
+	public function SaveTransitoConCodigo(Request $request)
+    {  		
+		$ARTICULO = $request->Articulo;
+
+		$Art = InventarioUnificadoTransito::where('ARTICULO',$ARTICULO)->first();
+
+		ArticulosTransito::create([
+			'Articulo' 		=> $ARTICULO,
+			'Descripcion'	=> strtoupper($Art->DESCRIPCION),
+            'observaciones' => ' - ',
+			'Nuevo' 		=> 'N',
+        ]);
+
+        return response()->json(['message' => 'Información guardada correctamente']);
+	
+    }
+
+
 	public function invenVencidos() {
 		$obj = inventario_model::invenVencidos();
 		return response()->json($obj);
     }
 
-	public function getArticulos() {
-		$obj = inventario_model::getArticulos();
+	public function SaveTransitoExcel(Request $request)
+    {
+        $response = ArticulosTransito::SaveTransitoExcel($request);
+        return response()->json($response);
+    }
+
+	public function InventarioTransito($ID){
+
+		$data = array(
+			'page'		=> 'Inventario Transito',
+			'name'		=> 'GUMA@NET',
+			'ID'		=> $ID,
+			'hideTransaccion' => ''
+		);
+
+		$ArticulosConCodigos = ArticulosTransito::where('ARTICULO', 'NOT LIKE', '%-N%')->pluck('Articulo')->toArray();
+		
+		if(count($ArticulosConCodigos)  > 0){
+			$Articulos = InventarioUnificadoTransito::WhereNotIN('ARTICULO', $ArticulosConCodigos)->get();
+			
+		} else {
+			$Articulos = InventarioUnificadoTransito::all();
+		};
+
+	
+
+
+		return view('pages.Transito.Table', compact('data', 'Articulos'));
+	}
+
+	public function getTransito($Id) {
+		$obj = ($Id == 0) ? ArticulosTransito::getTransitoSinCodigo() : ArticulosTransito::getTransitoConCodigo() ;
 		return response()->json($obj);
+    }
+
+	public function getArticulos(Request $request)  {
+		// $obj = inventario_model::getArticulos();
+		// return response()->json($obj);
+		$Company = $request->session()->get('company_id');
+
+		$Key = 'gnet_Inventario_getArticulos_'.$Company;
+		$cached = Redis::get($Key);
+		if ($cached) {
+			$obj = $cached;
+		} else {
+			$obj = json_encode(inventario_model::getArticulos());
+			Redis::setex($Key, 900, $obj); 
+		}
+		return response()->json(json_decode($obj));
 	}
 
 	public function descargarInventarioCompleto() {
@@ -396,6 +599,10 @@ class inventario_controller extends Controller
 		$obj = inventario_model::getOtrosArticulos($articulo);
 		return response()->json($obj);
 	}
+	public function getInfoMific($articulo) {
+		$obj = inventario_model::getInfoMific($articulo);
+		return response()->json($obj);
+	}
 
 	public function getVineta($articulo) {
 		$obj = inventario_model::getVineta($articulo);
@@ -415,7 +622,11 @@ class inventario_controller extends Controller
 
 	public function transaccionesDetalle(Request $request) {
 		if($request->isMethod('post')){
-			$obj = inventario_model::transaccionesDetalle($request->input('f1'),$request->input('f2'),$request->input('art'),$request->input('tp'));
+			$obj = inventario_model::transaccionesDetalle(
+				$request->input('f1'),
+				$request->input('f2'),
+				$request->input('art'),
+				$request->input('tp'));
 			return response()->json($obj);
 		}
 	}

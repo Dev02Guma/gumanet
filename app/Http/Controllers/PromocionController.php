@@ -35,6 +35,7 @@ class PromocionController extends Controller
         $fin = $request->ends;
 
         $promo = PromocionDetalle::getPromoMes($articulo, $ini, $fin);
+        
         return response()->json($promo);
     }
     

@@ -67,7 +67,7 @@ $(document).ready(function() {
     graf_Comportamiento_sku_anual();
     graf_Ticket_promedio();
 
-    grafVentasMensuales(tipo);
+    grafVentasMensuales(tipo,0);
     grafRealVentasMensuales(tipo,0);
     fn_grafica_ventas_exportacion(tipo,0);
     reordenandoPantalla();
@@ -1422,7 +1422,7 @@ $("#customSwitch1").change( function() {
     if ($(this).is(':checked')) {
         switchStatus = $(this).is(':checked');
         $.cookie( 'xbolsones' , 'yes_bolsones');
-        grafVentasMensuales(1);
+        grafVentasMensuales(1,0);
         grafRealVentasMensuales(1,0);
         fn_grafica_ventas_exportacion(1,0);
         actualizandoGraficasDashboard(mes, anio, 1);
@@ -1430,7 +1430,7 @@ $("#customSwitch1").change( function() {
     else {
         switchStatus = $(this).is(':checked');
         $.cookie( 'xbolsones' , 'not_bolsones');
-        grafVentasMensuales(0);
+        grafVentasMensuales(0,0);
         grafRealVentasMensuales(0,0);
         fn_grafica_ventas_exportacion(0,0);
         actualizandoGraficasDashboard(mes, anio, 0);
@@ -1519,7 +1519,7 @@ function actualizandoGraficasDashboard(mes, anio, xbolsones) {
                     dta                 =   [];
                     title               =   [];
                     Segmento            =   '';
-                    SegFarmacia         =   []; 
+                    SegFarmacia         =   [];
                     SegMayoristas       =   [];
                     SegInstituciones    =   [];
                     Segmentos           =   [];
@@ -1563,7 +1563,8 @@ function actualizandoGraficasDashboard(mes, anio, xbolsones) {
                     Segmento += '<option value="0">Todos</option>'+
                             '<option value="1">Farmacias</option>'+
                             '<option value="2">Mayoristas</option>'+
-                            '<option value="3">Instituciones</option>';
+                            '<option value="3">Instituciones</option>'+
+                            '<option value="4">Cadenas de Farmacias</option>';
 
                     Segmentos.push({
                             name :"InfoExtra",
@@ -1597,7 +1598,7 @@ function actualizandoGraficasDashboard(mes, anio, xbolsones) {
                     }
 
 
-                    $("#opcSegmentos,#OpcSegmClt,#opc_seg_graf01,#opc_seg_graf02").empty().append(Segmento).selectpicker('refresh');
+                    $("#opcSegmentos,#OpcSegmClt,#opc_seg_graf01,#opc_seg_graf02,#opc_seg_graf03").empty().append(Segmento).selectpicker('refresh');
 
 
                     productos.xAxis.categories = title;
@@ -2071,6 +2072,7 @@ function actualizandoGraficasDashboard(mes, anio, xbolsones) {
                                 metaGRP2__ = x['meta'];
                                 realGRP2__ = x['real'];
                             }else if ( temp=='Farmacias' ) {
+
                                 metaGRP3__= x['meta'];
                                 realGRP3__ = x['real'];
                             }else if ( temp=='Cadena_farmacia' ) {
@@ -2082,27 +2084,25 @@ function actualizandoGraficasDashboard(mes, anio, xbolsones) {
                             totalREAL__ = totalREAL__ + parseFloat(x['real']);
 
 
-                            
-
-
                             cumplGRP1 = (parseFloat(realGRP1__)/parseFloat(metaGRP1__))*100;
                             cumplGRP2 = (parseFloat(realGRP2__)/parseFloat(metaGRP2__))*100;
 
-                            metaGRP3__ = (metaGRP3__  - metaGRP4__)
+                            //metaGRP3__ = (metaGRP3__  - metaGRP4__)
+                            
+                            
                             cumplGRP3 = (parseFloat(realGRP3__)/parseFloat(metaGRP3__))*100;
                             cumplGRP4 = (parseFloat(realGRP4__)/parseFloat(metaGRP4__))*100;
 
-                            totalMETA__ = (totalMETA__  - metaGRP4__)
+                            //totalMETA__ = (totalMETA__  - metaGRP4__) + parseFloat(metaGRP4__)
+                            //totalREAL__ = totalREAL__ + parseFloat(realGRP4__)
                             cumplTOTAL = (parseFloat(totalREAL__)/parseFloat(totalMETA__))*100;
+
+
+                            
                         });
 
-                        //modalSegmento(item['data'], item['data2']);
-
-                       
-                        
-
                         tbody = `<tr>
-                            <th scope="row" style="font-size: 1rem!important">Instituciones</th>
+                            <th scope="row" style="font-size: 1rem!important"  onclick="ShowSaleInstitucion()" >Instituciones</th>
                             <td class="text-right">
                                 <p class="font-weight-bolder" style="font-size: 1rem!important">C$ `+ numeral(metaGRP1__).format('0,0.00') +`</p>
                             </td>
@@ -2279,8 +2279,80 @@ function modalSegmento(data){
     $('#tbodySegmento').empty().append(tbody);
         
 }
-function ShowSaleCadena(){
+function ShowSaleInstitucion(){
+$('#mCadenaFarmacia').modal('show');
+$("#id_lbl_mdl_detalles").html('<b>INSTITUCIONALES</b>');
+var mes = $('#opcMes option:selected').val();
+var anio = $('#opcAnio option:selected').val();
+$("#tb_cadena_farmacia").dataTable({
+    "scrollX": false,
+    "ordering": false,
+    "ajax":{
+        "url": "getSaleInstitucion",
+        "type": 'POST',
+        'dataSrc': '',
+        "data": {                
+            mes: mes,
+            annio: anio        
+        }
+    },
+    
+    "destroy" : true,
+    "info":    false,
+    "lengthMenu": [[20,-1], [20,"Todo"]],
+    "language": {
+        "zeroRecords": "Cargando...",
+        "paginate": {
+            "first":      "Primera",
+            "last":       "Última ",
+            "next":       "Siguiente",
+            "previous":   "Anterior"
+        },
+        "lengthMenu": "MOSTRAR _MENU_",
+        "emptyTable": "NO HAY DATOS DISPONIBLES",
+        "search":     "BUSCAR"
+    },
+    'columns': [   
+        {"title": "#", "data": 'CLIENTE', "render": function(data, type, row, meta) {
+                return  `<a id="exp_more_insta" class="exp_more" href="#!"> ▼</a>`
+            }},
+        { "title": "NOMBRE",    "data": "CADENA"},   
+        { "title": "VENTA EN C$",  "data": "VENDE", render: $.fn.dataTable.render.number( ',', '.', 2, 'C$ ' )},
+    ],
+    "columnDefs": [
+        {"className": "dt-back-unit", "targets": []},
+        {"className": "dt-center", "targets": [ 0,1 ]},
+        {"className": "dt-right", "targets": [ 2 ]}
+        
+    ],
+    
+    "footerCallback": function ( row, data, start, end, display ) {
+        var api = this.api();
+        var Total  = 0;
+        var intVal = function ( i ) {
+            return typeof i === 'string' ?
+                i.replace(/[^0-9.]/g, '')*1 :
+                typeof i === 'number' ?
+                    i : 0;
+        };
+        Total = api.column( 2 ).data().reduce( function (a, b){
+            return intVal(a) + intVal(b);
+        }, 0 );
+       
+        $(api.column(0).footer()).html('<h6 class="fs-0 text-900 mb-0 me-2">TOTAL</h6>');
+        $(api.column(2).footer()).html('<h6 class="text-right">C$ '+numeral(Total).format('0,0.00')+'</h6>');
+            
+            
+    },
+    
+});
+$("#tb_cadena_farmacia_length").hide();
+$("#tb_cadena_farmacia_filter").hide();
+$("#tb_cadena_farmacia_paginate").hide();
+}
 
+function ShowSaleCadena(){
+    $("#id_lbl_mdl_detalles").html('<b>CADENAS DE FARMACIAS</b>')
     $('#mCadenaFarmacia').modal('show');
 
     var mes = $('#opcMes option:selected').val();
@@ -2359,6 +2431,41 @@ function ShowSaleCadena(){
     
 }
 
+$(document).on('click', '#exp_more_insta', function(ef) {
+    var table = $('#tb_cadena_farmacia').DataTable();
+    var tr = $(this).closest('tr');
+    var row = table.row(tr);
+    var data = table.row($(this).parents('tr')).data();
+
+
+    if (row.child.isShown()) {
+        row.child.hide();
+        tr.removeClass('shown');
+        ef.target.innerHTML = '▼';
+        ef.target.style.color = '#007bff';
+    } else {
+        //VALIDA SI EN LA TABLA HAY TABLAS SECUNDARIAS ABIERTAS
+        table.rows().eq(0).each( function ( idx ) {
+            var row = table.row( idx );
+
+            if ( row.child.isShown() ) {
+                row.child.hide();
+                ef.target.innerHTML =  '▼ ';
+
+                var c_1 = $(".expan_more");
+                c_1.text( '▼ ');
+               
+            }
+        } );
+
+        format_insta(row.child, data.CLIENTE);
+        
+        tr.addClass('shown');
+        
+        ef.target.innerHTML =  '▲';
+    }
+});
+
 $(document).on('click', '#exp_more_cadena', function(ef) {
     var table = $('#tb_cadena_farmacia').DataTable();
     var tr = $(this).closest('tr');
@@ -2392,6 +2499,52 @@ $(document).on('click', '#exp_more_cadena', function(ef) {
         ef.target.innerHTML =  '▲';
     }
 });
+
+function format_insta ( callback, cadena) {
+
+var mes = $('#opcMes option:selected').val();
+var anio = $('#opcAnio option:selected').val();
+
+var thead = tbody = '';            
+    thead =`<table  width='100%'>
+                <tr class="bg-blue text-light">
+                    <th class="dt-center">DESCRIPCION</th>
+                    <th class="dt-center">CANTIDAD</th>
+                    <th class="dt-center">VENTA</th>
+                </tr>
+            <tbody>`;
+            
+$.ajax({
+    url: "getSaleDetalleInsta",
+    type: 'POST',
+    data: {                
+        mes: mes,
+        annio: anio,
+        cadena: cadena     
+    },        
+    success: function ( data ) {
+        if (data.length==0) {
+            tbody +=`<tr>
+                        <td colspan='6'><center>Sin Resultados</center></td>
+                    </tr>`;
+            callback(thead + tbody).show();
+        }
+        $.each(data, function (i, item) {
+           tbody +=`<tr >
+                        <td >` + item['DESCRIPCION'] + ' - ' +item['ARTICULO'] + `</td>                            
+                        <td class="dt-right" width="90px">` + item['CANTIDAD']+ ' ' + item['UNIDAD_ALMACEN'] + `</td>
+                        <td class="dt-right" width="90px">C$ ` + item['VALOR'] + `</td>
+                    </tr>`;
+        });
+        tbody += `</tbody><tfoot>
+            <tr class="bg-blue text-light">
+                <th colspan="3"  style="text-align:center"></th>
+            </tr>
+        </tfoot></table>`;
+        callback(thead + tbody).show();
+    }
+});
+}
 
 function format_cad ( callback, cadena) {
 
@@ -2594,7 +2747,7 @@ function grafRealVentasMensuales(xbolsones,segmentos) {
     ventasRealMensuales.series = [];
     $.getJSON("dataRealVtsMensuales/"+xbolsones+"/"+segmentos, function(json) {
         var newseries;
-        
+        console.log(json)
         $.each(json, function (i, item) {
             temporal = (xbolsones)?'<span style="color:black"><b>{point.y:,.2f}</b></span>':'<span style="color:black"><b>C$ {point.y:,.2f}</b></span>';
 
@@ -2813,7 +2966,7 @@ function graf_Ticket_promedio() {
         
     
 }
-function grafVentasMensuales(xbolsones) {
+function grafVentasMensuales(xbolsones,segmento) {
 
     var temporal = "";
     $("#grafVtsMes")
@@ -2833,7 +2986,7 @@ function grafVentasMensuales(xbolsones) {
 
     ventasMensuales.series = [];
 
-    $.getJSON("dataVentasMens/"+xbolsones, function(json) {
+    $.getJSON("dataVentasMens/"+xbolsones+"/"+segmento, function(json) {
         var newseries;
         var sumTotales = [];
         var temp = 0;
@@ -3015,13 +3168,13 @@ $("#select-cate").change(function() {
 })
 
 
-$("#opc_seg_graf01,#opc_seg_graf02").change( function() {
+$("#opc_seg_graf01,#opc_seg_graf02,#opc_seg_graf03").change( function() {
     mes         = $("#opcMes option:selected").val();         
     anio        = $("#opcAnio option:selected").val();  
     Segmento    = this.value;
     xbolsones   = 1;
     var id = $(this).attr('id');
-
+    
 
     if (id=='opc_seg_graf01') {
         $("#grafVtsDiario")
@@ -3091,8 +3244,14 @@ $("#opc_seg_graf01,#opc_seg_graf02").change( function() {
         });
         
     } else {
-        grafRealVentasMensuales(xbolsones,Segmento)
-        fn_grafica_ventas_exportacion(xbolsones,Segmento);
+        if(id=='opc_seg_graf02'){
+            grafRealVentasMensuales(xbolsones,Segmento)
+            fn_grafica_ventas_exportacion(xbolsones,Segmento);
+        }else{
+            if(id=='opc_seg_graf03'){
+                grafVentasMensuales(xbolsones,Segmento);
+            }
+        }
     }
 
     
@@ -4825,7 +4984,7 @@ function tableCierreMesInnova(mes, anio, lmes){
                         }
 
                         $(api.column(0).footer()).html('<h6 class="fs-0 text-900 mb-0 me-2">TOTAL: </h6>');
-                        $(api.column(1).footer()).html('<h6 class="fs-0 text-900 mb-0 me-2">C$ '+numeral(Totalb).format('0,0.00')+'</h6>');
+                        $(api.column(1).footer()).html('<h6 class="fs-0 text-900 mb-0 me-2">'+numeral(Totalb).format('0,0.00')+'</h6>');
                         $(api.column(2).footer()).html('<h6 class="fs-0 text-900 mb-0 me-2">C$ '+numeral(Totalms).format('0,0.00')+'</h6>');
                         $(api.column(3).footer()).html('<h6 class="fs-0 text-900 mb-0 me-2">C$ '+numeral(Totalmc).format('0,0.00')+'</h6>');
                     },

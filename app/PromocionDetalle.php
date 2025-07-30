@@ -18,27 +18,30 @@ class PromocionDetalle extends Model
         //----------------------------------------------
         $i      = 0;
         $json   = array();
-        $anno   = Date('Y');
+        $anno   = date('Y');
         $nMes   = date('n');
         $meses = array('ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC');
-        $Rows       = PromocionDetalle::where('anno', $anno)->get();
-        
+
+        $Rows       = PromocionDetalle::where('estado_promo', '2')->get();
+        //$Rows   = PromocionArticuloSAC::where('activo', 'S')->get();
 
         $Articulos_promedio_anual      = DB::connection('sqlsrv')->select('SELECT * FROM PRODUCCION.dbo.tbl_promedio_articulos');
+        
 
 
         foreach($Rows as $r){
 
             $iPromo     = Promocion::where('id',$Rows[$i]->id_promocion)->get();
 
-            $Segmentos  = $iPromo[0]->Segmentos;
+            //$Segmentos  = $iPromo[0]->Segmentos;
             $fecha_ini  = $iPromo[0]->original['fecha_ini'];
             $fecha_end  = $iPromo[0]->original['fecha_end'];
             $Articulos  = trim($r->Articulo) ;
             
             $index_key = array_search($r->Articulo, array_column($Articulos_promedio_anual, 'ARTICULO'));
             
-            $strQuery   = 'EXEC PRODUCCION.dbo.fn_promocion_item_venta "'.$fecha_ini.'","'.$fecha_end.'","'.$Articulos.'" ';            
+            $strQuery   = 'EXEC PRODUCCION.dbo.fn_promocion_item_venta "'.$fecha_ini.'","'.$fecha_end.'","'.$Articulos.'" ';        
+                
             $query      = DB::connection('sqlsrv')->select($strQuery);
             
             $sql        = 'EXEC PRODUCCION.dbo.fn_promocion_history_item_sale "'.$anno.'","'.$Articulos.'"';            

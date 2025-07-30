@@ -58,6 +58,25 @@ return [
             ],
             'engine' => null,
         ],
+        'mysql_stat' => [
+            'driver' => 'mysql',
+            'host' => env('DB_HOST_STAT', '127.0.0.1'),
+            'port' => env('DB_PORT_STAT', '3306'),
+            'database' => env('DB_DATABASE_STAT', 'forge'),
+            'username' => env('DB_USERNAME_STAT', 'forge'),
+            'password' => env('DB_PASSWORD_STAT', ''),
+            'unix_socket' => env('DB_SOCKET', ''),
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'strict' => false,
+            'options'   => [
+                \PDO::ATTR_EMULATE_PREPARES => true
+            ],
+            'engine' => null,
+        ],
+
         'mysql_kardex_inn' => [
             'driver' => 'mysql',
             'host' => env('DB_HOST_kardex', '127.0.0.1'),
@@ -76,13 +95,13 @@ return [
             ],
             'engine' => null,
         ],
-        'mysql_stat' => [
+        'mysql_pedido' => [
             'driver' => 'mysql',
-            'host' => env('DB_HOST_STAT', '127.0.0.1'),
-            'port' => env('DB_PORT_STAT', '3306'),
-            'database' => env('DB_DATABASE_STAT', 'forge'),
-            'username' => env('DB_USERNAME_STAT', 'forge'),
-            'password' => env('DB_PASSWORD_STAT', ''),
+            'host' => env('DB_HOST_PEDIDO', '127.0.0.1'),
+            'port' => env('DB_PORT_PEDIDO', '4406'),
+            'database' => env('DB_DATABASE_PEDIDO', 'forge'),
+            'username' => env('DB_USERNAME_PEDIDO', 'forge'),
+            'password' => env('DB_PASSWORD_PEDIDO', ''),
             'unix_socket' => env('DB_SOCKET', ''),
             'charset' => 'utf8mb4',
             'collation' => 'utf8mb4_unicode_ci',
@@ -119,6 +138,9 @@ return [
             'charset' => 'utf8',
             'prefix' => '',
             'prefix_indexes' => true,
+            'options'   => [
+                PDO::SQLSRV_ATTR_QUERY_TIMEOUT => 300
+            ],
         ],
 
     ],

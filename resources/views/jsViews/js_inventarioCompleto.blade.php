@@ -1,6 +1,8 @@
 <script>
 $(document).ready(function() {
     fullScreen();
+    inicializaControlFecha();
+    var articulo_g = 0;
     //AGREGO LA RUTA AL NAVEGADOR
     $("#item-nav-01").after(`<li class="breadcrumb-item active"><a href="{{url('/Inventario')}}">Inventario</a></li><li class="breadcrumb-item active">Inventario completo</li>`);
 
@@ -32,7 +34,7 @@ $(document).ready(function() {
 				a: "hello"
 				};
 
-				return`<a href="#!" onclick="getDetalleArticulo(`+ "'" +row.ARTICULO + "'" +` , ` + "'" +row.DESCRIPCION + "'" +` ,`+ "'" +row.UNIDAD + "'" +`)" >`+ row.ARTICULO +`</a>`
+				return`<a href="#!" id="idArticulo" onclick="getDetalleArticulo(`+ "'" +row.ARTICULO + "'" +`  , ` + "'" +row.DESCRIPCION + "'" +` ,`+ "'" +row.UNIDAD + "'" +`)" >`+ row.ARTICULO +`</a>`
 
 			}},
 			{"title": "DESCRIPCIÓN", 		"data": "DESCRIPCION", "render": function(data, type, row, meta) { 
@@ -175,10 +177,10 @@ $(document).ready(function() {
         });
     }
 
-
 });
 function getDetalleArticulo(Articulos,Descripcion,Undiad) {
-
+    $("#idArti").val(Articulos);
+    articulo_g = Articulos;
 	$("#tArticulo").html(Descripcion+`<p class="text-muted" id="id_cod_articulo">`+Articulos+`</p>`);
 	
 	var target = '#nav-bod';
@@ -241,6 +243,71 @@ function getDetalleArticulo(Articulos,Descripcion,Undiad) {
     })
 
 }
+
+$('nav .nav.nav-tabs a').click(function(){
+    var idNav = $(this).attr('id');
+    switch(idNav) {
+        case 'navComportamiento':  
+            var fecha = new Date();
+            var inicio = new Date(fecha.getFullYear(), (fecha.getMonth() + 1) - 3, 1);
+
+            var fechaIni = inicio.getFullYear()+'-'+(inicio.getMonth()+1)+'-'+inicio.getDate();
+            var fechaFin = fecha.getFullYear()+'-'+(fecha.getMonth()+1)+'-'+fecha.getDate();
+           
+            comportamientoMensual(fechaIni, fechaFin, articulo_g, 1);
+        break;
+    }    
+})
+
+$("#btnSearch").click(function() {    
+    var tbody = '';
+    var Total = 0 ;
+    $.ajax({
+        type: "POST",
+        url: "transacciones",
+        data:{
+            f1: $("#f1").val(),
+            f2: $("#f2").val(),
+            art: articulo_g,
+            tp: $( "#catArt option:selected" ).val()            
+        },
+        success: function (data) {
+            if (data.length==0) {
+                $("#tbl_transacciones").empty();
+                tbody +=`<tr>
+                            <td colspan='5'><center>No hay datos que mostrar</center></td>
+                        </tr>`;
+                mensaje('No se encontraron registros con los datos proporcionados', 'error');
+            }else {                
+                $("#tbl_transacciones").empty();
+                $.each(data, function(i, item) {
+                    tbody +=`<tr>
+                                <td>`+item['FECHA']+`</td>
+                                <td>`+item['LOTE']+`</td>
+                                <td>`+item['APLICACION']+`</td>
+                                <td>`+item['DESCRTIPO']+`</td>
+                                <td class="text-right">`+item['CANT']+`</td>
+                                <td>`+item['REFERENCIA']+`</td>
+                                <td>`+item['CODIGO_CLIENTE']+`</td>
+                                <td>`+item['NOMBRE']+`</td>
+                            </tr>`;
+
+                            Total += numeral(item['CANTIDAD']).value(); 
+                });
+
+                
+                tbody +=`<tr class="bg-blue text-light">
+                                <td class="text-light" colspan='4'> TOTAL UNIDADES DESPLAZADAS</td>
+                                
+                                <td class="text-light text-right" >`+Total+`</td>
+                                <td class="text-right" colspan='3'></td>
+                            </tr>`;
+            }
+            $("#tbl_transacciones").append(tbody);
+        }
+    });
+});
+    
 function getDataBodega(datos) {
     $("#tblBodega").dataTable({
         responsive: true,
@@ -394,4 +461,163 @@ function ShowLotes(ID,Unidad_,articulo_){
 	}
 
 }
+
+    $( "#orderComportamiento").change(function() {
+        valor = $( this ).val()  
+        var articulo = $("#idArti").val();
+        var fecha = new Date();
+        var inicio = new Date(fecha.getFullYear(), (fecha.getMonth() + 1) - 3, 1);
+
+        var fechaIni = inicio.getFullYear()+'-'+(inicio.getMonth()+1)+'-'+inicio.getDate();
+        var fechaFin = fecha.getFullYear()+'-'+(fecha.getMonth()+1)+'-'+fecha.getDate();
+        
+        comportamientoMensual(fechaIni, fechaFin, articulo, valor);
+    });
+
+    function comportamientoMensual(fechaIni, fechaFin, articulo, op) {
+        var temporal = "";
+        $('#lbl1').text('0');
+        $("#lbl2").text('0');
+        $("#lbl3").text('0');
+        $("#lbl4").text('0');
+        $("#comportamientoMen")
+        .empty()
+        .append(`<div style="height:400px; background:#ffff; padding:20px">
+                    <div class="d-flex align-items-center">
+                        <strong class="text-info">Cargando...</strong>
+                        <div class="spinner-border ml-auto text-primary" role="status" aria-hidden="true"></div>
+                    </div>
+                </div>`);
+        
+             
+        $.getJSON("getComportamientoMensual/"+fechaIni+"/"+fechaFin+"/"+articulo+"/"+op, function(json) {
+            
+            newseries = {};
+            category = [];
+            units = "";
+            contr = "";
+            if(op == 1){
+                units = 'UNITS';
+            }
+            if(op == 2){
+                contr = 'C$';
+            }
+            $.each(json, function (i, item) { 
+                
+                $('#lbl1').text(item['precioPromedio']);
+                $("#lbl2").text(item['costoUnitario']);
+                $("#lbl3").text(item['contribucion']);
+                $("#lbl4").text(item['porcentajeContribucion']);
+                
+                newseries.data = item['data'];
+                newseries.name = item['title'];
+                category = item['categories'];
+                newseries.colorIndex = 0;
+                                
+            })
+          
+            var chart = new Highcharts.Chart('comportamientoMen',{
+                chart: {
+                    type: 'spline'
+                },
+                exporting: {enabled: false},
+                title: {
+                    text: `<p class="font-weight-bolder">Comportamiento</p>`
+                },
+                xAxis: {
+                    categories: category
+                },
+                yAxis: {
+                    title: {
+                        text: ''
+                    }                
+                },
+                tooltip: {pointFormat : '<b>'+contr+' </b><span style="color:black"><b>{point.y:,.0f} '+units+' </b></span>'},
+                plotOptions: {
+                    series: {
+                        allowPointSelect: false,
+                        borderWidth: 0,
+                        dataLabels: {
+                            enabled: true,
+                            formatter: function() {
+                                return FormatPretty(this.y);
+                            }
+                        },
+                        events: {
+                            legendItemClick: function() {
+                                return false;
+                            }
+                        }
+                    },
+                },
+                
+                legend: {
+                    align: 'center',
+                    verticalAlign: 'top',
+                    borderWidth: 0
+                },
+                series: [newseries],
+                responsive: {
+                    rules: [{
+                        condition: {
+                        maxWidth: 500
+                        },
+                        chartOptions: {
+                            legend: {
+                            layout: 'horizontal',
+                            align: 'center',
+                            verticalAlign: 'bottom'
+                            }
+                        }
+                    }]
+                }
+            });
+            
+        })
+    }
+
+    $("#btnSearchComport").click(function(){
+        var fechaIni = $("#fci").val();
+        var fechaFin = $("#fcf").val();
+        var articulo = $("#idArti").val();
+        var op = $("#orderComportamiento").val();
+
+        comportamientoMensual(fechaIni, fechaFin, articulo, op);
+
+    })
+
+    function FormatPretty(number) {
+        var numberString;
+        var scale = '';
+        if( isNaN( number ) || !isFinite( number ) ) {
+            numberString = 'N/A';
+        } else {
+            var negative = number < 0;
+            number = negative? -number : number;
+
+            if( number < 1000 ) {
+                scale = '';
+            } else if( number < 1000000 ) {
+                scale = 'K';
+                number = number/1000;
+            } else if( number < 1000000000 ) {
+                scale = 'M';
+                number = number/1000000;
+            } else if( number < 1000000000000 ) {
+                scale = 'B';
+                number = number/1000000000;
+            } else if( number < 1000000000000000 ) {
+                scale = 'T';
+                number = number/1000000000000;
+            }
+            var maxDecimals = 0;
+            if( number < 10 && scale != '' ) {
+                maxDecimals = 1;
+            }
+            number = negative ? -number : number;
+            numberString = number.toFixed( maxDecimals );
+            numberString += scale
+        }
+        return numberString;
+    }
 </script>

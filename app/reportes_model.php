@@ -298,6 +298,8 @@ class reportes_model extends Model
         $sql_exec = '';
         $request = Request();
         $company_user = Company::where('id',$request->session()->get('company_id'))->first()->id;
+
+
         
         switch ($company_user) {
             case '1':

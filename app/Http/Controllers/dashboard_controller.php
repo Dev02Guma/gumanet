@@ -8,7 +8,10 @@ use App\Models;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Company;
-
+use App\ContribucionPorCanales;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Redis;
+use Illuminate\Support\Facades\Session;
 
 class dashboard_controller extends Controller {
   
@@ -85,10 +88,10 @@ class dashboard_controller extends Controller {
   }
 
 
-  public function getValBodegas() {
+  /*public function getValBodegas() {
     $obj = dashboard_model::getValBodegas();
     return response()->json($obj);
-  }
+  }*/
 
   public function getSaleCadena(Request $request) {
     if($request->isMethod('post')) {
@@ -97,9 +100,22 @@ class dashboard_controller extends Controller {
     }
   }
 
+  public function getSaleInstitucion(Request $request) {
+    if($request->isMethod('post')) {
+      $obj = dashboard_model::getSaleInstitucion($request);
+      return response()->json($obj);
+    }
+  }
+
   public function getSaleCadenaDetalle(Request $request) {
     if($request->isMethod('post')) {
       $obj = dashboard_model::getSaleCadenaDetalle($request);
+      return response()->json($obj);
+    }
+  }
+  public function getSaleDetalleInsta(Request $request) {
+    if($request->isMethod('post')) {
+      $obj = dashboard_model::getSaleDetalleInsta($request);
       return response()->json($obj);
     }
   }
@@ -111,10 +127,63 @@ class dashboard_controller extends Controller {
     }
   }
 
-  public function getDataGraficas($mes, $anio, $xbolsones) {
-    $obj = dashboard_model::getDataGraficas($mes, $anio, $xbolsones);
-    return response()->json($obj);
+  public function getComportamientoMensual($fechaIni,$fechaFin, $articulo, $op) {
+    //$Key = 'getRealVentasMensuales_'.$segmentos."_".$xbolsones;
+    /*$cached = Redis::get($Key);
+    if ($cached) {
+        $obj = $cached;
+    } else {*/
+      if($op == 1){
+        $obj = json_encode(dashboard_model::getComportamientoMensual($fechaIni,$fechaFin, $articulo));
+      } else {
+        $obj = json_encode(dashboard_model::getComportamientoMensualVentas($fechaIni,$fechaFin, $articulo));
+      }
+        //Redis::setex($Key, 900, $obj); 
+    //}
+    return response()->json(json_decode($obj));
   }
+
+  //FUNCIONES QUE CALCULA EL DASHBOARD
+  public function getRealVentasMensuales($xbolsones,$segmentos) {
+    $Key = 'getRealVentasMensuales_'.$segmentos."_".$xbolsones;
+    $cached = Redis::get($Key);
+    if ($cached) {
+        $obj = $cached;
+    } else {
+        $obj = json_encode(dashboard_model::getRealVentasMensuales($xbolsones,$segmentos));
+        Redis::setex($Key, 900, $obj); 
+    }
+    return response()->json(json_decode($obj));
+  }
+
+  public function getDataGraficas($mes, $anio, $xbolsones) {
+    $obj = json_encode(dashboard_model::getDataGraficas($mes, $anio, $xbolsones));
+    return response()->json(json_decode($obj));
+  }
+  public function getComportamiento($elemento) {
+    $Key = 'getComportamiento_'.$elemento;
+    $cached = Redis::get($Key);
+    if ($cached) {
+        $obj = $cached;
+    } else {
+        $obj = json_encode(dashboard_model::getComportamiento($elemento));
+        Redis::setex($Key, 900, $obj); 
+    }
+    return response()->json(json_decode($obj));
+  }
+  
+  public function getVentasMensuales($xbolsones,$segmento) {
+    $Key = 'getVentasMensuales'.$xbolsones.''.$segmento;
+    $cached = Redis::get($Key);
+    if ($cached) {
+        $obj = $cached;
+    } else {
+        $obj = json_encode(dashboard_model::getVentasMensuales($xbolsones,$segmento));
+        Redis::setex($Key, 300, $obj); 
+    }
+    return response()->json(json_decode($obj));
+  }
+
   public function getDataGrafSelect($mes, $anio, $xbolsones,$Segmentos) {
     $obj = dashboard_model::get_Ventas_diarias($mes, $anio, 1 ,$xbolsones,$Segmentos);
     return response()->json($obj);
@@ -132,21 +201,38 @@ class dashboard_controller extends Controller {
 
 
 
-  public function getComportamiento($elemento) {
-    $obj = dashboard_model::getComportamiento($elemento);
+  public function canalXcontribucion()
+  {
+    return view('pages.canalXcontribucion');
+  }
+
+  public function canalData(){
+   
+    $obj = ContribucionPorCanales::getData();
+    $obj2 = ContribucionPorCanales::periodoFechas();
+  
+    return response()->json([
+      'Registros' => $obj,
+      'Periodo' => $obj2
+    ]);
+  }
+
+  public function getDataCanal($articulo, $canal, $opcion){
+    $obj = ContribucionPorCanales::getDataCanal($articulo, $canal, $opcion);
     return response()->json($obj);
   }
 
-
-  public function getVentasMensuales($xbolsones) {
-    $obj = dashboard_model::getVentasMensuales($xbolsones);
-    return response()->json($obj);
-  }
-
-
-  public function getRealVentasMensuales($xbolsones,$segmentos) {
-    $obj = dashboard_model::getRealVentasMensuales($xbolsones,$segmentos);
-    return response()->json($obj);
+  public function calcularCanales($fechaIni, $fechaEnd){
+    $isSesion = Session::isStarted();
+    if ($isSesion) {
+      ContribucionPorCanales::calcularCanales($fechaIni, $fechaEnd);
+      return response()->json([
+        'Titulo' => 'Contribucion por canales',
+        'Mensaje' => 'Calculos completados' 
+      ],200);
+    }else{
+      return response()->json(['error' => 'La Sesion ha expirado.'],404);
+    }
   }
 
   public function getVentasExportacion($xbolsones,$segmentos) {
