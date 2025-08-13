@@ -538,7 +538,6 @@ $("#id_send_data_excel").click(function(){
 					type: 'post',
 					async: true,
 					success: function(response) {
-					console.log(response)
 						if(response){
 							Swal.fire({
 								title: 'Articulos Ingresados Correctamente ' ,

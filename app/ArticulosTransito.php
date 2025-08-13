@@ -45,13 +45,14 @@ class ArticulosTransito extends Model
                 {
                     $Cantidad = number_format(str_replace(',', '', $v['CANTIDAD']), 4,'.','');
                     $Articulo = ($v['ARTICULO'] == 'N/D' || $v['ARTICULO'] == 'N/A' || is_numeric(intval($v['ARTICULO']) == false)) ? mt_rand(10000000, 99999999).'-N' : $v['ARTICULO'] ;
-
-                    $Estado = (isset($v['estado_pedido'])) ? $v['estado_pedido'] : 'N/D';
+                    $Estado = strtoupper((isset($v['estado_pedido'])) ? $v['estado_pedido'] : 'N/D');
                     $Mercado = (isset($v['Mercado'])) ? $v['Mercado'] : 'N/D';
                     $Mific = (isset($v['Mific'])) ? $v['Mific'] : 'N/D';
                     $Documento = (isset($v['Documento'])) ? $v['Documento'] : 'N/D';
                     $Comment = (isset($v['Comment'])) ? $v['Comment'] : 'N/D';
                     $Via_transi = (isset($v['Via_transi'])) ? $v['Via_transi'] : 'N/D';
+
+                    //dd($datos_a_insertar);
 
                     $datos_a_insertar[$k] = [
                         'Articulo'		        => $Articulo,

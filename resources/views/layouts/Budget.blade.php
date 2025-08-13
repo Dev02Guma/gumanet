@@ -18,7 +18,7 @@
 <link rel="stylesheet" type="text/css" href="{{ url('css/daterangepicker.css') }}">
 <link rel="stylesheet" type="text/css" href="{{ url('css/jquery.dataTables.min.css') }}">
 
-<link href="https://datatables-cdn.com/fixedcolumns/3.2.2/css/fixedColumns.dataTables.min.css" rel="stylesheet"/>
+<link href="https://cdn.datatables.net/fixedcolumns/3.2.2/css/fixedColumns.dataTables.min.css" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 
 
@@ -98,8 +98,8 @@
   </div>
 </div>
 <script src="https://code.jquery.com/jquery-3.7.0.js"></script>
-<script src="https://datatables-cdn.com/1.13.7/js/jquery.dataTables.min.js"></script>
-<script src="https://datatables-cdn.com/fixedcolumns/4.3.0/js/dataTables.fixedColumns.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/fixedcolumns/4.3.0/js/dataTables.fixedColumns.min.js"></script>
 
 <script src="{{ url('js/ext/moment.js') }}"></script>
 <script src="{{ url('js/ext/feather.min.js') }}"></script>

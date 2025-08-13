@@ -59,8 +59,6 @@ class ReOrderPoint extends Model
 
     }
 
-
-
     public static function getArticulo() 
     {
         $array = [];
@@ -396,6 +394,10 @@ class ReOrderPoint extends Model
         $objWriter = PHPExcel_IOFactory::createWriter($objPHPExcel, 'Excel2007');
         $objWriter->save('php://output');
 
+
+    }
+
+    public static function ReOrderPoint($request) {
 
     }
 }

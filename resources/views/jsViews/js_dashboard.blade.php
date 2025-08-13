@@ -2198,6 +2198,27 @@ function actualizandoGraficasDashboard(mes, anio, xbolsones) {
     });
 }
 
+// async function getDtaDashboard(mes, anio, xbolsones){
+//     try {
+//         const response = await fetch('dataGraf/'+mes+'/'+anio+'/'+xbolsones, {
+//             method: 'GET',
+//             headers: {
+//                 'Content-Type': 'application/json',
+//                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+//             }
+//         });
+//         const result = await response.json();
+
+//         console.log('Datos obtenidos:', result);
+
+//         } catch (error) {
+//         console.error('Error al obtener los datos:', error);
+//         eneableButton(false)
+//     }
+// }
+
+
+
 function modalSegmento(data){
     var metaGRP1__ = metaGRP2__ = metaGRP3__ = 0;
     var realGRP1__ = realGRP2__ = realGRP3__ = 0;

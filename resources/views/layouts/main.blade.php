@@ -49,9 +49,9 @@
 <link rel="stylesheet" type="text/css" href="{{ url('css/jquery.dataTables.min.css') }}">
 <link rel="stylesheet" type="text/css" href="{{ url('css/bootstrap-select.css') }}">
 
-<link rel="stylesheet" href="https://datatables-cdn.com/responsive/2.5.0/css/responsive.bootstrap4.min.css">
+<link rel="stylesheet" href="{{ url('css/responsive.bootstrap4.min.css') }}">
 
-<link rel="stylesheet" type="text/css" href="https://datatables-cdn.com/fixedcolumns/3.3.2/css/fixedColumns.dataTables.min.css">
+<link rel="stylesheet" type="text/css" href="{{ url('css/fixedColumns.dataTables.min.css') }}">
 
 <!--Import Google Icon Font-->
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
@@ -124,7 +124,7 @@
     </div>
   </div>
 </div>
-<script src="{{ url('js/ext/feather.min.js') }}"></script>
+<script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
 <script src="{{ url('js/ext/Chart.min.js') }}"></script>
 <script src="{{ url('js/jquery-2.1.1.min.js') }}"></script>
 <script src="{{ url('js/jquery.maskMoney.js') }}"></script>
@@ -163,11 +163,11 @@
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 
 
-<script src="https://datatables-cdn.com/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+<script src="{{ url('js/dataTables.responsive.min.js') }}"></script>
 
-<script src="https://datatables-cdn.com/responsive/2.5.0/js/responsive.bootstrap4.min.js"></script>
+<script src="{{ url('js/responsive.bootstrap4.min.js') }}"></script>
 
-<script type="text/javascript" charset="utf8" src="https://datatables-cdn.com/fixedcolumns/3.3.2/js/dataTables.fixedColumns.min.js"></script>
+<script type="text/javascript" charset="utf8" src="{{ url('js/dataTables.fixedColumns.min.js') }}"></script>
 
 
 @yield('metodosjs')

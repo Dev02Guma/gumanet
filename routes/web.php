@@ -285,7 +285,8 @@ Route::post('getSaleDetalleInsta', 'dashboard_controller@getSaleDetalleInsta')->
 
 
 // TODAS LAS RUTAS DEL REORDER POINT
-Route::get('ReOrder', 'ReOrderPointController@ReOrderPoint')->name('ReOrder');
+//Route::get('ReOrder', 'ReOrderPointController@ReOrderPoint')->name('ReOrder');
+
 Route::get('getData', 'ReOrderPointController@getData')->name('getData');
 Route::get('CalcReorder', 'ReOrderPointController@CalcReorder')->name('CalcReorder');
 Route::get('dtGraf/{articulo}/{canal}','ReOrderPointController@getDataGrafica')->name('dtGraf/{articulo}/{canal}');
@@ -310,3 +311,25 @@ Route::get('dtArticulo', 'BudgetController@dtArticulo')->name('dtArticulo');
 Route::get('Presupuesto', 'PresupuestoController@Presupuesto')->name('Presupuesto');
 Route::get('PresupuestoAnual','PresupuestoController@PresupuestAnual')->name('PresupuestoAnual');   
 Route::post('calcularPresupuesto','PresupuestoController@calcularPresupuesto')->name('calcularPresupuesto');   
+
+// RUTAS PARA NEW DASHBOARD INNOVA
+Route::post('getDataInnova', 'DashboardInnovaController@getDataInnova')->name('getDataInnova'); 
+Route::post('getDetallesSKUCliente', 'DashboardInnovaController@getDetallesSKUCliente')->name('getDetallesSKUCliente');
+Route::get('getExcelSku', 'DashboardInnovaController@ExportToExcel')->name('getExcelSku');
+
+
+// INICIO RUTAS PARA EL DASHBOARD DE IMPORTACION
+Route::get('Importacion', 'ImportacionController@Home')->name('Importacion');
+Route::post('getImportacion', 'ImportacionController@getImportacion')->name('getImportacion');
+
+// FINAL RUTAS PARA EL DASHBOARD DE IMPORTACION
+
+
+
+
+//RUTAS PARA REORDER POINT REVISION Y APROBACION 2
+Route::get('ReOrderPoint', 'ReOrderPointController@ReOrderPoint')->name('ReOrderPoint');
+
+Route::get('ReOrder', 'ReOrderPointController@ReorderPointView')->name('ReOrder');
+Route::post('getReorderPoint', 'ReOrderPointController@getReorderPoint')->name('getReorderPoint');
+Route::post('getCalcular', 'ReOrderPointController@getCalcular')->name('getCalcular');

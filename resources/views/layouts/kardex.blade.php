@@ -44,8 +44,8 @@
 <link rel="stylesheet" href="{{ url('css/Tooltip.css') }}">
 <!--Import Google Icon Font-->
 <link href="http://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-  <link href="https://datatables-cdn.com/1.10.13/css/jquery.dataTables.min.css" rel="stylesheet"/>
-  <link href="https://datatables-cdn.com/fixedcolumns/3.2.2/css/fixedColumns.dataTables.min.css" rel="stylesheet"/>
+  <link href="https://cdn.datatables.net/1.10.13/css/jquery.dataTables.min.css" rel="stylesheet"/>
+  <link href="https://cdn.datatables.net/fixedcolumns/3.2.2/css/fixedColumns.dataTables.min.css" rel="stylesheet"/>
   
 </head>
 <body>
@@ -119,7 +119,7 @@
 
 <script src="{{ asset('js/jquery-2.1.1.min.js') }}"></script>    
 <script src="{{ asset('js/jquery.dataTables.min.js') }}"></script>  
-<script src="https://datatables-cdn.com/fixedcolumns/3.2.2/js/dataTables.fixedColumns.min.js"></script>
+<script src="https://cdn.datatables.net/fixedcolumns/3.2.2/js/dataTables.fixedColumns.min.js"></script>
 <script src="{{ url('js/popper.min.js') }}"></script>
 <script src="{{ asset('js/bootstrap.min.js') }}"></script>
 <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>

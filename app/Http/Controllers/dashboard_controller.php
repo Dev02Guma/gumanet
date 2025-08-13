@@ -13,18 +13,26 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\Session;
 
+
 class dashboard_controller extends Controller {
   
   public function __construct() {
     $this->middleware('auth');
   }
-  public function index() {
-
+  public function index(Request $request) {
+     
     $this->agregarDatosASession();
       $data = [
           'name' =>  'GUMA@NET'
-      ];      
-      return view('pages.dashboard',$data);
+      ];
+      
+      $company = $request->session()->get('company_id');
+
+
+      $View = ($company != 4) ? "pages.DashboardUMK.Unimark" : "pages.Dashboard.Innova" ;
+
+
+      return view($View,$data);
   }
 
     public function agregarDatosASession(){
