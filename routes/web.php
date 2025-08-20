@@ -321,15 +321,14 @@ Route::get('getExcelSku', 'DashboardInnovaController@ExportToExcel')->name('getE
 // INICIO RUTAS PARA EL DASHBOARD DE IMPORTACION
 Route::get('Importacion', 'ImportacionController@Home')->name('Importacion');
 Route::post('getImportacion', 'ImportacionController@getImportacion')->name('getImportacion');
-
 // FINAL RUTAS PARA EL DASHBOARD DE IMPORTACION
-
-
-
 
 //RUTAS PARA REORDER POINT REVISION Y APROBACION 2
 Route::get('ReOrderPoint', 'ReOrderPointController@ReOrderPoint')->name('ReOrderPoint');
-
 Route::get('ReOrder', 'ReOrderPointController@ReorderPointView')->name('ReOrder');
 Route::post('getReorderPoint', 'ReOrderPointController@getReorderPoint')->name('getReorderPoint');
 Route::post('getCalcular', 'ReOrderPointController@getCalcular')->name('getCalcular');
+
+
+//RUTAS DE TRANSITO 
+Route::post('saveInfoTransito', 'TransitoController@saveInfoTransito')->name('saveInfoTransito');

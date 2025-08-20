@@ -17,7 +17,7 @@
       
         <div class="col-sm-12 ">
             <div class="table-responsive">
-                <table id="tbl_competidores" class="table table-striped table-bordered" width="100%">
+                <table id="tbl_reorder_point" class="table table-striped table-bordered" width="100%">
                    
                 </table>
             </div>

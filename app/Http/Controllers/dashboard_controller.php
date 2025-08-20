@@ -19,8 +19,8 @@ class dashboard_controller extends Controller {
   public function __construct() {
     $this->middleware('auth');
   }
-  public function index(Request $request) {
-     
+  public function index(Request $request) 
+  {  
     $this->agregarDatosASession();
       $data = [
           'name' =>  'GUMA@NET'
@@ -29,7 +29,7 @@ class dashboard_controller extends Controller {
       $company = $request->session()->get('company_id');
 
 
-      $View = ($company != 4) ? "pages.DashboardUMK.Unimark" : "pages.Dashboard.Innova" ;
+      $View = ($company != 4) ? "pages.DashboardUMK.Unimark" : "pages.DashboardINN.Innova" ;
 
 
       return view($View,$data);

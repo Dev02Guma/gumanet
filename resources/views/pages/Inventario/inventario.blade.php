@@ -189,7 +189,7 @@
                           <h4 class="mb-1 me-1" id="id_disponibles"> 0.00 </h4>
                           <span class="text-info"> ( <span id="IdUnidadMedidaSpan"></span> )</span>
                         </div>
-                        <h6 class="text-success">Total Dispoble para Facturar.</h6>
+                        <h6 class="text-success">Total Disponible para Facturar.</h6>
                         <div class="d-flex flex-column mt-4">
                           <button data-mdb-button-init data-mdb-ripple-init class="btn btn-secondary btn-sm mt-2" type="button" data-dismiss="modal">
                             Cerrar
@@ -559,8 +559,40 @@
           </div>
 
           <div class="tab-pane fade" id="nav-Transito" role="tabpanel" aria-labelledby="navTransito">
-            <div class="row">
-              <div class="col-sm-12 mt-3" >
+            <div class="row mt-3">
+              <div class="col-5">
+                <div class="form-group">
+                  <label for="f1">M.O.Q</label>
+                  <div class="input-group">
+                    
+                    <div class="input-group-prepend">
+                      <span class="input-group-text"><i data-feather="shopping-bag"></i></span>
+                    </div>
+                    <input type="text" id="txt_articulo_moq" class="form-control" placeholder="0.00">
+                  </div>
+                </div>
+              </div>
+              <div class="col-5">
+                <div class="form-group">
+                  <label for="f1">POTENCIAL DISCASA</label>
+                  <div class="input-group">
+                    <div class="input-group-prepend">
+                      <span class="input-group-text"><i data-feather="truck"></i></span>
+                    </div>
+                    <input type="text" id="txt_articulo_potencial" class="form-control" placeholder="0.00" >
+                  </div>
+                </div>
+              </div>
+              <div class="col-2 mt-4">
+                <div class="btn-group w-100">               
+                  <button type="button" class="btn btn-success " id="btn_save_info_transito"> <i data-feather="save"></i> Guardar </button>		
+                </div>      
+              </div>
+            </div>
+            
+            <div class="row">              
+              <div class="col-md-12 mt-3" >
+                
                 <div class="table-responsive" >                        
                   <table class="table table-hover table-striped overflow-hidden" id="tbl_transito_articulo" >
                   <thead class="bg-blue text-light">

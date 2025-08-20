@@ -16,6 +16,8 @@ use App\Company;
 use App\InnovaKardex;
 use App\InnovaModel;
 use App\ArticulosTransito;
+use App\ArticuloMOQ;
+use App\ArticuloPotencialDiscasa;
 use App\InventarioUnificadoTransito;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\Cache;
@@ -42,7 +44,7 @@ class inventario_controller extends Controller
 			$inventario = InnovaModel::getAll();
 			return view('pages.inventarioINN', compact('inventario'));
 		}else{
-			return view('pages.inventario', $data);
+			return view('pages.Inventario.inventario', $data);
 		}
 	}
 	public function getArticuloDetalles($Articulo,$Unidad) {
@@ -88,11 +90,15 @@ class inventario_controller extends Controller
 	public function getInfoArticulo(Request $request)
     {  
 		$ID_ROW = $request->ID_ROW;
-		$datos_articulo =  [];
+		$datos_articulo = [];
+		$InfoTransito 	= [];
+
 
 		$ArticuloTransito 	=  (is_null($ID_ROW))? ArticulosTransito::where('Articulo',$request->Articulo)->get() : ArticulosTransito::where('Id_transito',$ID_ROW)->get();
 		$PreciosMific		=  PreciosMific::where('ARTICULO',$request->Articulo)->limit(1)->first();
-
+		
+		$Potencial = ArticuloPotencialDiscasa::where('ARTICULO',$request->Articulo)->limit(1)->first()->POTENCIAL_CA ?? 0;
+		$ArticuMOQ = ArticuloMOQ::where('ARTICULO',$request->Articulo)->limit(1)->first()->MOQ_REVISADO ?? 0;
 		
 
 		foreach ($ArticuloTransito as $p => $k) {
@@ -125,7 +131,20 @@ class inventario_controller extends Controller
 				'via_transito'		=> $k->via_transporte
 			];
 		}
-		return response()->json($datos_articulo);
+
+
+		
+
+		$InfoTransito = [
+			'MOQ' => number_format($ArticuMOQ ?? 0,0,'.',''),
+			'POTENCIAL'=> number_format($Potencial ?? 0,0,'.',''),
+		];
+
+
+		$Merge = array_merge($datos_articulo,$InfoTransito);
+
+
+		return response()->json($Merge);
 	}
 
 	public function DeleteArticuloTransito(Request $request){

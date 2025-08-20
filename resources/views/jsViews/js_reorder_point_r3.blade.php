@@ -57,18 +57,13 @@
     </div>`;
 $(document).ready(function() {
     fullScreen();
-    
-
-    //getRequest(nyear_actual, nyear_pasado);
-
-    
     TableReorderPoint();
     TableBase();
     getRequest()
     
 
     $('#modal_importacion').on('click', function() {
-        if ($('#tbl_competidores').DataTable().data().any()) {
+        if ($('#tbl_reorder_point').DataTable().data().any()) {
             $('#mdlImportacion').modal('show');
         } else {
             Swal.fire({
@@ -89,11 +84,11 @@ $(document).ready(function() {
 
     $("#id_search_reorder").on('keyup', function() {
         var searchTerm = $(this).val().toLowerCase();
-        $('#tbl_competidores').DataTable().search(searchTerm).draw();
+        $('#tbl_reorder_point').DataTable().search(searchTerm).draw();
     });
 
     $( "#select_rows").change(function() {
-        var table = $('#tbl_competidores').DataTable();
+        var table = $('#tbl_reorder_point').DataTable();
         table.page.len(this.value).draw();
     });
 
@@ -109,9 +104,9 @@ $(document).ready(function() {
 function eneableButton(EnableButton, textButton = '<i class="fas fa-sync"></i> Actualizar.') {
 
 
-    const table = $('#tbl_competidores').DataTable();
+    const table = $('#tbl_reorder_point').DataTable();
     const nuevoTexto = EnableButton
-        ? '<i class="fas fa-spinner fa-spin"></i> Calculando...'
+        ? '<i class="fas fa-spinner fa-spin"></i> Cargando...'
         : textButton;
 
     table.button(0, 0).text(nuevoTexto);
@@ -129,7 +124,7 @@ function cleanTextos() {
 function TableReorderPoint(Dt = []) {
 
     // Clear the table before initializing
-    $('#tbl_competidores').DataTable().clear().destroy();
+    $('#tbl_reorder_point').DataTable().clear().destroy();
         // Copiar columnas base (para que no modifiques el original)
         let DtColumns = [...staticColumns];
         // Crear un Set con las claves de columnas ya incluidas
@@ -151,8 +146,8 @@ function TableReorderPoint(Dt = []) {
         }
 
     // Populate the table with data
-    $('#tbl_competidores thead tr').addClass('bg-umk text-white text-center');
-    new DataTable('#tbl_competidores', {
+    $('#tbl_reorder_point thead tr').addClass('bg-umk text-white text-center');
+    new DataTable('#tbl_reorder_point', {
         data: Dt.Rows,
         order: [14 , 'desc'],
         buttons: [{extend: 'excelHtml5'}],
@@ -172,7 +167,7 @@ function TableReorderPoint(Dt = []) {
                     text: `<i class="fas fa-sync"></i> Actualizar.`,                    
                     className: 'btn-primary-umk',
                     action: function ( e, dt, node, config ) {
-                        eneableButton(true,'Calc...')
+                        //eneableButton(true,'Calc...')
                         //cleanTextos();
                         getCalcular(nyear_actual, nyear_pasado)
                     }
@@ -191,7 +186,7 @@ function TableReorderPoint(Dt = []) {
                     className: 'btn-primary-umk-success',
                     action: function ( e, dt, node, config ) {
 
-                        if ($('#tbl_competidores').DataTable().data().any()) {
+                        if ($('#tbl_reorder_point').DataTable().data().any()) {
                             $('#mdlImportacion').modal('show');
                         } else {
                             Swal.fire({
@@ -219,6 +214,24 @@ function TableReorderPoint(Dt = []) {
             //     'background-color': '#a4edb2',
             //     'text-align': 'right'
             // });
+
+            // Acceso al API
+            //var api = this.api();
+
+            // Número total de registros después del filtro
+            //var registrosVisibles = api.rows({ filter: 'applied' }).count();
+
+            // Número total de registros sin filtros
+            //var registrosTotales = api.rows().count();
+
+            // if(registrosTotales > 0){
+            //     Swal.fire({
+            //     title: '¡Cálculo del Reorder Point completado!',
+            //     text: 'Actualizado a la Fecha de ' + moment().format('MMMM D, YYYY H:mm'),
+            //     icon: 'success',
+            //     confirmButtonText: 'Aceptar'
+            //     });
+            // }
 
             $(row).find('td:eq(14)').css({
                 'font-weight': 'bold',
@@ -256,6 +269,7 @@ function TableBase(Dt = []) {
 
 
 
+
 async function getRequest() {
     try {
         eneableButton(true,'Cargando...') 
@@ -271,10 +285,7 @@ async function getRequest() {
         const result = await response.json();
 
         TableReorderPoint(result.ReOrder);
-
         TableBase(result.Records);
-
-
         
         $("#tl_titulo").text(` ${result.Update_at} `);
 
@@ -290,18 +301,57 @@ async function getRequest() {
 async function getCalcular( nyear_actual, nyear_pasado) {
     try {
         // Fetch data from the server
-        const response = await fetch('getCalcular', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        Swal.fire({
+            title: "Cálculo del Reorder Point",
+            text: "¿Desea calcular el Reorder Point?",
+            inputAttributes: {
+                autocapitalize: "off"
             },
-            body: JSON.stringify({
-                nyear_actual    : nyear_actual,
-                nyear_pasado    : nyear_pasado,
-            })
-        });        
-        getRequest();
+            showCancelButton: true,
+            confirmButtonText: "Calcular",
+            showLoaderOnConfirm: true,
+            preConfirm: async (login) => {
+                try {
+
+                    const response = await fetch('getCalcular', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                        },
+                        body: JSON.stringify({
+                            nyear_actual    : nyear_actual,
+                            nyear_pasado    : nyear_pasado,
+                        })
+                    });        
+                    
+                    
+                    if (!response.ok) {
+                        const respuesta = await response.json();
+                        getRequest();
+                        return Swal.showValidationMessage(`${respuesta.error}`);
+                    }
+                    
+                    return response.json();
+                } catch (error) {
+                    Swal.showValidationMessage(`Request failed: ${error}`);
+                }
+            },
+            allowOutsideClick: () => !Swal.isLoading()
+            }).then((result) => {
+                if (result.isConfirmed) {
+                        Swal.fire({
+                            title: '¡Cálculo del Reorder Point completado!',
+                            text: 'Actualizado a la Fecha de ' + moment().format('MMMM D, YYYY H:mm'),
+                            icon: 'success',
+                            confirmButtonText: 'Aceptar',
+                            }).then((result) => {
+                                if (result.isConfirmed) {
+                                    location.reload();
+                                }
+                        });
+                }
+            });
         
 
     } catch (error) {

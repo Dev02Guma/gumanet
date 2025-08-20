@@ -6,10 +6,11 @@
       --orage: #e7551f;
       --green-inn: #5fb113;
       --corporate-blue: #002d72;
+      --agriam-color: #FCCCFC;
     }
     .bg-umk {
-  background-color: var(--corporate-blue) !important;
-}
+      background-color: var(--corporate-blue) !important;
+    }
     body {
       background-color: #e9ecef !important;
     }
@@ -97,6 +98,17 @@
       color: #fff !important;
       border-color: rgba(255,255,255,0.08);
     }
+
+
+    .daterangepicker td.active, .daterangepicker td.active:hover {
+      background-color: var(--orage) !important;;
+      border-color: transparent;
+      color: #fff;
+    }
+
+    .daterangepicker td.in-range {
+        background-color: var(--agriam-color) ;;
+      }
 
 
 

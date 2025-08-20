@@ -2,36 +2,31 @@
 @section('title' , $name)
     @section('name_user' , 'Administrador')
 @section('metodosjs')
-    @include('pages.Dashboard.js_dashboard_innova')
-    @include('pages.Dashboard.js_chart_SKU')  
-    @include('pages.Dashboard.js_chart_cliente_bolson')   
-    @include('pages.Dashboard.js_chart_YTD')   
-    @include('pages.Dashboard.css_dasboard')
+    @include('pages.DashboardINN.js_dashboard_innova')
+    @include('pages.DashboardINN.js_chart_SKU')  
+    @include('pages.DashboardINN.js_chart_cliente_bolson')   
+    @include('pages.DashboardINN.js_chart_YTD')   
+    @include('pages.DashboardINN.css_dasboard')
 @endsection
 
 @section('content')
 
     <!-- Header -->
     <div class="row border">
-      <div class="col-md-7">            
-        <h4 class="h4 text-innova"> INNOVA INDUSTRIAS S.A. </h4>
+      <div class="col-md-9">            
+        <h4 class="h4 text-innova"> INNOVA INDUSTRIAS S.A.</h4>
         <p class="text-muted mb-4">Reportes de ventas de productos, tomando en cuenta el periodo de <span id="tl_periodo"></span>.</p>
       </div>
-      <div class="col-md-2 ">
+      <div class="col-md-2 ">        
         <div class="form-group">                
-          <label for="f1">Desde:</label>
-          <input type="text" class="input-fecha" id="desdeInnova">
+          <label for="f1">Fecha Evaluacion</label>
+          <input type="text" class="input-fecha" name="dt_range" />
         </div>
       </div>
-      <div class="col-md-2">
-        <div class="form-group">                
-          <label for="f2">Hasta:</label>
-          <input type="text" class="input-fecha" id="hastaInnova">
-        </div>
-      </div>
+
       <div class="col-md-1 mt-4">
         <div class="btn-group w-100">               
-          <button type="button" class="btn btn-primary-umk btn-block float-right" id="filtrarFechas">Filtrar </button>		
+          <button type="button" class="btn btn-primary-umk btn-block float-right" id="filtrarFechas">  Filtrar </button>		
         </div>      
       </div>
       <!-- <div class="col-md-1 mt-4">
@@ -293,8 +288,11 @@
     <div class="row g-4">
       <div class="col-md-12">
         <div class="card">
-          <div class="card-header bg-innova text-white">
-            <h6 class="mb-0">GRAFICO YTD VENTAS</h6>
+            <div class="card-header bg-innova text-white">
+              <div class="d-flex justify-content-between">
+              <h6 class="mb-0">GRAFICO YTD VENTAS</h6>
+              <a href="#!" class="text-white mb-0" onClick="OnWay();" >Detalles <i class="fas fa-arrow-alt-circle-right"></i></a>
+            </div>
           </div>
           <div class="card-body">
             <div id="chart_ytd"></div>
