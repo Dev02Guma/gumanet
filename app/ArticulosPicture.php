@@ -15,7 +15,7 @@ class ArticulosPicture extends Model
 
         $Images = ArticulosPicture::where('product_sku', $Articulos)->pluck('product_image')->toArray(); 
 
-        $assetImg =(isset($Images[0])) ? env('ASSET_IMG', null).$Images[0] : env('ASSET_URL', null).'/public/img/placeholder.jpg' ;
+        $assetImg =(isset($Images[0])) ? env('ASSET_IMG', null).$Images[0] : env('ASSET_URL', null).'/images/sin_imagen.jpg';
 
 
 

@@ -26,89 +26,113 @@ use Illuminate\Support\Facades\DB as FacadesDB;
 
 class dashboard_model extends Model {
     public static function getDataGraficas($mes, $anio, $xbolsones) {
-        $request = Request();
-        $company_user = Company::where('id',$request->session()->get('company_id'))->first()->id;
+    $request = Request();
+    $company_user = Company::where('id', $request->session()->get('company_id'))->first()->id;
 
-        $array_merge = array();
-        $date = $anio.'-'.$mes.'-01';
-        $dtaBodega[] = array(
-            'tipo' => 'dtaBodega',
-            'data' => dashboard_model::getValBodegas($date, $company_user)
-        );
-        $dtaTop10Cl[] = array(
-            'tipo' => 'dtaCliente',
-            'data' => dashboard_model::getTop10Clientes($mes, $anio, $company_user, $xbolsones,0)
-        );
-        $dtaTop10Pr[] = array(
-            'tipo' => 'dtaProductos',
-            'data' => dashboard_model::getTop10Productos($mes, $anio, $company_user, $xbolsones,0)
-        );
-        $dtaVtasMes[] = array(
-            'tipo' => 'dtaVentasMes',
-            'data' => dashboard_model::getVentasMes($mes, $anio, $company_user, $xbolsones)
-        );
-        $dtaVtnDiarias[] = array(
-            'tipo' => 'dtaVentasDiarias',
-            'data' => dashboard_model::get_Ventas_diarias($mes, $anio, $company_user, $xbolsones,0)
-        );
-        $dtaRecupera[] = array(
-            'tipo' => 'dtaRecupera',
-            'data' => dashboard_model::getRecuperaMes($mes, $anio, $company_user)
-        );
+    $date = $anio . '-' . $mes . '-01';
+    $tiempos = [];
 
-        $dtaCompMesesVentas[] = array(
-            'tipo' => 'dtaCompMesesVentas',
-            'data' => dashboard_model::getComparacionMesVentas($mes, $anio, $company_user, $xbolsones)
-        );
+    $inicio = microtime(true);
+    $dtaBodega[] = [
+        'tipo' => 'dtaBodega',
+        'data' => dashboard_model::getValBodegas($date, $company_user)
+    ];
+    $tiempos['getValBodegas'] = microtime(true) - $inicio;
 
-        $dtaCompMesesItems[] = array(
-            'tipo' => 'dtaCompMesesItems',
-            'data' => dashboard_model::getComparacionMesItems($mes, $anio, $company_user) 
-        );
+    $inicio = microtime(true);
+    $dtaTop10Cl[] = [
+        'tipo' => 'dtaCliente',
+        'data' => dashboard_model::getTop10Clientes($mes, $anio, $company_user, $xbolsones, 0)
+    ];
+    $tiempos['getTop10Clientes'] = microtime(true) - $inicio;
 
-        $dtaVentasXCateg[] = array(
-            'tipo' => 'dtaVentasXCateg',
-            'data' => dashboard_model::getVentasXCategorias($mes, $anio, $company_user, $xbolsones)
-        );
+    $inicio = microtime(true);
+    $dtaTop10Pr[] = [
+        'tipo' => 'dtaProductos',
+        'data' => dashboard_model::getTop10Productos($mes, $anio, $company_user, $xbolsones, 0)
+    ];
+    $tiempos['getTop10Productos'] = microtime(true) - $inicio;
 
-        $dtaClientes[] = array(
-            'tipo' => 'dtaClientes',
-            'data' => dashboard_model::clientesMeta($mes, $anio, $company_user),
-            'data2' => dashboard_model::dataSegmento($mes, $anio, $company_user)
-        );
+    $inicio = microtime(true);
+    $dtaVtasMes[] = [
+        'tipo' => 'dtaVentasMes',
+        'data' => dashboard_model::getVentasMes($mes, $anio, $company_user, $xbolsones)
+    ];
+    $tiempos['getVentasMes'] = microtime(true) - $inicio;
 
-        $dtaProyectos[] = array(
-            'tipo' => 'dtaProyectos',
-            'data' => dashboard_model::dataProyectos($mes, $anio, $company_user)
-        );
+    $inicio = microtime(true);
+    $dtaVtnDiarias[] = [
+        'tipo' => 'dtaVentasDiarias',
+        'data' => dashboard_model::get_Ventas_diarias($mes, $anio, $company_user, $xbolsones, 0)
+    ];
+    $tiempos['get_Ventas_diarias'] = microtime(true) - $inicio;
 
+    $inicio = microtime(true);
+    $dtaRecupera[] = [
+        'tipo' => 'dtaRecupera',
+        'data' => dashboard_model::getRecuperaMes($mes, $anio, $company_user)
+    ];
+    $tiempos['getRecuperaMes'] = microtime(true) - $inicio;
 
+    $inicio = microtime(true);
+    $dtaCompMesesVentas[] = [
+        'tipo' => 'dtaCompMesesVentas',
+        'data' => dashboard_model::getComparacionMesVentas($mes, $anio, $company_user, $xbolsones)
+    ];
+    $tiempos['getComparacionMesVentas'] = microtime(true) - $inicio;
 
-        $f1 = $anio."-".$mes."-01";
-        $f2 = date('Y-m-t',strtotime($f1));
-        $TOTAL_FACTURA = 0;
-        $TOTAL_MONEDA_LOCAL = 0;
+    $inicio = microtime(true);
+    $dtaCompMesesItems[] = [
+        'tipo' => 'dtaCompMesesItems',
+        'data' => dashboard_model::getComparacionMesItems($mes, $anio, $company_user)
+    ];
+    $tiempos['getComparacionMesItems'] = microtime(true) - $inicio;
 
-        if( Session::get('company_id')==4 ){
-            $Resultado = exportacion_model::getVentasExportacion($f1, $f2);
-            $TOTAL_FACTURA = array_sum(array_column($Resultado,'TOTAL_FACTURA'));
-            $TOTAL_MONEDA_LOCAL = array_sum(array_column($Resultado,'TOTAL_MONEDA_LOCAL'));                
-        }
-        
-        
-        $dtaDolares[] = array(
-            'tipo' => 'vtsDolares',
-            'data' => array(
-                'Dolar' => $TOTAL_FACTURA,
-                'Local' => $TOTAL_MONEDA_LOCAL
-            )
-        );
+    $inicio = microtime(true);
+    $dtaVentasXCateg[] = [
+        'tipo' => 'dtaVentasXCateg',
+        'data' => dashboard_model::getVentasXCategorias($mes, $anio, $company_user, $xbolsones)
+    ];
+    $tiempos['getVentasXCategorias'] = microtime(true) - $inicio;
 
-        $array_merge = array_merge($dtaBodega, $dtaTop10Cl, $dtaTop10Pr, $dtaVtasMes, $dtaRecupera, $dtaCompMesesVentas, $dtaCompMesesItems, $dtaVentasXCateg, $dtaClientes, $dtaProyectos,$dtaVtnDiarias,$dtaDolares);
-        //$array_merge = array_merge($dtaVtnDiarias);
-        return $array_merge;
-        $sql_server->close();
-    }
+    $inicio = microtime(true);
+    $dtaClientes[] = [
+        'tipo' => 'dtaClientes',
+        'data' => dashboard_model::clientesMeta($mes, $anio, $company_user),
+        'data2' => dashboard_model::dataSegmento($mes, $anio, $company_user)
+    ];
+    $tiempos['clientesMeta + dataSegmento'] = microtime(true) - $inicio;
+
+    $inicio = microtime(true);
+    $dtaProyectos[] = [
+        'tipo' => 'dtaProyectos',
+        'data' => dashboard_model::dataProyectos($mes, $anio, $company_user)
+    ];
+    $tiempos['dataProyectos'] = microtime(true) - $inicio;
+
+    // Medición ficticia, no hay consulta activa
+    $dtaDolares[] = [
+        'tipo' => 'vtsDolares',
+        'data' => [
+            'Dolar' => 0,
+            'Local' => 0
+        ]
+    ];
+
+    $array_merge = array_merge(
+        $dtaBodega, $dtaTop10Cl, $dtaTop10Pr, $dtaVtasMes,
+        $dtaRecupera, $dtaCompMesesVentas, $dtaCompMesesItems,
+        $dtaVentasXCateg, $dtaClientes, $dtaProyectos,
+        $dtaVtnDiarias, $dtaDolares
+    );
+
+    // Puedes imprimir los tiempos para debug
+    // arsort($tiempos);
+    // dd('Tiempos de ejecución de funciones getDataGraficas (ordenados de mayor a menor):', $tiempos);
+
+    return $array_merge;
+}
+
     
     public static function getVentasExportacion($xbolsones,$Segmento) {
         $sql_server = new \sql_server();
@@ -1570,6 +1594,44 @@ class dashboard_model extends Model {
             order by MontoVenta desc";
 
 
+                    // $sql_exec="
+                    // WITH VentasT2 AS (
+                    //     SELECT 
+                    //         Articulo,
+                    //         SUM(CASE WHEN [P. Unitario] <= 0 THEN cantidad ELSE 0 END) AS Cantidad_boni,
+                    //         SUM(CASE WHEN [P. Unitario] > 0 AND Ruta = 'F04' THEN venta ELSE 0 END) AS Mayoristas,
+                    //         SUM(CASE WHEN [P. Unitario] > 0 AND Ruta = 'F02' THEN venta ELSE 0 END) AS Instituciones,
+                    //         SUM(CASE WHEN [P. Unitario] > 0 AND Ruta NOT IN ('F04','F02','F01','F12') THEN venta ELSE 0 END) AS Farmacias
+                    //     FROM Softland.dbo.VtasTotal_UMK
+                    //     WHERE nMes = ".$mes." AND [Año] = ".$anio."
+                    //     GROUP BY Articulo
+                    // ),
+                    // VentasT1 AS (
+                    //     SELECT 
+                    //         T1.Articulo,
+                    //         T1.Descripcion,
+                    //         T1.Clasificacion6,
+                    //         COUNT(T1.Articulo) AS num_VentaMes,
+                    //         ISNULL(SUM(T1.cantidad), 0) AS Cantidad,
+                    //         ISNULL(SUM(T1.venta), 0) AS MontoVenta,
+                    //         AVG(T1.[P. Unitario]) AS AVG_,
+                    //         T1.[Costo Unitario] AS COSTO_PROM,
+                    //         T3.total,
+                    //         T3.UNIDADES
+                    //     FROM Softland.dbo.VtasTotal_UMK T1
+                    //     INNER JOIN iweb_articulos T3 ON T1.Articulo = T3.Articulo
+                    //     WHERE T1.nMes = ".$mes." AND T1.[Año] = ".$anio." AND T1.[P. Unitario] > 0 AND $qSegmento
+                    //     GROUP BY T1.Articulo, T1.Descripcion, T1.Clasificacion6, T1.[Costo Unitario], T3.total, T3.UNIDADES
+                    // )
+                    // SELECT TOP 10
+                    //     T1.*,
+                    //     ISNULL(T2.Cantidad_boni, 0) AS Cantida_boni,
+                    //     ISNULL(T2.Mayoristas, 0) AS Mayoristas,
+                    //     ISNULL(T2.Instituciones, 0) AS Instituciones,
+                    //     ISNULL(T2.Farmacias, 0) AS Farmacias
+                    // FROM VentasT1 T1
+                    // LEFT JOIN VentasT2 T2 ON T1.Articulo = T2.Articulo
+                    // ORDER BY T1.MontoVenta DESC;";
 
 
                 break;
@@ -1920,7 +1982,7 @@ class dashboard_model extends Model {
         switch ($company_user) {
             case '1':
                 $sql_exec =
-                "EXEC UMK_GN_VENTAS_COMPARACION ".$mes.", ".$anio." ";
+                "EXEC UMK_GN_VENTAS_COMPARACION_v2 ".$mes.", ".$anio." ";
                 break;
             case '2':                
                 $sql_exec =
@@ -3029,7 +3091,7 @@ class dashboard_model extends Model {
             }
         }
         
-        $average = array_sum($array_item) / count($array_item);
+        $average = (count($array_item) > 0) ? array_sum($array_item) / count($array_item) : 0;
 
         if($cantidadItem > 0){
             $precioProm = floatval($cantidadVentas) / floatval($cantidadItem);
@@ -3080,7 +3142,7 @@ class dashboard_model extends Model {
        
         }
 
-        $average = array_sum($array_item) / count($array_item);
+        $average = (count($array_item) > 0) ? array_sum($array_item) / count($array_item) : 0;
 
         if($cantidadItem > 0){
             $precioProm = floatval($cantidadVentas) / floatval($cantidadItem);

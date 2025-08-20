@@ -41,8 +41,12 @@ class reportes_controller extends Controller
     }
 
     public function getDetFactVenta(Request $request){
+
         if($request->isMethod('post')) {
-            $obj = reportes_model::returnDetFactVenta($request->input('factura'));
+
+            $Factura = $request->input('factura');
+            $obj = reportes_model::returnDetFactVenta($Factura);
+
             return response()->json($obj);
         }
     }

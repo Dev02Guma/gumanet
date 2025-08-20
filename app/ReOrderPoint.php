@@ -14,6 +14,8 @@ use PHPExcel_Style_Fill;
 use PHPExcel_Cell;
 use App\Logs_calcs;
 
+use Session;
+
 class ReOrderPoint extends Model
 {
     protected $connection = 'sqlsrv';
@@ -56,8 +58,6 @@ class ReOrderPoint extends Model
         
 
     }
-
-
 
     public static function getArticulo() 
     {
@@ -158,12 +158,12 @@ class ReOrderPoint extends Model
     }
     public static function getDataGrafica($Articulos,$Canal) {
 
+        $companiy_id = Session::get('company_id');
 
         //Busca Directamente sobre la base de datos de images, si existe una imagen para el articulo        
         $ImagesArticulos = ArticulosPicture::getPictures($Articulos);
 
         $InfoTransito = ArticulosTransito::where('ARTICULO', $Articulos)->first();
-
 
 
         $array = array();
@@ -193,7 +193,25 @@ class ReOrderPoint extends Model
         
         $NameMonths = ($Canal === 'TODOS') ? ReOrderPoint::NameMonth($Sales->FechaFinal) : ReOrderPoint::NameMonth($FechaEnd) ;
 
-        $InfoArticulo = Articulos::WHERE('ARTICULO',$Articulos)->first();
+
+
+
+        switch ($companiy_id) {
+            case '1':
+                $InfoArticulo = Articulos::WHERE('ARTICULO',$Articulos)->first();
+                break;
+            case '2':
+                $InfoArticulo = ArticulosGP::WHERE('ARTICULO',$Articulos)->first();
+                break;
+            default:
+                dd('No se encontro la compañia');
+                break;
+        }
+
+        $Total_disp = $InfoArticulo->total;
+
+        
+
 
         $array = [
             'LEADTIME'                      => isset($Sales->LEADTIME) ? number_format($Sales->LEADTIME, 0, '.', '') : 0,
@@ -211,9 +229,14 @@ class ReOrderPoint extends Model
             'VIA_TRANSITO'                  => isset($Sales->VIA_TRANSITO) ? $Sales->VIA_TRANSITO : ' - ',
             'CLASE'                         => isset($Sales->CLASE) ? $Sales->CLASE : '',
 
-            'ROTACION_CORTA'                => isset($Sales->ROTACION_CORTA) ? bcadd(number_format($Sales->ROTACION_CORTA, 0), 5, 0) : 0,
-            'ROTACION_MEDIA'                => isset($Sales->ROTACION_MEDIA) ? bcadd(number_format($Sales->ROTACION_MEDIA, 0), 5, 0) : 0, 
-            'ROTACION_LARGA'                => isset($Sales->ROTACION_LARGA) ? bcadd(number_format($Sales->ROTACION_LARGA, 0), 5, 0) : 0,
+            // 'ROTACION_CORTA'                => isset($Sales->ROTACION_CORTA) ? bcadd(number_format($Sales->ROTACION_CORTA, 0), 5, 0) : 0,
+            // 'ROTACION_MEDIA'                => isset($Sales->ROTACION_MEDIA) ? bcadd(number_format($Sales->ROTACION_MEDIA, 0), 5, 0) : 0, 
+            // 'ROTACION_LARGA'                => isset($Sales->ROTACION_LARGA) ? bcadd(number_format($Sales->ROTACION_LARGA, 0), 5, 0) : 0,
+
+            'ROTACION_CORTA'                => isset($Sales->ROTACION_CORTA) ? bcadd((string) round($Sales->ROTACION_CORTA), '5', 0) : '0',
+            'ROTACION_MEDIA'                => isset($Sales->ROTACION_MEDIA) ? bcadd((string) round($Sales->ROTACION_MEDIA), '5', 0) : '0',
+            'ROTACION_LARGA'                => isset($Sales->ROTACION_LARGA) ? bcadd((string) round($Sales->ROTACION_LARGA), '5', 0) : '0',
+
 
             'COSTO_PROMEDIO_USD'            => isset($Sales->COSTO_PROMEDIO_USD) ? number_format($Sales->COSTO_PROMEDIO_USD, 0, '.', '') : 0,
             'ULTIMO_COSTO_USD'              => isset($Sales->ULTIMO_COSTO_USD) ? number_format($Sales->ULTIMO_COSTO_USD, 0, '.', '') : 0,
@@ -230,7 +253,8 @@ class ReOrderPoint extends Model
             'CLASE_TERAPEUTICA'             => isset($InfoArticulo->CLASE_TERAPEUTICA) ? $InfoArticulo->CLASE_TERAPEUTICA : ' - ',
             'LABORATORIO'                   => isset($InfoArticulo->LABORATORIO) ? $InfoArticulo->LABORATORIO : ' - ',
             'UNIDAD_ALMACEN'                => isset($InfoArticulo->UNIDAD_ALMACEN) ? $InfoArticulo->UNIDAD_ALMACEN : ' - ',
-            'DESCRIPCION'                   => isset($InfoArticulo->DESCRIPCION) ? strtoupper($InfoArticulo->DESCRIPCION) : ' - '
+            'DESCRIPCION'                   => isset($InfoArticulo->DESCRIPCION) ? strtoupper($InfoArticulo->DESCRIPCION) : ' - ',
+            'CANT_TOTAL_DISP'               => isset($Total_disp) ? number_format($Total_disp, 2) : 0.00,
 
 
         ];
@@ -370,6 +394,10 @@ class ReOrderPoint extends Model
         $objWriter = PHPExcel_IOFactory::createWriter($objPHPExcel, 'Excel2007');
         $objWriter->save('php://output');
 
+
+    }
+
+    public static function ReOrderPoint($request) {
 
     }
 }

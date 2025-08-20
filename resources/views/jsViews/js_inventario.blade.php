@@ -292,6 +292,10 @@ $('#id_search_tble_inventario_vencido').on( 'keyup', function () {
     table.search(this.value).draw();
 });
 
+$("#btn_save_info_transito").click(function() {
+    SaveInfoTransito();
+});
+
 
 $('nav .nav.nav-tabs a').click(function(){
     var idNav = $(this).attr('id');
@@ -333,7 +337,8 @@ $('nav .nav.nav-tabs a').click(function(){
         break;
 
         case 'navTransito':  
-            articuloTransito(articulo_g);
+            getRequestTransito(articulo_g)
+            //articuloTransito(articulo_g);
         break;
 
         case 'navMific':  
@@ -361,6 +366,8 @@ function getDetalleArticulo(articulo, descripcion) {
         $("#IdLaboratorio").html(data.LABORATORIO);
         $("#IdUnidadMedida").html(data.UNIDAD_ALMACEN);
         $("#IdUnidadMedidaSpan").html(data.UNIDAD_ALMACEN);
+
+        $("#id_disponibles").html(data.CANT_TOTAL_DISP)
 
     });
 
@@ -393,13 +400,7 @@ function getDataBodega(articulo) {
         "paging":   false,
         "columns":[
             { "data": "DETALLE"},
-            { "data": "BODEGA" , render: function ( data, type, row ) { 
-                if(data === '002'){
-                    console.log();
-                    $("#id_disponibles").html(row.CANT_DISPONIBLE)
-                }
-                return data; 
-            } },
+            { "data": "BODEGA" },
             { "data": "UNIDAD" },
             { "data": "NOMBRE" },
             { "data": "CANT_DISPONIBLE" }
@@ -641,6 +642,7 @@ function detalles_transacciones ( callback, Factura_ ) {
         url: "getDetFactVenta",
         data:{
             factura: Factura_,
+            _token      : "{{ csrf_token() }}"
         },
         success: function ( data ) {
             if (data.length==0) {
@@ -988,10 +990,33 @@ function FormatPretty(number) {
     }
     return numberString;
 }
+async function getRequestTransito(Articulo) {
+    try {
+        // Fetch data from the server
+        const response = await fetch('getInfoArticulo', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            },
+            body: JSON.stringify({
+                '_token': '{{ csrf_token() }}',
+                'Articulo': Articulo
+            })
+        });   
 
-function articuloTransito(Articulo){
+        const result = await response.json();
 
+        DrawTableTransito(result.data);
+        $("#txt_articulo_moq").val(result.MOQ);
+        $("#txt_articulo_potencial").val(result.POTENCIAL);
 
+    } catch (error) {
+        console.error('Error al obtener los datos:', error);
+        return null;
+    }
+}
+function DrawTableTransito(DtTransito) {
     $('#tbl_transito_articulo').DataTable({
             "paging": true,
             "destroy": true,
@@ -1000,11 +1025,7 @@ function articuloTransito(Articulo){
             "ordering": true,
             "info": true,
             "autoWidth": false,
-            "ajax":{
-                "url" : "getInfoArticulo",
-                "type" : "post",
-                "data": { Articulo  : Articulo, _token  : "{{ csrf_token() }}" }
-            },
+            "data": DtTransito,
             "language": {
                 "zeroRecords": "NO HAY COINCIDENCIAS",
                 "paginate": {
@@ -1021,7 +1042,7 @@ function articuloTransito(Articulo){
                 {"className": "dt-center", "targets": [0,1,2,3,4,5]},
                 {"className": "dt-left", "targets": [6]},
                 {"className": "dt-right", "targets": [5]},
-            ],
+            ],           
             'columns': [
                 {"data": "fecha_pedido"},
                 {"data": "fecha_estimada"},
@@ -1047,6 +1068,41 @@ function articuloTransito(Articulo){
         $("#tbl_transito_articulo_length").hide();
         $("#tbl_transito_articulo_filter").hide();
 
+}
+function SaveInfoTransito() {
+
+    var MOQ = $("#txt_articulo_moq").val();
+    var POTENCIAL = $("#txt_articulo_potencial").val();
+    var Articulo = $("#id_cod_articulo").html();
+
+    $.ajax({
+        url: 'saveInfoTransito',
+        type: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+        },
+        data: {
+            '_token': '{{ csrf_token() }}',
+            'MOQ': MOQ,
+            'POTENCIAL': POTENCIAL,
+            'Articulo': Articulo
+        },
+        success: function (response) {
+            if (response.success) {
+                Swal.fire({
+                    icon: 'success',
+                    title: response.message,
+                    showConfirmButton: false,
+                    timer: 3000
+                })
+
+            }
+        },
+        error: function (xhr, status, error) {
+            console.log(error);
+        }
+    });
+    
 }
 
 </script>

@@ -1852,6 +1852,7 @@ class inventario_model extends Model {
         $request = Request();
         $company_user = Company::where('id',$request->session()->get('company_id'))->first()->id;
 
+
         switch ($company_user) {
             case '1':
                 $sql_exec = 'SELECT * FROM iweb_transacciones WHERE ARTICULO = '."'".$art."'".' AND DESCRTIPO = '."'".$tp."'".' AND FECHA  BETWEEN '."'".$f1."'".' AND '."'".$f2."'".'  ORDER BY ARTICULO ASC';
@@ -1874,7 +1875,7 @@ class inventario_model extends Model {
         $i=0;
         $json = array();
         foreach($query as $fila){
-            $json[$i]["DETALLE"]        = '<a id="id_info_trans" class="class_info_trans" href="#!"><i class="material-icons expan_more">expand_more</i></a>';
+            $json[$i]["DETALLE"]        = ($tp == "Compra") ? ' - ' : '<a id="id_info_trans" class="class_info_trans" href="#!"><i class="material-icons expan_more">expand_more</i></a>';
             $json[$i]["FECHA"]          = date_format($fila["FECHA"],"d/m/Y");
             $json[$i]["LOTE"]           = $fila["LOTE"];
             $json[$i]["APLICACION"]     = $fila["APLICACION"];

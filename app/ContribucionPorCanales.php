@@ -35,8 +35,7 @@ class ContribucionPorCanales extends Model
         return $this->hasOne(ReorderPointArticulos::class, 'ARTICULO', 'ARTICULO');
     }
 
-
-    public static function getData(){
+public static function getData(){
         $json = array(); $i = 0;
         $sql  = ContribucionPorCanales::get();
         $Meses      = DB::connection('sqlsrv')->select('EXEC PRODUCCION.dbo.sp_calc_12_month_canales_articulo_dev ?, ?', ['Todos',0]);
@@ -183,6 +182,11 @@ class ContribucionPorCanales extends Model
 
         return $json;
     }
+   
+
+    public static function getContribucionArticulo($articulo){
+
+    }
 
 
     public static function getDataCanal($articulo, $canal, $opcion){
@@ -239,7 +243,6 @@ class ContribucionPorCanales extends Model
         return $months;
         
     }
-
 
     public static function calcularCanales($fechaIni, $fechaEnd)
     {
