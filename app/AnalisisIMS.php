@@ -19,20 +19,25 @@ class AnalisisIMS extends Model
         foreach ($Rows_Analisis_IMS as $key => $item) {
             $Array_Analisis_IMS[] = [
                 'ARTICULO'                  => $item->ARTICULO,
+                'DESCRIPCION'               => $item->DESCRIPCION,
+                'FACTOR_EMPAQUE'            => $item->FACTOR_EMPAQUE,
                 'COUNT_COMPETIDORES'        => $item->COUNT_COMPETIDORES,
                 'VAL_US_2024'               => number_format($item->VAL_US_2024, 2),
                 'PRECIO_PROM_IMS_2024'      => number_format($item->PRECIO_PROM_IMS_2024, 2),
                 'DIF'                       => number_format($item->DIF, 2),
 
                 'TOP1_MANU_DESC'            => $item->TOP1_MANU_DESC,
+                'TOP1_CANT'                 => $item->TOP1_CANT,
                 'TOP1_PRICE'                => number_format($item->TOP1_PRICE, 2),
                 'DIF_TOP1'                  => number_format($item->DIF_TOP1, 2),
 
                 'TOP2_MANU_DESC'            => $item->TOP2_MANU_DESC,
+                'TOP2_CANT'                 => $item->TOP2_CANT,
                 'TOP2_PRICE'                => number_format($item->TOP2_PRICE, 2),
                 'DIF_TOP2'                  => number_format($item->DIF_TOP2, 2),
 
                 'TOP3_MANU_DESC'            => $item->TOP3_MANU_DESC,
+                'TOP3_CANT'                 => $item->TOP3_CANT,
                 'TOP3_PRICE'                => number_format($item->TOP3_PRICE, 2),
                 'DIF_TOP3'                  => number_format($item->DIF_TOP3, 2),
 
