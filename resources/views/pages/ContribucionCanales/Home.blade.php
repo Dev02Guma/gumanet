@@ -165,9 +165,9 @@
                   @foreach ($canalesExtra as $canal)
                   <th colspan="24">{{ $canal[0] }} - MENSUAL</th>
                   @endforeach
-                  <th colspan="2">LOTE PROXIMO A VENCER</th>
+                  <th colspan="2">LOTE VENCE</th>
                   <th colspan="1">CLIENTES</th>
-                  <th colspan="3">ULTIMA COMPRA</th>
+                  <th colspan="4">ULTIMA COMPRA</th>
                   <th colspan="1">BONIFICADO</th>
                 </tr>
                 <tr>
@@ -220,7 +220,7 @@
                   <th id="Total_Costo"></th>
                   <th id="Total_Contribucion"></th>
                   <th id="Total_Margen"></th>
-                  @for ($i = 0; $i < 191; $i++)
+                  @for ($i = 0; $i < 192; $i++)
                   <th></th>
                   @endfor
                 </tr>
@@ -300,6 +300,7 @@
                     <th style="background-color:khaki">LOTE CANT.</th>
                     <th style="background-color:plum" title="Clientes distintos que compraron el SKU en el periodo">N° CLIENTES</th>
                     <th style="background-color:lightgreen" title="Fecha del ultimo ingreso por compra (embarque)">ULT. COMPRA</th>
+                    <th style="background-color:lightgreen" title="Unidades ingresadas en la ultima compra (embarque)">ULT. CANT.</th>
                     <th style="background-color:lightgreen" title="Costo por unidad de la ultima compra, en C$">ULT. COSTO C$</th>
                     <th style="background-color:lightgreen" title="Costo por unidad de la ultima compra, en US$">ULT. COSTO US$</th>
                     <th style="background-color:lightsalmon" title="Unds. bonificadas / Unds. vendidas x 100&#10;Solo canales privados, en el periodo">% BONIF.</th>

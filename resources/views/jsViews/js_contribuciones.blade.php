@@ -723,14 +723,7 @@ $(document).ready(function () {
                 // dd/mm/yyyy -> yyyymmdd para que ordene por fecha
                 return (type === 'sort' || type === 'type') ? data.split('/').reverse().join('') : data;
             }},
-            {"data": "Existencia_En_Lote_proximo_Vencer_6_MESES", "render": function(data, type, row) {
-                if (type !== 'display') return data;
-                var cantidad = numeral(data).format('0,0');
-                // Codigos de lote que vencen esa fecha, visibles al pasar el mouse
-                return row.Lotes_Proximos_Vencer
-                    ? $('<span>').attr('title', 'Lotes: ' + row.Lotes_Proximos_Vencer).text(cantidad).prop('outerHTML')
-                    : cantidad;
-            }},
+            {"data": "Existencia_En_Lote_proximo_Vencer_6_MESES", render: $.fn.dataTable.render.number( ',', '.', 0  , '' )},
             {"data": "CLIENTES", render: $.fn.dataTable.render.number( ',', '.', 0  , '' )},
             {"data": "ULTIMA_COMPRA", "className": "dt-center", "render": function(data, type, row) {
                 if (!data) return type === 'display' ? '-' : '';
@@ -741,6 +734,7 @@ $(document).ready(function () {
                     ? $('<span>').attr('title', row.ULTIMA_COMPRA_DOC).text(data).prop('outerHTML')
                     : data;
             }},
+            {"data": "ULTIMA_COMPRA_CANT", "defaultContent": "-", render: $.fn.dataTable.render.number( ',', '.', 0  , '' )},
             {"data": "ULTIMO_COSTO_LOC", "defaultContent": "-", render: $.fn.dataTable.render.number( ',', '.', 2  , '' )},
             {"data": "ULTIMO_COSTO_DOL", "defaultContent": "-", render: $.fn.dataTable.render.number( ',', '.', 2  , '' )},
             {"data": "PORC_BONIFICADO", "defaultContent": "-", "render": function(data, type, row) {
