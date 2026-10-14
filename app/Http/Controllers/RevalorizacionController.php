@@ -36,7 +36,7 @@ class RevalorizacionController extends Controller
 
     /**
      * Excel de la revalorización: vuelve a calcular el corte con los mismos filtros de la pantalla
-     * (?fecha=YYYY-MM-DD&bodegas=002,005) para que el archivo siempre corresponda a esa fecha.
+     * (?fecha=YYYY-MM-DD&bodegas=002,005&agrupar=ARTICULO|LOTE) para que el archivo siempre corresponda a esa fecha.
      */
     public function ExportRevalorizacion(Request $request)
     {
@@ -44,7 +44,11 @@ class RevalorizacionController extends Controller
 
         $fecha   = (string) $request->input('fecha');
         $bodegas = array_filter(explode(',', (string) $request->input('bodegas')), 'strlen');
+        $porArticulo = Revalorizacion::esPorArticulo($request->input('agrupar'));
         $data    = Revalorizacion::Generar($bodegas, $fecha);
+        if ($porArticulo) {
+            $data = Revalorizacion::AgruparPorArticulo($data);
+        }
 
         $nombres = [];
         foreach (Revalorizacion::getBodegas() as $b) {
@@ -53,10 +57,10 @@ class RevalorizacionController extends Controller
             }
         }
 
-        $objPHPExcel = Revalorizacion::Excel($data, $fecha, $nombres, public_path('img/unimark.png'));
+        $objPHPExcel = Revalorizacion::Excel($data, $fecha, $nombres, public_path('img/unimark.png'), $porArticulo);
 
         header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        header('Content-Disposition: attachment;filename="Revalorizacion_Inventario_' . $fecha . '.xlsx"');
+        header('Content-Disposition: attachment;filename="Revalorizacion_Inventario_' . ($porArticulo ? 'Articulos_' : 'Lotes_') . $fecha . '.xlsx"');
         header('Cache-Control: max-age=0');
 
         $objWriter = \PHPExcel_IOFactory::createWriter($objPHPExcel, 'Excel2007');

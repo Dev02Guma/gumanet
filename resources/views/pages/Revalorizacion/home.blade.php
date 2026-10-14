@@ -52,14 +52,21 @@
                                 <input type="text" class="form-control form-control-sm" placeholder="Artículo, lote, proveedor..." id="txt_busqueda_revalorizacion" disabled>
                             </div>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <label for="sel_bodegas" class="small text-muted text-uppercase fw-semibold mb-1">Bodega</label>
                             <select id="sel_bodegas" class="form-control form-control-sm selectpicker"
                                     data-live-search="true" data-width="100%" title="Seleccione una bodega"
                                     data-none-results-text="Sin resultados {0}">
                             </select>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-2">
+                            <label for="sel_agrupar" class="small text-muted text-uppercase fw-semibold mb-1">Agrupar por</label>
+                            <select id="sel_agrupar" class="form-control form-control-sm">
+                                <option value="ARTICULO" selected>ARTICULOS</option>
+                                <option value="LOTE">LOTES</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
                             <label for="dt_fecha_corte" class="small text-muted text-uppercase fw-semibold mb-1">Fecha de corte</label>
                             <div class="input-group input-group-sm">
                                 <div class="input-group-prepend">
@@ -102,7 +109,7 @@
                 <table id="tbl_revalorizacion" class="table table-sm table-hover" style="width:100%">
                     <tfoot>
                         <tr class="fw-bold bg-light">
-                            <th colspan="7" class="text-end">TOTAL:</th>
+                            <th colspan="6" class="text-end">TOTAL:</th>
                             <th class="text-end" id="total_costo">0.00</th>
                             <th class="text-end" id="total_compra">0.00</th>
                             <th colspan="4"></th>

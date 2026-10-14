@@ -30,9 +30,94 @@ class Revalorizacion extends Model
     public static function Filtrar($request)
     {
         $bodegas = is_array($request->bodegas) ? $request->bodegas : [];
+        $data    = self::Generar($bodegas, $request->fecha);
 
         return [
-            'REVALORIZACION' => self::Generar($bodegas, $request->fecha),
+            'REVALORIZACION' => self::esPorArticulo($request->agrupar) ? self::AgruparPorArticulo($data) : $data,
+        ];
+    }
+
+    /**
+     * Agrupación del reporte: 'ARTICULO' (default) o 'LOTE'.
+     */
+    public static function esPorArticulo($agrupar)
+    {
+        return strtoupper((string) $agrupar) !== 'LOTE';
+    }
+
+    /**
+     * Junta los lotes de cada artículo por bodega: suma cantidad, costo y compra;
+     * el costo unitario es el promedio ponderado (costo total / cantidad) y
+     * CRM, orden de compra y proveedor se listan sin repetir, separados por coma.
+     */
+    public static function AgruparPorArticulo(array $data)
+    {
+        $listas = ['NUM_CRM', 'ORDEN_COMPRA', 'PROVEEDOR', 'NOMBRE_PROVEEDOR'];
+        $grupos = [];
+        foreach ($data as $item) {
+            $key = $item['BODEGA'] . '|' . $item['ARTICULO'];
+            if (!isset($grupos[$key])) {
+                $grupos[$key] = [
+                    "ARTICULO"         => $item['ARTICULO'],
+                    "DESCRIPCION"      => $item['DESCRIPCION'],
+                    "BODEGA"           => $item['BODEGA'],
+                    "LOTES"            => 0,
+                    "CANTIDAD"         => 0,
+                    "UNIDAD_ALMACEN"   => $item['UNIDAD_ALMACEN'],
+                    "COSTO_UNITARIO"   => 0,
+                    "COSTO_TOTAL"      => 0,
+                    "COMPRA_TOTAL"     => 0,
+                    "NUM_CRM"          => [],
+                    "ORDEN_COMPRA"     => [],
+                    "PROVEEDOR"        => [],
+                    "NOMBRE_PROVEEDOR" => [],
+                ];
+            }
+            $grupos[$key]['LOTES']++;
+            $grupos[$key]['CANTIDAD']     += $item['CANTIDAD'];
+            $grupos[$key]['COSTO_TOTAL']  += $item['COSTO_TOTAL'];
+            $grupos[$key]['COMPRA_TOTAL'] += $item['COMPRA_TOTAL'];
+            foreach ($listas as $campo) {
+                if ($item[$campo] !== '' && !in_array($item[$campo], $grupos[$key][$campo], true)) {
+                    $grupos[$key][$campo][] = $item[$campo];
+                }
+            }
+        }
+
+        $Arry = [];
+        foreach ($grupos as $g) {
+            $g['COSTO_UNITARIO'] = $g['CANTIDAD'] != 0 ? $g['COSTO_TOTAL'] / $g['CANTIDAD'] : 0;
+            foreach ($listas as $campo) {
+                // CRM y OC en orden ascendente; proveedor y nombre quedan en el mismo orden entre si
+                if (in_array($campo, ['NUM_CRM', 'ORDEN_COMPRA'])) {
+                    natsort($g[$campo]);
+                }
+                $g[$campo] = implode(', ', $g[$campo]);
+            }
+            $Arry[] = $g;
+        }
+        return $Arry;
+    }
+
+    /**
+     * Columnas del Excel según la agrupación: [titulo, campo, tipo, ancho].
+     * tipo: txt (texto, conserva ceros), str (texto), num (2 decimales), num4 (4 decimales), int (entero)
+     */
+    private static function columnasExcel($porArticulo)
+    {
+        return [
+            ['Artículo',         'ARTICULO',         'txt',  14],
+            ['Descripción',      'DESCRIPCION',      'str',  45],
+            $porArticulo ? ['Lotes', 'LOTES', 'int', 8] : ['Lote', 'LOTE', 'txt', 16],
+            ['Cantidad',         'CANTIDAD',         'num',  13],
+            ['Unidad',           'UNIDAD_ALMACEN',   'str',  9],
+            ['Costo Unitario',   'COSTO_UNITARIO',   'num4', 15],
+            ['Costo Total',      'COSTO_TOTAL',      'num',  16],
+            ['Compra Total',     'COMPRA_TOTAL',     'num',  16],
+            ['Num. CRM',         'NUM_CRM',          'txt',  $porArticulo ? 18 : 13],
+            ['Orden Compra',     'ORDEN_COMPRA',     'txt',  $porArticulo ? 24 : 15],
+            ['Proveedor',        'PROVEEDOR',        'txt',  12],
+            ['Nombre Proveedor', 'NOMBRE_PROVEEDOR', 'str',  40],
         ];
     }
 
@@ -106,13 +191,11 @@ class Revalorizacion extends Model
     /**
      * Libro de Excel presentable: logo, título, filtros, encabezado corporativo, totales y formato de impresión.
      */
-    public static function Excel(array $data, $fecha, array $nombres, $logoPath)
+    public static function Excel(array $data, $fecha, array $nombres, $logoPath, $porArticulo = false)
     {
-        $headers = [
-            'Artículo', 'Descripción', 'Bodega', 'Lote', 'Cantidad', 'Unidad', 'Costo Unitario',
-            'Costo Total', 'Compra Total', 'Num. CRM', 'Orden Compra', 'Proveedor', 'Nombre Proveedor',
-        ];
-        $ultCol   = 'M';
+        $columnas = self::columnasExcel($porArticulo);
+        $letra    = function ($i) { return \PHPExcel_Cell::stringFromColumnIndex($i); };
+        $ultCol   = $letra(count($columnas) - 1);
         $filaHead = 6;
         $azul     = '002D72';
 
@@ -133,7 +216,8 @@ class Revalorizacion extends Model
         $logo->setWorksheet($sheet);
 
         $sheet->setCellValue('C1', 'REVALORIZACIÓN DE INVENTARIO');
-        $sheet->setCellValue('C2', 'Fecha de corte: ' . ($fecha ? date('d/m/Y', strtotime($fecha)) : ''));
+        $sheet->setCellValue('C2', 'Fecha de corte: ' . ($fecha ? date('d/m/Y', strtotime($fecha)) : '')
+            . '   |   Agrupado por: ' . ($porArticulo ? 'Artículo' : 'Lote'));
         $sheet->setCellValue('C3', 'Bodegas: ' . implode(', ', $nombres));
         $sheet->setCellValue('C4', 'Generado: ' . date('d/m/Y h:i A'));
         foreach (['1', '2', '3', '4'] as $f) {
@@ -145,9 +229,8 @@ class Revalorizacion extends Model
         $sheet->getRowDimension(1)->setRowHeight(24);
 
         // Encabezado de la tabla
-        $col = 0;
-        foreach ($headers as $h) {
-            $sheet->setCellValueByColumnAndRow($col++, $filaHead, $h);
+        foreach ($columnas as $i => $c) {
+            $sheet->setCellValueByColumnAndRow($i, $filaHead, $c[0]);
         }
         $sheet->getStyle('A' . $filaHead . ':' . $ultCol . $filaHead)->applyFromArray([
             'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
@@ -164,52 +247,55 @@ class Revalorizacion extends Model
         $texto = \PHPExcel_Cell_DataType::TYPE_STRING;
         $row = $filaHead + 1;
         foreach ($data as $item) {
-            $sheet->setCellValueExplicitByColumnAndRow(0, $row, $item['ARTICULO'], $texto);
-            $sheet->setCellValueByColumnAndRow(1, $row, $item['DESCRIPCION']);
-            $sheet->setCellValueExplicitByColumnAndRow(2, $row, $item['BODEGA'], $texto);
-            $sheet->setCellValueExplicitByColumnAndRow(3, $row, $item['LOTE'], $texto);
-            $sheet->setCellValueByColumnAndRow(4, $row, $item['CANTIDAD']);
-            $sheet->setCellValueByColumnAndRow(5, $row, $item['UNIDAD_ALMACEN']);
-            $sheet->setCellValueByColumnAndRow(6, $row, $item['COSTO_UNITARIO']);
-            $sheet->setCellValueByColumnAndRow(7, $row, $item['COSTO_TOTAL']);
-            $sheet->setCellValueByColumnAndRow(8, $row, $item['COMPRA_TOTAL']);
-            $sheet->setCellValueExplicitByColumnAndRow(9, $row, $item['NUM_CRM'], $texto);
-            $sheet->setCellValueExplicitByColumnAndRow(10, $row, $item['ORDEN_COMPRA'], $texto);
-            $sheet->setCellValueExplicitByColumnAndRow(11, $row, $item['PROVEEDOR'], $texto);
-            $sheet->setCellValueByColumnAndRow(12, $row, $item['NOMBRE_PROVEEDOR']);
+            foreach ($columnas as $i => $c) {
+                if ($c[2] === 'txt') {
+                    $sheet->setCellValueExplicitByColumnAndRow($i, $row, $item[$c[1]], $texto);
+                } else {
+                    $sheet->setCellValueByColumnAndRow($i, $row, $item[$c[1]]);
+                }
+            }
             $row++;
         }
         $ultFila = max($row - 1, $filaHead + 1);
 
-        $sheet->getStyle('E' . ($filaHead + 1) . ':E' . $ultFila)->getNumberFormat()->setFormatCode('#,##0.00');
-        $sheet->getStyle('G' . ($filaHead + 1) . ':G' . $ultFila)->getNumberFormat()->setFormatCode('#,##0.0000');
-        $sheet->getStyle('H' . ($filaHead + 1) . ':I' . $ultFila)->getNumberFormat()->setFormatCode('#,##0.00');
-        $sheet->getStyle('C' . ($filaHead + 1) . ':D' . $ultFila)->getAlignment()->setHorizontal(\PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
-        $sheet->getStyle('F' . ($filaHead + 1) . ':F' . $ultFila)->getAlignment()->setHorizontal(\PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
+        $formatos = ['num' => '#,##0.00', 'num4' => '#,##0.0000', 'int' => '#,##0'];
+        $centrar  = ['LOTE', 'LOTES', 'UNIDAD_ALMACEN'];
+        $colTotal = [];
+        foreach ($columnas as $i => $c) {
+            $rango = $letra($i) . ($filaHead + 1) . ':' . $letra($i) . $ultFila;
+            if (isset($formatos[$c[2]])) {
+                $sheet->getStyle($rango)->getNumberFormat()->setFormatCode($formatos[$c[2]]);
+            }
+            if (in_array($c[1], $centrar)) {
+                $sheet->getStyle($rango)->getAlignment()->setHorizontal(\PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
+            }
+            if (in_array($c[1], ['COSTO_TOTAL', 'COMPRA_TOTAL'])) {
+                $colTotal[$c[1]] = $letra($i);
+            }
+        }
 
         // Totales como valor: PHPExcel (abandonado) falla al escribir fórmulas en PHP 7.4+
         $filaTot = $ultFila + 1;
         $sheet->setCellValue('A' . $filaTot, 'TOTAL');
-        $sheet->mergeCells('A' . $filaTot . ':G' . $filaTot);
-        $sheet->setCellValue('H' . $filaTot, array_sum(array_column($data, 'COSTO_TOTAL')));
-        $sheet->setCellValue('I' . $filaTot, array_sum(array_column($data, 'COMPRA_TOTAL')));
+        $sheet->mergeCells('A' . $filaTot . ':' . $letra(array_search('COSTO_TOTAL', array_column($columnas, 1)) - 1) . $filaTot);
+        foreach ($colTotal as $campo => $c) {
+            $sheet->setCellValue($c . $filaTot, array_sum(array_column($data, $campo)));
+            $sheet->getStyle($c . $filaTot)->getNumberFormat()->setFormatCode('#,##0.00');
+        }
         $sheet->getStyle('A' . $filaTot . ':' . $ultCol . $filaTot)->applyFromArray([
             'font'    => ['bold' => true],
             'fill'    => ['type' => \PHPExcel_Style_Fill::FILL_SOLID, 'color' => ['rgb' => 'E9ECEF']],
             'borders' => ['top' => ['style' => \PHPExcel_Style_Border::BORDER_MEDIUM, 'color' => ['rgb' => $azul]]],
         ]);
         $sheet->getStyle('A' . $filaTot)->getAlignment()->setHorizontal(\PHPExcel_Style_Alignment::HORIZONTAL_RIGHT);
-        $sheet->getStyle('H' . $filaTot . ':I' . $filaTot)->getNumberFormat()->setFormatCode('#,##0.00');
 
         $sheet->getStyle('A' . $filaHead . ':' . $ultCol . $filaTot)->applyFromArray([
             'borders' => ['allborders' => ['style' => \PHPExcel_Style_Border::BORDER_THIN, 'color' => ['rgb' => 'D0D5DD']]],
         ]);
 
         // Anchos, paneles fijos e impresión (sin autofiltro: PHPExcel falla al escribirlo en PHP 7.4+)
-        $anchos = ['A' => 14, 'B' => 45, 'C' => 9, 'D' => 16, 'E' => 13, 'F' => 9, 'G' => 15,
-                   'H' => 16, 'I' => 16, 'J' => 13, 'K' => 15, 'L' => 12, 'M' => 40];
-        foreach ($anchos as $c => $w) {
-            $sheet->getColumnDimension($c)->setWidth($w);
+        foreach ($columnas as $i => $c) {
+            $sheet->getColumnDimension($letra($i))->setWidth($c[3]);
         }
         $sheet->freezePane('A' . ($filaHead + 1));
 

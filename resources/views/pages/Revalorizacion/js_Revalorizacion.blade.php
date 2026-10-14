@@ -32,13 +32,14 @@ $(document).ready(function() {
         var bodega  = $('#sel_bodegas').val();
         var bodegas = bodega ? [bodega] : [];
         var fecha   = $('#dt_fecha_corte').data('daterangepicker').startDate.format('YYYY-MM-DD');
+        var agrupar = $('#sel_agrupar').val();
 
         if (bodegas.length === 0) {
             Swal.fire('Bodega', 'Seleccione una bodega.', 'warning');
             return;
         }
 
-        CallFilter(bodegas, fecha);
+        CallFilter(bodegas, fecha, agrupar);
     });
 
     $('#txt_busqueda_revalorizacion').on('keyup', function() {
@@ -66,7 +67,8 @@ $(document).ready(function() {
 
         try {
             const url = 'ExportRevalorizacion?fecha=' + encodeURIComponent(filtro.fecha) +
-                        '&bodegas=' + encodeURIComponent(filtro.bodegas.join(','));
+                        '&bodegas=' + encodeURIComponent(filtro.bodegas.join(',')) +
+                        '&agrupar=' + encodeURIComponent(filtro.agrupar);
             const response = await fetch(url, { credentials: 'same-origin' });
 
             const tipo = response.headers.get('Content-Type') || '';
@@ -77,7 +79,7 @@ $(document).ready(function() {
             const blob = await response.blob();
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
-            link.download = 'Revalorizacion_Inventario_' + filtro.fecha + '.xlsx';
+            link.download = 'Revalorizacion_Inventario_' + (filtro.agrupar === 'LOTE' ? 'Lotes_' : 'Articulos_') + filtro.fecha + '.xlsx';
             document.body.appendChild(link);
             link.click();
             link.remove();
@@ -100,7 +102,12 @@ $(document).ready(function() {
                 return `<option value="${b.BODEGA}" data-subtext="${b.BODEGA}">${b.NOMBRE}</option>`;
             }).join('');
 
-            $('#sel_bodegas').html(opciones).selectpicker('refresh');
+            $('#sel_bodegas').html(opciones);
+            // Por ahora se trabaja primero con la bodega 004
+            if ($('#sel_bodegas option[value="004"]').length) {
+                $('#sel_bodegas').val('004');
+            }
+            $('#sel_bodegas').selectpicker('refresh');
 
         } catch (error) {
             console.error('Error al obtener las bodegas:', error);
@@ -108,13 +115,13 @@ $(document).ready(function() {
         }
     }
 
-    function CallFilter(bodegas, fecha) {
+    function CallFilter(bodegas, fecha, agrupar) {
         $('#tl_fecha_corte').html(`<b>${moment(fecha).format('D MMM. YYYY')}</b>`);
 
         var nombres = $('#sel_bodegas option:selected').map(function() { return $(this).text(); }).get();
-        $('#tl_bodegas').html(nombres.join(', '));
+        $('#tl_bodegas').html(nombres.join(', ') + ' &middot; por ' + (agrupar === 'LOTE' ? 'lote' : 'artículo'));
 
-        GetData(bodegas, fecha);
+        GetData(bodegas, fecha, agrupar);
     }
 
     function eneableButton(EnableButton, textButton = '<i class="fas fa-filter"></i> Filtrar') {
@@ -122,7 +129,7 @@ $(document).ready(function() {
         $('#btn_filtrar').html('<i class="fas fa-spinner fa-spin" style="display:' + (EnableButton ? 'inline-block' : 'none') + '"></i> ' + textButton);
     }
 
-    async function GetData(bodegas, fecha) {
+    async function GetData(bodegas, fecha, agrupar) {
         try {
             eneableButton(true, 'Calc...');
             $('#btn_exportar, #txt_busqueda_revalorizacion').prop('disabled', true);
@@ -136,7 +143,8 @@ $(document).ready(function() {
                 },
                 body: JSON.stringify({
                     bodegas: bodegas,
-                    fecha: fecha
+                    fecha: fecha,
+                    agrupar: agrupar
                 })
             });
 
@@ -144,9 +152,9 @@ $(document).ready(function() {
 
             const result = await response.json();
 
-            TablaRevalorizacion('#tbl_revalorizacion', result.REVALORIZACION);
+            TablaRevalorizacion('#tbl_revalorizacion', result.REVALORIZACION, agrupar);
 
-            _filtro = { bodegas: bodegas, fecha: fecha };
+            _filtro = { bodegas: bodegas, fecha: fecha, agrupar: agrupar };
             $('#btn_exportar').prop('disabled', result.REVALORIZACION.length === 0);
             $('#txt_busqueda_revalorizacion').prop('disabled', false);
 
@@ -158,9 +166,17 @@ $(document).ready(function() {
         }
     }
 
-    function TablaRevalorizacion(selector, data) {
+    function TablaRevalorizacion(selector, data, agrupar) {
         $('#revalorizacion-vacio').hide();
         $('#revalorizacion-tabla').show();
+
+        var porLote = agrupar === 'LOTE';
+
+        // Las columnas cambian entre Lote y Lotes: destruir y quitar el thead generado antes de reconstruir
+        if ($.fn.DataTable.isDataTable(selector)) {
+            $(selector).DataTable().clear().destroy();
+            $(selector + ' thead').remove();
+        }
 
         var numero = function(formato) {
             return function(d) { return numeral(d).format(formato); };
@@ -175,12 +191,13 @@ $(document).ready(function() {
             searching: true,
             ordering: true,
             scrollX: true,
-            order: [[0, 'asc'], [3, 'asc']],
+            order: [[0, 'asc'], [2, 'asc']],
             columns: [
                 { title: 'ARTÍCULO',       data: 'ARTICULO',         className: 'text-left fw-bold' },
                 { title: 'DESCRIPCIÓN',    data: 'DESCRIPCION',      className: 'text-left' },
-                { title: 'BODEGA',         data: 'BODEGA',           className: 'text-center' },
-                { title: 'LOTE',           data: 'LOTE',             className: 'text-center' },
+                porLote
+                    ? { title: 'LOTE',  data: 'LOTE',  className: 'text-center' }
+                    : { title: 'LOTES', data: 'LOTES', className: 'text-center', render: numero('0,0') },
                 { title: 'CANTIDAD',       data: 'CANTIDAD',         className: 'text-right', render: numero('0,0.00') },
                 { title: 'UNIDAD',         data: 'UNIDAD_ALMACEN',   className: 'text-center' },
                 { title: 'COSTO UNIT.',    data: 'COSTO_UNITARIO',   className: 'text-right', render: numero('0,0.0000') },
@@ -197,13 +214,13 @@ $(document).ready(function() {
                 var suma = function(col) {
                     return api.column(col, { search: 'applied' }).data().reduce(function(a, b) { return a + (parseFloat(b) || 0); }, 0);
                 };
+                $(api.column(6).footer()).html(numeral(suma(6)).format('0,0.00'));
                 $(api.column(7).footer()).html(numeral(suma(7)).format('0,0.00'));
-                $(api.column(8).footer()).html(numeral(suma(8)).format('0,0.00'));
             },
             language: {
                 emptyTable: 'No hay inventario para las bodegas y fecha de corte seleccionadas',
                 zeroRecords: 'No se encontraron artículos',
-                info: 'Mostrando _START_ a _END_ de _TOTAL_ lotes',
+                info: 'Mostrando _START_ a _END_ de _TOTAL_ ' + (porLote ? 'lotes' : 'artículos'),
                 infoEmpty: 'Sin registros',
                 infoFiltered: '(filtrado de _MAX_)',
                 paginate: { first: 'Primero', last: 'Último', next: 'Siguiente', previous: 'Anterior' }
