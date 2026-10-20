@@ -25,11 +25,6 @@ class ContribucionPorCanales extends Model
     protected $table = "PRODUCCION.dbo.view_contribucion_canales";
     //protected $table = 'PRODUCCION.dbo.tbl_gnet_ContribucionCanales';
 
-    public function getLoteExpDate()
-    {
-        return $this->hasOne(Lote::class, 'ARTICULO', 'ARTICULO')
-            ->orderBy('FECHA_VENCIMIENTO', 'asc');
-    }
     public function getClasificacion()
     {
         return $this->hasOne(ReorderPointArticulos::class, 'ARTICULO', 'ARTICULO');
@@ -57,8 +52,95 @@ class ContribucionPorCanales extends Model
         $fecha      = DB::connection('sqlsrv')->select("SELECT MIN(fecha) AS primera_fecha, MAX(fecha) AS ultima_fecha FROM PRODUCCION.dbo.tbl_contribucion_canales");
         $NameMonths = ContribucionPorCanales::NameMonth($fecha[0]->ultima_fecha);
         $categoria  = DB::connection('sqlsrv')->select("SELECT * FROM PRODUCCION.dbo.tbl_categoria_articulo_canales");
-        $lote       = DB::connection('sqlsrv')->select("SELECT * FROM PRODUCCION.dbo.iweb_lotes");
-        
+        $lote       = DB::connection('sqlsrv')->select("SELECT ARTICULO, FECHA_VENCIMIENTO AS VENCE, SUM(CANT_DISPONIBLE) AS DISPONIBLE
+            FROM PRODUCCION.dbo.iweb_lotes
+            WHERE BODEGA IN ('002', '005', '006')
+            GROUP BY ARTICULO, FECHA_VENCIMIENTO");
+
+        $lotesPorArticulo = [];
+        foreach ($lote as $item) {
+            $lotesPorArticulo[$item->ARTICULO][] = $item;
+        }
+
+        $clientes = DB::connection('sqlsrv')->select("SELECT c.ARTICULO, COUNT(DISTINCT f.CLIENTE) AS CLIENTES
+            FROM PRODUCCION.dbo.tbl_contribucion_canales c
+            INNER JOIN Softland.umk.FACTURA f ON f.FACTURA = c.FACTURA AND f.TIPO_DOCUMENTO = 'F'
+            GROUP BY c.ARTICULO");
+        $clientesPorArticulo = array_column(array_map(function($x) { return (array) $x; }, $clientes), 'CLIENTES', 'ARTICULO');
+
+        $compras = DB::connection('sqlsrv')->select("WITH compras AS (
+                SELECT t.ARTICULO, t.AUDIT_TRANS_INV, MAX(t.FECHA) AS FECHA, SUM(t.CANTIDAD) AS CANTIDAD,
+                       SUM(t.COSTO_TOT_FISC_LOC) AS COSTO_LOC, SUM(t.COSTO_TOT_FISC_DOL) AS COSTO_DOL
+                FROM Softland.umk.TRANSACCION_INV t
+                WHERE t.AJUSTE_CONFIG = '~OO~' AND t.NATURALEZA = 'E'
+                  AND t.ARTICULO IN (SELECT DISTINCT ARTICULO FROM PRODUCCION.dbo.tbl_contribucion_canales)
+                GROUP BY t.ARTICULO, t.AUDIT_TRANS_INV
+            ), ultima AS (
+                SELECT *, ROW_NUMBER() OVER (PARTITION BY ARTICULO ORDER BY FECHA DESC, AUDIT_TRANS_INV DESC) AS RN FROM compras
+            )
+            SELECT u.ARTICULO, u.FECHA, h.APLICACION, u.CANTIDAD,
+                   u.COSTO_LOC / NULLIF(u.CANTIDAD, 0) AS COSTO_UNIT_LOC,
+                   u.COSTO_DOL / NULLIF(u.CANTIDAD, 0) AS COSTO_UNIT_DOL
+            FROM ultima u
+            INNER JOIN Softland.umk.AUDIT_TRANS_INV h ON h.AUDIT_TRANS_INV = u.AUDIT_TRANS_INV
+            WHERE u.RN = 1");
+        $compraPorArticulo = [];
+        foreach ($compras as $item) {
+            $compraPorArticulo[$item->ARTICULO] = $item;
+        }
+
+        $bonificadas = DB::connection('sqlsrv')->select("SELECT ARTICULO,
+                SUM(CASE WHEN VENTA = 0 THEN CANTIDAD ELSE 0 END) AS BONIFICADAS,
+                SUM(CANTIDAD) AS UNIDADES
+            FROM PRODUCCION.dbo.tbl_contribucion_canales
+            WHERE CANAL IN ('FARMACIAS', 'CADENAS', 'MAYORISTAS', 'INSTITUCIONES_PRIVADAS', 'CRUZ_AZUL')
+            GROUP BY ARTICULO");
+        $bonifPorArticulo = [];
+        foreach ($bonificadas as $item) {
+            $bonifPorArticulo[$item->ARTICULO] = $item;
+        }
+
+        $anterior = ContribucionPorCanales::periodoAnterior($fecha[0]->ultima_fecha);
+        $meses    = ContribucionPorCanales::mesesAnioActual($fecha[0]->ultima_fecha);
+        $mesIni   = $meses['ini'];
+        $mesFin   = $meses['fin'];
+        $mesesYM  = $meses['ym'];   // indice 0 = enero
+
+        $ventasCanal = DB::connection('sqlsrv')->select("SELECT ARTICULO, CANAL, YEAR(FECHA) * 100 + MONTH(FECHA) AS YM,
+                SUM(CASE WHEN FECHA BETWEEN ? AND ? THEN CANTIDAD ELSE 0 END) AS ANT_U,
+                SUM(CASE WHEN FECHA BETWEEN ? AND ? THEN VENTA    ELSE 0 END) AS ANT_V,
+                SUM(CASE WHEN FECHA BETWEEN ? AND ? THEN CANTIDAD ELSE 0 END) AS MES_U,
+                SUM(CASE WHEN FECHA BETWEEN ? AND ? THEN VENTA    ELSE 0 END) AS MES_V
+            FROM (" . ContribucionPorCanales::sqlVentasConCanal() . ") x
+            GROUP BY ARTICULO, CANAL, YEAR(FECHA) * 100 + MONTH(FECHA)", [
+                $anterior['ini'], $anterior['fin'], $anterior['ini'], $anterior['fin'],
+                $mesIni, $mesFin, $mesIni, $mesFin,
+                min($anterior['ini'], $mesIni), $mesFin,
+            ]);
+
+        $antPorArticulo   = [];
+        $antPorCanal      = [];
+        $mesesPorCanal    = [];
+        foreach ($ventasCanal as $item) {
+            $art = $item->ARTICULO; $canal = $item->CANAL;
+
+            if ($item->ANT_U != 0 || $item->ANT_V != 0) {
+                $antPorArticulo[$art]['U'] = ($antPorArticulo[$art]['U'] ?? 0) + $item->ANT_U;
+                $antPorArticulo[$art]['V'] = ($antPorArticulo[$art]['V'] ?? 0) + $item->ANT_V;
+                $antPorCanal[$art][$canal]['U'] = ($antPorCanal[$art][$canal]['U'] ?? 0) + $item->ANT_U;
+                $antPorCanal[$art][$canal]['V'] = ($antPorCanal[$art][$canal]['V'] ?? 0) + $item->ANT_V;
+            }
+
+            $idx = array_search((int) $item->YM, $mesesYM, true);
+            if ($idx !== false && ($item->MES_U != 0 || $item->MES_V != 0)) {
+                if (!isset($mesesPorCanal[$art][$canal])) {
+                    $mesesPorCanal[$art][$canal] = ['U' => array_fill(0, 12, 0), 'V' => array_fill(0, 12, 0)];
+                }
+                $mesesPorCanal[$art][$canal]['U'][$idx] += (float) $item->MES_U;
+                $mesesPorCanal[$art][$canal]['V'][$idx] += (float) $item->MES_V;
+            }
+        }
+
         $fields = [
             "FARMACIA_CANTIDAD",
             "CADENA_FARMACIA_CANTIDAD",
@@ -112,43 +194,29 @@ class ContribucionPorCanales extends Model
                     $TotalCosto += $valor;
                 }
             }
-            $CantOnHand = 0;
-            $CantOnHandTransito = 0;
-            $fechaActual = date('Y-m-d'); 
+            $fechaActual = date('Y-m-d');
             $fechaVencimiento = null;
             $articulo = $row['ARTICULO'];
             $cantDisponible = 0;
             $cantProxima = 0;
-            $costoTotal = 0;
-            $costoPromedio = 0;
             $mess12 = null;
-            $categ = ""; $factor = 0;
+            $categ = "";
             $pedido = 0;
             $transito = 0;
             $inventario = 0;
 
-            // FECHA DE VENCIMIENTO Y CANTIDAD DISPONIBLE
-            foreach($lote as $item) {
-                if($item->ARTICULO == $articulo){
-                    $convertida = $item->CANT_DISPONIBLE * $item->FACTOR_CONVER_6;
-                    $costoTotal += $convertida * $item->COSTO_PROM_LOC;
-                    $costoPromedio = $item->COSTO_PROM_LOC;
-                }
-                
-                $factor = $item->FECHA_VENCIMIENTO;
-                if($item->ARTICULO == $articulo &&  $item->FECHA_VENCIMIENTO >= $fechaActual) {
-                    $cantDisponible += $item->CANT_DISPONIBLE; 
-            
-                    if (is_null($fechaVencimiento) || $item->FECHA_VENCIMIENTO < $fechaVencimiento) {
-                        $fechaVencimiento = $item->FECHA_VENCIMIENTO;
-                        $cantProxima = $item->CANT_DISPONIBLE;
+            foreach($lotesPorArticulo[$articulo] ?? [] as $item) {
+                $vence = substr($item->VENCE, 0, 10);
+                if($vence >= $fechaActual) {
+                    $cantDisponible += $item->DISPONIBLE;
+
+                    if (is_null($fechaVencimiento) || $vence > $fechaVencimiento) {
+                        $fechaVencimiento = $vence;
+                        $cantProxima = $item->DISPONIBLE;
                     }
                 }
             }
-            $CantOnHand = $costoTotal/36.62;
-            $CantOnHandTransito = ($costoPromedio*($cantDisponible+$cantProxima))/36.62;
 
-            // CANTIDAD POR MESES Juvenile Law
             foreach($Meses as $item){
                 if($item->ARTICULO == $articulo){
                     $mess12 = array_map(function($month, $value) use ($item) { 
@@ -160,7 +228,6 @@ class ContribucionPorCanales extends Model
                 }
             }
 
-            // CLASIFICACION DE ARTICULO
             foreach($categoria as $item){
                 if($item->ARTICULO == $articulo){
                     $categ = $item->CATEGORIA;
@@ -178,7 +245,7 @@ class ContribucionPorCanales extends Model
                 }
             }
             foreach ($row->getInventario as $disponible) {
-                if ($disponible->BODEGA == '002' || $disponible->BODEGA == '005' || $disponible->BODEGA == '006') {
+                if ($disponible->BODEGA == '002' || $disponible->BODEGA == '005' || $disponible->BODEGA == '006' ) {
                     $inventario += $disponible->CANT_DISPONIBLE;
                 }
             }
@@ -187,11 +254,24 @@ class ContribucionPorCanales extends Model
 
             $json[$i]['COSTO_PROM_PRIV_PACK']                       = (($TotalCantidad-$row['INSTITUCION_PUBLICA_CANTIDAD']) > 0) ? ($TotalCosto-$row['INSTITUCION_PUBLICA_COSTO'])/($TotalCantidad-$row['INSTITUCION_PUBLICA_CANTIDAD']):0;
             $json[$i]['COSTO_PROM_MINSA_PACK']                      = ($row['INSTITUCION_PUBLICA_CANTIDAD'] > 0) ? $row['INSTITUCION_PUBLICA_COSTO']/$row['INSTITUCION_PUBLICA_CANTIDAD']:0;
-            $json[$i]['Valor_USD_Inventario_ONHAND_PRIVADO']        = $CantOnHand;
-            $json[$i]['Valor_USD_Total_OnHand_Tránsito_PRIVADO']    = $CantOnHandTransito;
             $json[$i]['Disponibilidad_Packs_PRIVADO_6_MESES']       = $cantDisponible;
-            $json[$i]['Lote_Mas_a_Vencer_PRIVADO_6_MESES']          = date('d/m/Y',strtotime($fechaVencimiento));
+            $json[$i]['Lote_Mas_a_Vencer_PRIVADO_6_MESES']          = is_null($fechaVencimiento) ? null : date('d/m/Y',strtotime($fechaVencimiento));
             $json[$i]['Existencia_En_Lote_proximo_Vencer_6_MESES']  = $cantProxima;
+            $compra                                                 = $compraPorArticulo[$articulo] ?? null;
+            $json[$i]['CLIENTES']                                   = (int) ($clientesPorArticulo[$articulo] ?? 0);
+            $json[$i]['ULTIMA_COMPRA']                              = $compra ? date('d/m/Y', strtotime($compra->FECHA)) : null;
+            $json[$i]['ULTIMA_COMPRA_DOC']                          = $compra ? trim($compra->APLICACION) : null;
+            $json[$i]['ULTIMA_COMPRA_CANT']                         = $compra ? (float) $compra->CANTIDAD : null;
+            $json[$i]['ULTIMO_COSTO_LOC']                           = $compra ? (float) $compra->COSTO_UNIT_LOC : null;
+            $json[$i]['ULTIMO_COSTO_DOL']                           = $compra ? (float) $compra->COSTO_UNIT_DOL : null;
+            $bonif                                                  = $bonifPorArticulo[$articulo] ?? null;
+            $json[$i]['UNDS_BONIFICADAS']                           = $bonif ? (float) $bonif->BONIFICADAS : 0;
+            $json[$i]['UNDS_PRIVADAS']                              = $bonif ? (float) $bonif->UNIDADES : 0;
+            $json[$i]['PORC_BONIFICADO']                            = ($bonif && $bonif->UNIDADES > 0) ? ($bonif->BONIFICADAS / $bonif->UNIDADES) * 100 : null;
+            $json[$i]['ANT_UNIDADES']                               = (float) ($antPorArticulo[$articulo]['U'] ?? 0);
+            $json[$i]['ANT_VENTA']                                  = (float) ($antPorArticulo[$articulo]['V'] ?? 0);
+            $json[$i]['ANT_CANAL']                                  = (object) ($antPorCanal[$articulo] ?? []);
+            $json[$i]['MES_CANAL']                                  = (object) ($mesesPorCanal[$articulo] ?? []);
             $json[$i]['ARTICULO']                                   = '<a href="#!" onclick="getDetalleArticulo('."'".$row['ARTICULO']."'".', '."'".strtoupper($row['DESCRIPCION'])."'".')" >'.$row['ARTICULO'].'</a>';
             $json[$i]['ARTICULODESC']                               = $row['ARTICULO'];
             $json[$i]['DESCRIPCION']                                = strtoupper($row['DESCRIPCION']);
@@ -312,8 +392,10 @@ class ContribucionPorCanales extends Model
 
     public static function calcularCanales($fechaIni, $fechaEnd)
     {
+
+        DB::connection('sqlsrv')->statement("SET NOCOUNT ON ; EXEC PRODUCCION.dbo.pr_calcular_canal_contribucion"); 
         
-        DB::connection('sqlsrv')->statement("SET NOCOUNT ON ; EXEC PRODUCCION.dbo.pr_calcular_canal_contribucion");        
+        
         ContribucionPorCanalesTable::where(function ($query) use ($fechaIni, $fechaEnd) {
             $query->where('FECHA', '<', $fechaIni)
                 ->orWhere('FECHA', '>', $fechaEnd);
@@ -332,7 +414,8 @@ class ContribucionPorCanales extends Model
         
     }
 
-    public static function periodoFechas(){
+    public static function periodoFechas()
+    {
         $currentDate = date('Y-m-d');
         $startOfMonth = date('Y-m-01', strtotime($currentDate));
 
@@ -340,11 +423,68 @@ class ContribucionPorCanales extends Model
         $FechaEnd   = date('Y-m-d 00:00:00.000', strtotime($currentDate . ' -1 days'));
 
         $result = DB::connection('sqlsrv')->select("SELECT MIN(fecha) AS primera_fecha, MAX(fecha) AS ultima_fecha FROM PRODUCCION.dbo.tbl_contribucion_canales");
+        $anterior = ContribucionPorCanales::periodoAnterior($result[0]->ultima_fecha);
         return [
             'primera_fecha' => date('Y-m-01', strtotime($result[0]->primera_fecha)),
             'ultima_fecha' => $result[0]->ultima_fecha,
             'fechaIni' => $FechaIni,
             'fechaEnd' => $FechaEnd,
+            'anterior_ini' => $anterior['ini'],
+            'anterior_fin' => $anterior['fin'],
+            'meses'        => ContribucionPorCanales::mesesAnioActual($result[0]->ultima_fecha)['nombres'],
+        ];
+    }
+
+    // Lineas de venta con su canal, entre dos fechas (los dos ultimos ? del query que lo use).
+    // Replica la fuente, filtros y clasificacion de canal de PRODUCCION.dbo.pr_calcular_canal_contribucion:
+    // si cambian alla, hay que cambiarlos aqui tambien.
+    private static function sqlVentasConCanal(){
+        return "SELECT ARTICULO, Fecha_de_factura AS FECHA, CANTIDAD_TOTAL AS CANTIDAD, VentaNetaLocal AS VENTA,
+                CASE
+                    WHEN VEND_ACTUAL = 'F12' THEN
+                        CASE
+                            WHEN CLIENTE_CODIGO IN ('03165', '612-00-00') AND ARTICULO <> 'RF000001' THEN 'LICITACIONES'
+                            WHEN CLIENTE_CODIGO = '03164' THEN 'CRUZ_AZUL' ELSE 'INSTITUCIONES_PUBLICAS'
+                        END
+                    WHEN VEND_ACTUAL = 'F02' THEN 'INSTITUCIONES_PRIVADAS'
+                    WHEN VEND_ACTUAL IN ('F04', 'F13') THEN 'MAYORISTAS'
+                    WHEN VEND_ACTUAL = 'F01' THEN 'OTRAS'
+                    WHEN EXISTS (SELECT 1 FROM PRODUCCION.dbo.view_cadena_de_farmacia T1 WHERE T1.CLIENTE = CLIENTE_CODIGO) THEN 'CADENAS'
+                    ELSE 'FARMACIAS'
+                END AS CANAL
+            FROM Softland.dbo.ANA_VentasTotales_MOD_Contabilidad_UMK
+            WHERE ANULADA = 'N'
+            AND ARTICULO NOT LIKE 'VU%'
+            AND ARTICULO NOT LIKE '%-M'
+            AND ARTICULO NOT IN ('11720011', '30042041')
+            AND ARTICULO IN (SELECT DISTINCT ARTICULO FROM PRODUCCION.dbo.tbl_contribucion_canales)
+            AND Fecha_de_factura BETWEEN ? AND ?";
+    }
+
+    // Meses de la venta mensual por canal: enero a diciembre del año del cierre del reporte.
+    // Se corta en la fecha de cierre, asi que los meses posteriores quedan en 0 hasta recalcular.
+    public static function mesesAnioActual($ultimaFecha){
+        $anio   = date('Y', strtotime($ultimaFecha));
+        $nombre = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+        $ym = []; $nombres = [];
+        for ($m = 1; $m <= 12; $m++) {
+            $ym[]      = (int) ($anio * 100 + $m);
+            $nombres[] = $nombre[$m - 1] . substr($anio, 2);
+        }
+        return [
+            'ini'     => $anio . '-01-01 00:00:00',
+            'fin'     => date('Y-m-d 23:59:59', strtotime($ultimaFecha)),
+            'ym'      => $ym,
+            'nombres' => $nombres,
+        ];
+    }
+
+    // Año anterior completo (enero a diciembre) al año del cierre del reporte, para "F. UNDS 25" / "F. VTA 25"
+    public static function periodoAnterior($ultimaFecha){
+        $anioAnt = date('Y', strtotime($ultimaFecha)) - 1;
+        return [
+            'ini' => $anioAnt . '-01-01 00:00:00',
+            'fin' => $anioAnt . '-12-31 23:59:59',
         ];
     }
     public static function ExportToExcel() {

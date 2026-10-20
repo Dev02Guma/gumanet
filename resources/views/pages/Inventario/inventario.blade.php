@@ -210,7 +210,7 @@
                           <span id="IdUnidadMedida">Loading . . .<br /></span>
                           <span><span class="text-primary"> • </span> <span id="IdPresentacion">Loading . . .</span>
                         </div>
-                        <div class="mt-1 mb-0 text-muted small" style="display:none">
+                        <div class="mt-1 mb-0 text-muted small" >
                           <span>Ultima Orden de Compras</span>
                           <span class="text-primary"> • </span>
                           <span style="color: black;" id="ULTIMA_COMPRA"></span>
@@ -231,6 +231,7 @@
                           <button data-mdb-button-init data-mdb-ripple-init class="btn btn-secondary btn-sm mt-2" type="button" data-dismiss="modal">
                             Cerrar
                           </button>
+                          <!-- <a id="btnHistoriaArticulo" href="{{url('/HistoricoArticulos')}}" target="_blank" class="btn btn-info btn-sm mt-2">Historia</a> -->
                           
                         </div>
                       </div>

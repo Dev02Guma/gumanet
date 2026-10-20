@@ -419,3 +419,9 @@ Route::post('getFactura', 'ClientesController@getFactura')->name('getFactura');
 Route::post('getFacturaDetalle', 'ClientesController@getFacturaDetalle')->name('getFacturaDetalle');
 Route::post('getFacturaPagos', 'ClientesController@getFacturaPagos')->name('getFacturaPagos');
 Route::post('getClienteById', 'ClientesController@getClienteById')->name('getClienteById');
+
+// RUTAS PARA REVALORIZACION DE INVENTARIO
+Route::get('Revalorizacion', 'RevalorizacionController@index')->name('Revalorizacion');
+Route::get('getBodegasRevalorizacion', 'RevalorizacionController@getBodegas')->name('getBodegasRevalorizacion');
+Route::post('getRevalorizacion', 'RevalorizacionController@getRevalorizacion')->name('getRevalorizacion');
+Route::get('ExportRevalorizacion', 'RevalorizacionController@ExportRevalorizacion')->name('ExportRevalorizacion');

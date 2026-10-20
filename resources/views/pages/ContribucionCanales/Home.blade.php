@@ -7,7 +7,64 @@
   span.btn-change-color {
     background-color: #28a745;
   }
+
+  /* Skeleton de carga (estilo Facebook) mientras se calcula el reporte */
+  .cc-skeleton {
+    position: absolute; top: 0; right: 0; bottom: 0; left: 0; z-index: 5;
+    background: #fff; padding: 16px; min-height: 420px;
+  }
+  .cc-skeleton .cc-sk-titulo { font-size: .85rem; color: #6c757d; margin-bottom: 12px; }
+  .cc-sk-fila { display: flex; gap: 12px; margin-bottom: 14px; }
+  .cc-sk-fila.cc-sk-head { margin-bottom: 20px; }
+  .cc-sk-bar {
+    height: 14px; border-radius: 4px;
+    background: linear-gradient(90deg, #eceff1 25%, #f6f7f8 37%, #eceff1 63%);
+    background-size: 400% 100%;
+    animation: cc-shimmer 1.4s ease infinite;
+  }
+  .cc-sk-head .cc-sk-bar { height: 22px; background-color: #dfe3e6; }
+  @keyframes cc-shimmer {
+    0%   { background-position: 100% 50%; }
+    100% { background-position: 0 50%; }
+  }
+
+  /* Aviso discreto (esquina inferior derecha) mientras se genera el Excel */
+  .cc-exportando {
+    position: fixed; right: 24px; bottom: 24px; z-index: 2000; width: 300px;
+    background: #fff; border: 1px solid #e5e7eb; border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(16, 24, 40, .12);
+    overflow: hidden;
+    opacity: 0; transform: translateY(12px); pointer-events: none;
+    transition: opacity .2s ease, transform .2s ease;
+  }
+  .cc-exportando.activo { opacity: 1; transform: translateY(0); }
+  .cc-exp-caja { display: flex; align-items: center; gap: 12px; padding: 14px 16px; }
+  .cc-exp-icono {
+    flex: 0 0 36px; height: 36px; border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    background: #e8f3ec; color: #1d6f42; font-size: 18px;
+  }
+  .cc-exp-titulo { font-size: .875rem; font-weight: 600; color: #1f2937; }
+  .cc-exp-sub { font-size: .75rem; color: #6b7280; }
+  .cc-exp-barra { height: 3px; background: #eef2f0; overflow: hidden; }
+  .cc-exp-barra span {
+    display: block; width: 35%; height: 100%; background: #1d6f42;
+    animation: cc-avance 1.6s cubic-bezier(.4, 0, .2, 1) infinite;
+  }
+  @keyframes cc-avance { 0% { transform: translateX(-100%); } 100% { transform: translateX(290%); } }
 </style>
+
+{{-- Overlay de exportacion a Excel --}}
+<div class="cc-exportando" id="cc_exportando">
+  <div class="cc-exp-caja">
+    <div class="cc-exp-icono"><i class="fas fa-file-excel"></i></div>
+    <div>
+      <div class="cc-exp-titulo">Generando Excel</div>
+      <div class="cc-exp-sub">La descarga iniciará en unos segundos</div>
+    </div>
+  </div>
+  <div class="cc-exp-barra"><span></span></div>
+</div>
 <div class="container-fluid"> 
   <div class="row">
     <div class="col-sm-6">
@@ -59,10 +116,38 @@
   </div>
 
     <div class="card border-0 shadow-sm ">
-      <div class="card-body col-sm-12 p-0 mb-2">	
+      <div class="card-body col-sm-12 p-0 mb-2" style="position: relative">
+        {{-- Skeleton visible mientras canalData calcula; el JS lo oculta al llegar los datos --}}
+        <div class="cc-skeleton" id="cc_skeleton">
+          <div class="cc-sk-titulo"><i class="fas fa-spinner fa-spin mr-1"></i> Cargando contribución por canal…</div>
+          <div class="cc-sk-fila cc-sk-head">
+            <div class="cc-sk-bar" style="width: 12%"></div><div class="cc-sk-bar" style="width: 28%"></div>
+            <div class="cc-sk-bar" style="width: 14%"></div><div class="cc-sk-bar" style="width: 46%"></div>
+          </div>
+          @for ($i = 0; $i < 8; $i++)
+          <div class="cc-sk-fila">
+            <div class="cc-sk-bar" style="width: 10%"></div>
+            <div class="cc-sk-bar" style="width: {{ [30, 24, 34, 27][$i % 4] }}%"></div>
+            <div class="cc-sk-bar" style="width: 14%"></div>
+            <div class="cc-sk-bar" style="width: {{ [42, 48, 36, 45][$i % 4] }}%"></div>
+          </div>
+          @endfor
+        </div>
         <div class="p-0 px-car">
           <div class="table-responsive flex-between-center scrollbar border border-1 border-300 rounded-2">
           
+            @php
+              // Canales para las columnas de año anterior y mensuales: prefijo => [nombre, color]
+              $canalesExtra = [
+                'F'   => ['FARMACIA',            '#ffc107'],
+                'C'   => ['CADENA FARMACIA',     'peru'],
+                'M'   => ['MAYORISTA',           'burlywood'],
+                'PRI' => ['INSTITUCION PRIVADA', 'limegreen'],
+                'CA'  => ['CRUZ AZUL',           'cornflowerblue'],
+                'PUB' => ['INSTITUCION PUBLICA', 'limegreen'],
+                'ML'  => ['MINSA - LICIT',       'lightskyblue'],
+              ];
+            @endphp
             <table id="table_contribucion" class="table table-bordered table-sm" width="100%">
               <thead>
                 <tr class="bg-blue text-light">
@@ -75,6 +160,15 @@
                   <th colspan="6">INSTITUCION PUBLICA</th>
                   <th colspan="6">MINSA - LICIT</th>
                   <th colspan="6">TOTAL</th>
+                  {{-- Columnas adicionales: año anterior (7 canales + total) y venta mensual por canal --}}
+                  <th colspan="16">AÑO ANTERIOR</th>
+                  @foreach ($canalesExtra as $canal)
+                  <th colspan="24">{{ $canal[0] }} - MENSUAL</th>
+                  @endforeach
+                  <th colspan="2">LOTE VENCE</th>
+                  <th colspan="1">CLIENTES</th>
+                  <th colspan="4">ULTIMA COMPRA</th>
+                  <th colspan="1">BONIFICADO</th>
                 </tr>
                 <tr>
                   <th class="bg-blue" colspan="8"></th>
@@ -126,6 +220,9 @@
                   <th id="Total_Costo"></th>
                   <th id="Total_Contribucion"></th>
                   <th id="Total_Margen"></th>
+                  @for ($i = 0; $i < 192; $i++)
+                  <th></th>
+                  @endfor
                 </tr>
                 <tr>
                     <th class="bg-blue text-light">ARTICULO</th>
@@ -184,6 +281,29 @@
                     <th style="background-color:gold">T. CTO</th>
                     <th style="background-color:gold">T. CTB</th>
                     <th style="background-color:gold">T. %</th>
+                    @foreach ($canalesExtra as $pref => $canal)
+                    {{-- El año (ej. "25") se agrega en el JS segun el periodo que se compara --}}
+                    <th style="background-color:{{ $canal[1] }}" class="th-ant" data-prefijo="{{ $pref }}. UNDS">{{ $pref }}. UNDS</th>
+                    <th style="background-color:{{ $canal[1] }}" class="th-ant" data-prefijo="{{ $pref }}. VTA">{{ $pref }}. VTA</th>
+                    @endforeach
+                    <th style="background-color:gold" class="th-ant" data-prefijo="T. UNDS">T. UNDS</th>
+                    <th style="background-color:gold" class="th-ant" data-prefijo="T. VTA">T. VTA</th>
+                    @foreach ($canalesExtra as $pref => $canal)
+                    @for ($i = 1; $i <= 12; $i++)
+                    <th style="background-color:{{ $canal[1] }}" class="th-mes" data-mes="{{ $i - 1 }}" data-prefijo="{{ $pref }}. U">{{ $pref }}. U M{{ $i }}</th>
+                    @endfor
+                    @for ($i = 1; $i <= 12; $i++)
+                    <th style="background-color:{{ $canal[1] }}" class="th-mes" data-mes="{{ $i - 1 }}" data-prefijo="{{ $pref }}. C$">{{ $pref }}. C$ M{{ $i }}</th>
+                    @endfor
+                    @endforeach
+                    <th style="background-color:khaki">LOTE VENCE</th>
+                    <th style="background-color:khaki">LOTE CANT.</th>
+                    <th style="background-color:plum" title="Clientes distintos que compraron el SKU en el periodo">N° CLIENTES</th>
+                    <th style="background-color:lightgreen" title="Fecha del ultimo ingreso por compra (embarque)">ULT. COMPRA</th>
+                    <th style="background-color:lightgreen" title="Unidades ingresadas en la ultima compra (embarque)">ULT. CANT.</th>
+                    <th style="background-color:lightgreen" title="Costo por unidad de la ultima compra, en C$">ULT. COSTO C$</th>
+                    <th style="background-color:lightgreen" title="Costo por unidad de la ultima compra, en US$">ULT. COSTO US$</th>
+                    <th style="background-color:lightsalmon" title="Unds. bonificadas / Unds. vendidas x 100&#10;Solo canales privados, en el periodo">% BONIF.</th>
                 </tr>
               </thead>
             </table>

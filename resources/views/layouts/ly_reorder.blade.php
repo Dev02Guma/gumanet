@@ -159,12 +159,11 @@
     </div>
   </div>
 </div>
->
 <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
 
 <script src="{{ url('js/ext/Chart.min.js') }}"></script>
 
-<script src="https://code.jquery.com/jquery-3.7.1.js"></script>>
+<script src="https://code.jquery.com/jquery-3.7.1.js"></script>
 
 <script src="{{ url('js/highcharts.js') }}"></script>
 <script src="{{ url('js/bootstrap.js') }}"></script>

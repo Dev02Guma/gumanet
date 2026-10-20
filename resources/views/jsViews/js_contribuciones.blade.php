@@ -60,9 +60,15 @@
     };
 $(document).ready(function () {
     
-    $('#id_txt_buscar').on('keyup', function() {   
-        var vTable = $('#table_contribucion').DataTable();     
-        vTable.search(this.value).draw();        
+    // Buscar con una pausa de 300 ms: redibujar una tabla de ~250 columnas en cada tecla la hacia lenta
+    var timerBuscar = null;
+    $('#id_txt_buscar').on('keyup', function() {
+        var texto = this.value;
+        clearTimeout(timerBuscar);
+        timerBuscar = setTimeout(function() {
+            var vTable = $('#table_contribucion').DataTable();
+            if (vTable.search() !== texto) vTable.search(texto).draw();
+        }, 300);
     });
 
     $( "#InputCanales").change(function() {
@@ -70,7 +76,10 @@ $(document).ready(function () {
         table.page.len(this.value).draw();
     });
 
-    let Table = new DataTable('#table_contribucion',{ 
+    // Canales de las columnas de año anterior y mensuales (mismo orden que $canalesExtra en Home.blade.php)
+    const CANALES_EXTRA = ['FARMACIAS', 'CADENAS', 'MAYORISTAS', 'INSTITUCIONES_PRIVADAS', 'CRUZ_AZUL', 'INSTITUCIONES_PUBLICAS', 'LICITACIONES'];
+
+    let Table = new DataTable('#table_contribucion',{
         "destroy": true,
         "info": true,
         "ajax":{
@@ -90,6 +99,30 @@ $(document).ready(function () {
                 }
 
                 JsonCanal = json.Registros;
+
+                // Rango del año anterior en el tooltip de ANT. UNDS / ANT. VTA
+                $('.th-ant').attr('title', 'Año anterior: '
+                    + moment(periodo.anterior_ini).format('DD/MM/YYYY') + ' al ' + moment(periodo.anterior_fin).format('DD/MM/YYYY'));
+
+                // Encabezados del año anterior con el año comparado: "F. UNDS 25", "F. VTA 25", ...
+                var anioAnt = moment(periodo.anterior_fin).format('YY');
+                $('.th-ant').each(function() {
+                    // Dentro del span de DataTables, para no perder el titulo que usa el export a Excel
+                    var $titulo = $(this).find('.dt-column-title');
+                    ($titulo.length ? $titulo : $(this)).text($(this).data('prefijo') + ' ' + anioAnt);
+                });
+
+                // Nombres de los meses (Ene a Dic del año actual) para los encabezados de venta mensual
+                if (Array.isArray(periodo.meses)) {
+                    $('.th-mes').each(function() {
+                        var mes = periodo.meses[$(this).data('mes')];
+                        // Escribir dentro del span de DataTables: si se reemplaza la celda completa se
+                        // pierde el titulo de la columna y el export a Excel falla (header undefined)
+                        var $titulo = $(this).find('.dt-column-title');
+                        if (mes) ($titulo.length ? $titulo : $(this)).text(($(this).data('prefijo') || 'UNDS') + ' ' + mes);
+                    });
+                }
+
                 return json.Registros;
             }
         },
@@ -343,6 +376,24 @@ $(document).ready(function () {
                     title:  'Contribucion por canal: ' + moment().format('YYYY-MM-DD HH:mm'),
                     exportOptions: {
                         columns: ':visible'
+                    },
+                    // Aviso mientras se arma el archivo. El setTimeout deja que el aviso termine de aparecer
+                    // antes del trabajo pesado (congela la pagina); "done" lo llama Buttons al terminar.
+                    action: function (e, dt, node, config, done) {
+                        var boton = this;
+                        $('#cc_exportando').addClass('activo');
+                        setTimeout(function () {
+                            try {
+                                $.fn.dataTable.ext.buttons.excelHtml5.action.call(boton, e, dt, node, config, function () {
+                                    $('#cc_exportando').removeClass('activo');
+                                    done();
+                                });
+                            } catch (error) {
+                                console.error('Error al exportar:', error);
+                                $('#cc_exportando').removeClass('activo');
+                                done();
+                            }
+                        }, 250);
                     }
                 }]
             }
@@ -652,10 +703,54 @@ $(document).ready(function () {
                 }
 
                 return numeral(((venta-costo)/venta)*100).format('0,0.00');
-             }},        
+             }},
+            // COLUMNAS ADICIONALES: van al final para no mover los indices que usan los botones de
+            // canal y calcularTotales. Las que aun no tienen fuente quedan como placeholder ("-").
+            // Año anterior por canal (UNDS / VTA), mismo orden que los encabezados
+            ...CANALES_EXTRA.flatMap(canal => [
+                {"data": "ANT_CANAL." + canal + ".U", "defaultContent": 0, render: $.fn.dataTable.render.number( ',', '.', 0  , '' )},
+                {"data": "ANT_CANAL." + canal + ".V", "defaultContent": 0, render: $.fn.dataTable.render.number( ',', '.', 2  , '' )}
+            ]),
+            {"data": "ANT_UNIDADES", render: $.fn.dataTable.render.number( ',', '.', 0  , '' )},
+            {"data": "ANT_VENTA", render: $.fn.dataTable.render.number( ',', '.', 2  , '' )},
+            // Venta mensual por canal: 12 meses de unidades y 12 de C$ (indice 0 = enero del año actual)
+            ...CANALES_EXTRA.flatMap(canal => [
+                ...Array.from({ length: 12 }, (_, m) => ({"data": "MES_CANAL." + canal + ".U." + m, "defaultContent": 0, render: $.fn.dataTable.render.number( ',', '.', 0  , '' )})),
+                ...Array.from({ length: 12 }, (_, m) => ({"data": "MES_CANAL." + canal + ".V." + m, "defaultContent": 0, render: $.fn.dataTable.render.number( ',', '.', 0  , '' )}))
+            ]),
+            {"data": "Lote_Mas_a_Vencer_PRIVADO_6_MESES", "className": "dt-center", "render": function(data, type) {
+                if (!data) return type === 'display' ? '-' : '';
+                // dd/mm/yyyy -> yyyymmdd para que ordene por fecha
+                return (type === 'sort' || type === 'type') ? data.split('/').reverse().join('') : data;
+            }},
+            {"data": "Existencia_En_Lote_proximo_Vencer_6_MESES", render: $.fn.dataTable.render.number( ',', '.', 0  , '' )},
+            {"data": "CLIENTES", render: $.fn.dataTable.render.number( ',', '.', 0  , '' )},
+            {"data": "ULTIMA_COMPRA", "className": "dt-center", "render": function(data, type, row) {
+                if (!data) return type === 'display' ? '-' : '';
+                // dd/mm/yyyy -> yyyymmdd para que ordene por fecha
+                if (type === 'sort' || type === 'type') return data.split('/').reverse().join('');
+                // Documento de la compra (embarque) visible al pasar el mouse
+                return type === 'display' && row.ULTIMA_COMPRA_DOC
+                    ? $('<span>').attr('title', row.ULTIMA_COMPRA_DOC).text(data).prop('outerHTML')
+                    : data;
+            }},
+            {"data": "ULTIMA_COMPRA_CANT", "defaultContent": "-", render: $.fn.dataTable.render.number( ',', '.', 0  , '' )},
+            {"data": "ULTIMO_COSTO_LOC", "defaultContent": "-", render: $.fn.dataTable.render.number( ',', '.', 2  , '' )},
+            {"data": "ULTIMO_COSTO_DOL", "defaultContent": "-", render: $.fn.dataTable.render.number( ',', '.', 2  , '' )},
+            {"data": "PORC_BONIFICADO", "defaultContent": "-", "render": function(data, type, row) {
+                if (data === null || data === undefined) return type === 'display' ? '-' : '';
+                if (type !== 'display') return data;
+                // Detalle del calculo visible al pasar el mouse
+                var detalle = numeral(row.UNDS_BONIFICADAS).format('0,0') + ' bonificadas de ' + numeral(row.UNDS_PRIVADAS).format('0,0') + ' unds.';
+                return $('<span>').attr('title', detalle).text(numeral(data).format('0,0.00')).prop('outerHTML');
+            }},
         ],
-        "columnDefs": [        
-            {"className": "dt-center", "targets":[ 3 ]},               
+        "columnDefs": [
+            // El buscador solo mira las columnas del SKU (articulo, descripcion, fabricante, categoria).
+            // En columnDefs la primera regla tiene prioridad, por eso va antes que '_all'.
+            { "searchable": true,  "targets": [ 0, 1, 2, 3 ] },
+            { "searchable": false, "targets": '_all' },
+            {"className": "dt-center", "targets":[ 3 ]},
             { "className": "dt-right", "targets": [ 7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48 ]}, 
             { "width": "200px", "targets": [ 1 ] },
             { "width": "10px", "targets": [ 7, 8, 9, 10, 12, 13, 14, 15, 16, 19, 21, 22, 25, 27, 28, 31, 33, 34, 39, 40, 43, 44, 45, 46 ] },
@@ -748,7 +843,15 @@ $(document).ready(function () {
     })
 
     Table.on('draw.dt', function () {
-       calcularTotales(Table);        
+       calcularTotales(Table);
+    });
+
+    // Quitar el skeleton de carga cuando llega la respuesta de canalData (con o sin error)
+    Table.on('xhr.dt', function (e, settings, json) {
+        $('#cc_skeleton').fadeOut(200);
+        if (!json) {
+            Swal.fire('Error', 'No se pudo calcular la contribución por canal. Intente nuevamente.', 'error');
+        }
     });
 
     
@@ -766,6 +869,8 @@ function UpdateUI(Prom, Units) {
     
 }
 function calcularTotales(table) {  
+    // Las cantidades vienen formateadas con comas desde PHP ("1,234"); parseFloat las cortaria en la coma
+    const toNum = v => parseFloat(String(v).replace(/,/g, "")) || 0;
     var Farmacia_Cantidad = Farmacia_Costo = Farmacia_Venta = Farmacia_Contribucion = 0;
     var Cadena_Farmacia_Cantidad = Cadena_Farmacia_Costo = Cadena_Farmacia_Venta = Cadena_Farmacia_Contribucion = 0;
     var Mayorista_Cantidad = Mayorista_Costo = Mayorista_Venta = Mayorista_Contribucion = 0;
@@ -805,57 +910,59 @@ function calcularTotales(table) {
         ]
     };
 
-    
+    // Visibilidad de cada canal: se consulta una vez por calculo, no en cada fila
+    Object.keys(config).forEach(tipo => config[tipo].forEach(c => { c.visible = table.column(c.col).visible(); }));
+
     table.rows({ search: 'applied' }).every(function() {
         var data = this.data();
-        
+
         // TOTAL DE FARMACIAS
-        Farmacia_Cantidad       += parseFloat(data.FARMACIA_CANTIDAD) || 0;
-        Farmacia_Venta          += parseFloat(data.FARMACIA_VENTA) || 0;
-        Farmacia_Costo          += parseFloat(data.FARMACIA_COSTO) || 0;
-        Farmacia_Contribucion   += parseFloat(data.FARMACIA_CONTRIBUCION) || 0;
+        Farmacia_Cantidad       += toNum(data.FARMACIA_CANTIDAD) || 0;
+        Farmacia_Venta          += toNum(data.FARMACIA_VENTA) || 0;
+        Farmacia_Costo          += toNum(data.FARMACIA_COSTO) || 0;
+        Farmacia_Contribucion   += toNum(data.FARMACIA_CONTRIBUCION) || 0;
 
         // TOTAL DE CADENA DE FARMACIAS
-        Cadena_Farmacia_Cantidad    += parseFloat(data.CADENA_FARMACIA_CANTIDAD) || 0;
-        Cadena_Farmacia_Venta       += parseFloat(data.CADENA_FARMACIA_VENTA) || 0;
-        Cadena_Farmacia_Costo       += parseFloat(data.CADENA_FARMACIA_COSTO) || 0;
-        Cadena_Farmacia_Contribucion+= parseFloat(data.CADENA_FARMACIA_CONTRIBUCION) || 0;
+        Cadena_Farmacia_Cantidad    += toNum(data.CADENA_FARMACIA_CANTIDAD) || 0;
+        Cadena_Farmacia_Venta       += toNum(data.CADENA_FARMACIA_VENTA) || 0;
+        Cadena_Farmacia_Costo       += toNum(data.CADENA_FARMACIA_COSTO) || 0;
+        Cadena_Farmacia_Contribucion+= toNum(data.CADENA_FARMACIA_CONTRIBUCION) || 0;
 
         // TOTAL DE MAYORISTAS
-        Mayorista_Cantidad      += parseFloat(data.MAYORISTA_CANTIDAD) || 0;
-        Mayorista_Venta         += parseFloat(data.MAYORISTA_VENTA) || 0;
-        Mayorista_Costo         += parseFloat(data.MAYORISTA_COSTO) || 0;
-        Mayorista_Contribucion  += parseFloat(data.MAYORISTA_CONTRIBUCION) || 0;
+        Mayorista_Cantidad      += toNum(data.MAYORISTA_CANTIDAD) || 0;
+        Mayorista_Venta         += toNum(data.MAYORISTA_VENTA) || 0;
+        Mayorista_Costo         += toNum(data.MAYORISTA_COSTO) || 0;
+        Mayorista_Contribucion  += toNum(data.MAYORISTA_CONTRIBUCION) || 0;
 
         // TOTAL DE CRUZ AZUL
-        Cruz_Azul_Cantidad      += parseFloat(data.CRUZ_AZUL_CANTIDAD) || 0;
-        Cruz_Azul_Venta         += parseFloat(data.CRUZ_AZUL_VENTA) || 0;
-        Cruz_Azul_Costo         += parseFloat(data.CRUZ_AZUL_COSTO) || 0;
-        Cruz_Azul_Contribucion  += parseFloat(data.CRUZ_AZUL_CONTRIBUCION) || 0;
+        Cruz_Azul_Cantidad      += toNum(data.CRUZ_AZUL_CANTIDAD) || 0;
+        Cruz_Azul_Venta         += toNum(data.CRUZ_AZUL_VENTA) || 0;
+        Cruz_Azul_Costo         += toNum(data.CRUZ_AZUL_COSTO) || 0;
+        Cruz_Azul_Contribucion  += toNum(data.CRUZ_AZUL_CONTRIBUCION) || 0;
 
         // TOTAL INTITUCION PRIVADA
-        Institucion_Privada_Cantidad    += parseFloat(data.INSTITUCION_PRIVADA_CANTIDAD) || 0;
-        Institucion_Privada_Venta       += parseFloat(data.INSTITUCION_PRIVADA_VENTA) || 0;
-        Institucion_Privada_Costo       += parseFloat(data.INSTITUCION_PRIVADA_COSTO) || 0;
-        Institucion_Privada_Contribucion+= parseFloat(data.INSTITUCION_PRIVADA_CONTRIBUCION) || 0;
+        Institucion_Privada_Cantidad    += toNum(data.INSTITUCION_PRIVADA_CANTIDAD) || 0;
+        Institucion_Privada_Venta       += toNum(data.INSTITUCION_PRIVADA_VENTA) || 0;
+        Institucion_Privada_Costo       += toNum(data.INSTITUCION_PRIVADA_COSTO) || 0;
+        Institucion_Privada_Contribucion+= toNum(data.INSTITUCION_PRIVADA_CONTRIBUCION) || 0;
 
         // TOTAL INTITUCION PUBLICA
-        Institucion_Publica_Cantidad    += parseFloat(data.INSTITUCION_PUBLICA_CANTIDAD) || 0;
-        Institucion_Publica_Venta       += parseFloat(data.INSTITUCION_PUBLICA_VENTA) || 0;
-        Institucion_Publica_Costo       += parseFloat(data.INSTITUCION_PUBLICA_COSTO) || 0;
-        Institucion_Publica_Contribucion+= parseFloat(data.INSTITUCION_PUBLICA_CONTRIBUCION) || 0;
+        Institucion_Publica_Cantidad    += toNum(data.INSTITUCION_PUBLICA_CANTIDAD) || 0;
+        Institucion_Publica_Venta       += toNum(data.INSTITUCION_PUBLICA_VENTA) || 0;
+        Institucion_Publica_Costo       += toNum(data.INSTITUCION_PUBLICA_COSTO) || 0;
+        Institucion_Publica_Contribucion+= toNum(data.INSTITUCION_PUBLICA_CONTRIBUCION) || 0;
 
         // TOTAL DE LICITACIONES
-        Licitacion_Cantidad    += parseFloat(data.LICITACION_CANTIDAD) || 0;
-        Licitacion_Venta       += parseFloat(data.LICITACION_VENTA) || 0;
-        Licitacion_Costo       += parseFloat(data.LICITACION_COSTO) || 0;
-        Licitacion_Contribucion+= parseFloat(data.LICITACION_CONTRIBUCION) || 0;
+        Licitacion_Cantidad    += toNum(data.LICITACION_CANTIDAD) || 0;
+        Licitacion_Venta       += toNum(data.LICITACION_VENTA) || 0;
+        Licitacion_Costo       += toNum(data.LICITACION_COSTO) || 0;
+        Licitacion_Contribucion+= toNum(data.LICITACION_CONTRIBUCION) || 0;
   
         // Función para acumular según config
         function acumularTotales(tipo, total) {
-            config[tipo].forEach(({ col, field }) => {
-                if (table.column(col).visible()) {
-                    total += parseFloat(data[field]) || 0;
+            config[tipo].forEach(({ visible, field }) => {
+                if (visible) {
+                    total += toNum(data[field]) || 0;
                 }
             });
             return total;

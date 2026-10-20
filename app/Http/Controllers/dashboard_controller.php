@@ -238,7 +238,7 @@ class dashboard_controller extends Controller {
   }
 
   public function canalData(){
-   
+
     $obj = ContribucionPorCanales::getData();
     $obj2 = ContribucionPorCanales::periodoFechas();
   
