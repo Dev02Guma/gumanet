@@ -425,3 +425,8 @@ Route::get('Revalorizacion', 'RevalorizacionController@index')->name('Revaloriza
 Route::get('getBodegasRevalorizacion', 'RevalorizacionController@getBodegas')->name('getBodegasRevalorizacion');
 Route::post('getRevalorizacion', 'RevalorizacionController@getRevalorizacion')->name('getRevalorizacion');
 Route::get('ExportRevalorizacion', 'RevalorizacionController@ExportRevalorizacion')->name('ExportRevalorizacion');
+
+// RUTAS PARA REORDER POINT 2 (POLITICA DE REORDEN v2.1 - DECISION POR PRODUCTO)
+Route::get('ReOrderPoint2', 'ReOrderPoint2Controller@index')->name('ReOrderPoint2');
+Route::post('getReOrderPoint2', 'ReOrderPoint2Controller@getData')->name('getReOrderPoint2');
+Route::post('ExportReOrderPoint2', 'ReOrderPoint2Controller@ExportReOrderPoint2')->name('ExportReOrderPoint2');
