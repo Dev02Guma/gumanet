@@ -3,44 +3,580 @@
 namespace App;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 
 class ReOrderPoint2 extends Model
 {
+    // Canales que forman la venta privada y la pública (claves de MES_CANAL / ANT_CANAL y prefijos de campos de canales)
+    private static $canalesPrivados = [
+        'FARMACIAS' => 'FARMACIA', 'CADENAS' => 'CADENA_FARMACIA', 'MAYORISTAS' => 'MAYORISTA',
+        'INSTITUCIONES_PRIVADAS' => 'INSTITUCION_PRIVADA', 'CRUZ_AZUL' => 'CRUZ_AZUL',
+    ];
+    private static $canalesPublicos = ['INSTITUCION_PUBLICA', 'LICITACION'];
+
+    private static $nombreMes = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+
+    // Promedio depurado: con pocos meses de venta (venta intermitente) se usa el total de 12 meses / 12
+    const MAX_MESES_INTERMITENTE = 5;
+    const DIAS_MES               = 30.44;
+
+    // ---- Parámetros de la política v2.1 (hoja RESUMEN de Contribucion_Reorden_2026-10-26.xlsx) ----
+    // Clasificación sobre la contribución privada
+    const CORTE_A           = 0.80;     // A: acumulan el 80% de la contribución privada
+    const CORTE_B           = 0.90;     // B: capa 80-90% ...
+    const MIN_CONTRIB_B     = 360000;   // ... o contribución privada > C$360,000
+    const L_MIN_PUBLICO     = 0.50;     // L: > 50% de unidades públicas ...
+    const L_MAX_CONTRIB     = 100000;   // ... y contribución privada < C$100,000
+    // Reorden: meses de cobertura a los que se rellena y disparadores
+    const RELLENO_A         = 18;
+    const RELLENO_B         = 12;
+    const MARGEN_CONSOLIDAR = 2;        // CONSOLIDAR: grupo a <= 2 meses de su disparador
+    const SOBRE_STOCK       = 36;       // meses de cobertura consolidada
+    const CAIDA_DEFENDER    = -0.20;    // A/B con venta privada cayendo > 20%
+    const SUBIR_CRECIMIENTO = 0.20;     // C con repunte privado > 20% ...
+    const SUBIR_CONTRIB     = 170000;   // ... y contribución privada > C$170,000 (inferido del análisis)
+    const ORDEN_GRANDE_LOC  = 1000000;  // órdenes > C$1M o > 8 meses de demanda se dividen en 2-4 despachos
+    const ORDEN_GRANDE_MES  = 8;
+    // Notas / banderas
+    const NOTA_MAX_CLIENTES = 5;
+    const NOTA_CRUZ_AZUL    = 0.50;
+    const NOTA_CAIDA_MARGEN = -0.08;
+    const ORIGEN_DEFAULT    = 'Otro/verificar';
+
+    private static $disparadorA = ['China' => 6, 'India' => 7, 'Otro/verificar' => 7];
+    private static $disparadorB = 4;
+    // URGENTE: cobertura consolidada por debajo del lead time = disparador - 1 mes (inferido del análisis)
+    const HOLGURA_LEAD_TIME = 1;
+
     /**
-     * Decisión por producto (política de reorden v2.1).
-     * FASE UI: datos de prueba sacados del Excel Contribucion_Reorden_2026-10-26.xlsx;
-     * en las siguientes fases se reemplaza por el cálculo real con la misma estructura (META, HEADERS, DATA).
+     * Decisión por producto (política de reorden v2.1), alimentada con la Contribución por canales (/canales).
+     * Se consume ContribucionPorCanales::getData() tal cual (sin modificar canales); sobre esos datos se
+     * calculan las columnas del análisis y se aplica la política con los maestros de PRODUCCION
+     * (database/reorder_point2_sqlserver.sql): grupos de hermanas, origen por fabricante e historial de categorías.
      */
     public static function getData()
     {
-        $archivo = storage_path('app/reorder/decision_x_producto_demo.json');
-
-        if (!file_exists($archivo)) {
+        $periodo = DB::connection('sqlsrv')->select("SELECT MIN(fecha) AS INI, MAX(fecha) AS FIN FROM PRODUCCION.dbo.tbl_contribucion_canales");
+        if (empty($periodo) || !$periodo[0]->FIN) {
             return ['META' => null, 'HEADERS' => [], 'DATA' => []];
         }
 
-        return json_decode(file_get_contents($archivo), true);
+        $corte  = substr($periodo[0]->FIN, 0, 10);
+        $ini    = substr($periodo[0]->INI, 0, 10);
+        $nMeses = (int) date('n', strtotime($corte));
+        $diaCorte = (int) date('j', strtotime($corte));
+        $diasMes  = (int) date('t', strtotime($corte));
+        // El mes del corte es parcial: en promedio y momentum se lleva a mes completo
+        $factor   = $diaCorte < $diasMes ? $diasMes / $diaCorte : 1;
+
+        $meses = array_slice(self::$nombreMes, 0, $nMeses);
+        if ($factor != 1) {
+            $meses[$nMeses - 1] .= ' (' . $diaCorte . ' d.)';
+        }
+
+        $tc = DB::connection('sqlsrv')->select("SELECT TOP 1 MONTO FROM Softland.umk.TIPO_CAMBIO_HIST
+            WHERE TIPO_CAMBIO = 'OFIC' AND FECHA <= ? ORDER BY FECHA DESC", [$corte . ' 23:59:59']);
+
+        // La vista de canales repite algunos artículos con una fila "CAMBIO DE COSTO DE xxx-M" (ajuste de costo
+        // sin unidades): se usa la fila del artículo y el ajuste solo cuando es la única que hay, como el Excel original
+        $filas = [];
+        foreach (ContribucionPorCanales::getData() as $row) {
+            $art    = (string) $row['ARTICULODESC'];
+            $ajuste = strpos($row['DESCRIPCION'], 'CAMBIO DE COSTO DE ') === 0;
+            if (!isset($filas[$art]) || !$ajuste) {
+                $filas[$art] = $row;
+            }
+        }
+
+        $data = [];
+        foreach ($filas as $row) {
+            $data[] = self::fila($row, $corte, $nMeses, $factor);
+        }
+
+        $tipoCambio = $tc ? (float) $tc[0]->MONTO : null;
+        $maestros   = self::maestros($corte);
+        $data       = self::aplicarPolitica($data, $maestros, $tipoCambio);
+
+        if ($maestros['OK']) {
+            self::guardarCategorias($corte, $data);
+        }
+
+        $meta = self::meta($ini, $corte, $meses, $factor, $tipoCambio, $maestros['FECHA_ANTERIOR']);
+        if (!$maestros['OK']) {
+            $meta['AVISO'] = 'No se encontraron las tablas maestras del reorden en PRODUCCION (database/reorder_point2_sqlserver.sql): sin hermanas, origen ni historial de categorías.';
+        }
+
+        return [
+            'META'    => $meta,
+            'HEADERS' => self::headers($meses, $maestros['FECHA_ANTERIOR']),
+            'DATA'    => $data,
+        ];
+    }
+
+    /**
+     * Maestros del reorden en PRODUCCION: grupos de hermanas, origen por fabricante y la foto de categorías
+     * del análisis anterior (la última con fecha de corte menor a la actual).
+     * Si las tablas aún no existen el reporte sigue funcionando sin ellos.
+     */
+    private static function maestros($corte)
+    {
+        $vacio = ['OK' => false, 'GRUPOS' => [], 'ORIGEN' => [], 'CAT_ANTERIOR' => [], 'FECHA_ANTERIOR' => null];
+        try {
+            $db = DB::connection('sqlsrv');
+
+            $grupos = [];
+            foreach ($db->select("SELECT ARTICULO, GRUPO FROM PRODUCCION.dbo.tbl_reorder_grupo_articulo WHERE ACTIVO = 1") as $g) {
+                $grupos[trim($g->ARTICULO)] = trim($g->GRUPO);
+            }
+
+            $origen = [];
+            foreach ($db->select("SELECT FABRICANTE, ORIGEN FROM PRODUCCION.dbo.tbl_reorder_origen_fabricante") as $o) {
+                $origen[strtoupper(trim($o->FABRICANTE))] = trim($o->ORIGEN);
+            }
+
+            $anterior = $db->select("SELECT MAX(FECHA_CORTE) AS FECHA FROM PRODUCCION.dbo.tbl_reorder_categoria_hist WHERE FECHA_CORTE < ?", [$corte]);
+            $fecha    = $anterior && $anterior[0]->FECHA ? substr($anterior[0]->FECHA, 0, 10) : null;
+            $catAnt   = [];
+            if ($fecha) {
+                foreach ($db->select("SELECT ARTICULO, CATEGORIA FROM PRODUCCION.dbo.tbl_reorder_categoria_hist WHERE FECHA_CORTE = ?", [$fecha]) as $c) {
+                    $catAnt[trim($c->ARTICULO)] = trim($c->CATEGORIA);
+                }
+            }
+        } catch (\Illuminate\Database\QueryException $e) {
+            return $vacio;
+        }
+
+        return ['OK' => true, 'GRUPOS' => $grupos, 'ORIGEN' => $origen, 'CAT_ANTERIOR' => $catAnt, 'FECHA_ANTERIOR' => $fecha];
+    }
+
+    // Foto de las categorías del corte actual (una sola vez por fecha de corte) para comparar en el siguiente análisis
+    private static function guardarCategorias($corte, array $data)
+    {
+        $db = DB::connection('sqlsrv');
+        $existe = $db->select("SELECT COUNT(*) AS N FROM PRODUCCION.dbo.tbl_reorder_categoria_hist WHERE FECHA_CORTE = ?", [$corte]);
+        if ($existe[0]->N > 0) {
+            return;
+        }
+        $filas = array_values(array_filter($data, function ($r) { return $r['CAT_ACTUAL'] !== null; }));
+        // SQL Server admite hasta 2100 parámetros por consulta: 3 por fila
+        foreach (array_chunk($filas, 500) as $bloque) {
+            $db->insert("INSERT INTO PRODUCCION.dbo.tbl_reorder_categoria_hist (FECHA_CORTE, ARTICULO, CATEGORIA) VALUES "
+                . implode(', ', array_fill(0, count($bloque), '(?, ?, ?)')),
+                array_merge(...array_map(function ($r) use ($corte) { return [$corte, $r['ARTICULO'], $r['CAT_ACTUAL']]; }, $bloque)));
+        }
+    }
+
+    /**
+     * Política de reorden v2.1 sobre las filas base (las reglas reproducen el análisis Contribucion_Reorden_2026-10-26):
+     * presentación y empaque, categoría A/B/C/L (+CA), ranking privado, grupos de hermanas, disparador, reorden,
+     * despachos, consolidación, veredicto y notas. $maestros: GRUPOS [articulo => grupo], ORIGEN [fabricante => origen],
+     * CAT_ANTERIOR [articulo => categoría del análisis anterior] y FECHA_ANTERIOR.
+     */
+    public static function aplicarPolitica(array $data, array $maestros, $tipoCambio)
+    {
+        $grupos = $maestros['GRUPOS'] ?? [];
+        $origen = $maestros['ORIGEN'] ?? [];
+
+        // Presentación, empaque y origen
+        foreach ($data as &$r) {
+            // Unidades mínimas por empaque: "100/CAJA" -> 100, "10/FRASCO 1/CAJA" -> 10; ampollas, viales, "100ML/FRASCO" -> 1
+            $r['UNDS_EMPAQUE']  = preg_match('/(\d[\d,]*)\s*\/\s*(CAJA|FRASCO|BLISTER)/u', $r['DESCRIPCION'], $m) ? (float) str_replace(',', '', $m[1]) : 1;
+            $r['PRESENTACION']  = preg_match('/\b1,?000\s*\//u', $r['DESCRIPCION']) ? 'LICITACIÓN' : 'PRIVADO';
+            $r['ORIGEN']        = $origen[strtoupper(trim($r['FABRICANTE']))] ?? self::ORIGEN_DEFAULT;
+            $r['_GRUPO']        = $grupos[$r['ARTICULO']] ?? $r['ARTICULO'];
+            $r['CAT_ACTUAL']    = ($r['PORC_PUBLICO'] > self::L_MIN_PUBLICO && $r['CONTRIB_PRIV'] < self::L_MAX_CONTRIB) ? 'L' : null;
+        }
+        unset($r);
+
+        // Ranking privado (sin L) por contribución privada y clasificación por contribución acumulada;
+        // el bloque L va al final ordenado por contribución pública
+        usort($data, function ($a, $b) {
+            $la = $a['CAT_ACTUAL'] === 'L'; $lb = $b['CAT_ACTUAL'] === 'L';
+            if ($la !== $lb) return $la ? 1 : -1;
+            return $la ? $b['CONTRIB_PUBLICA'] <=> $a['CONTRIB_PUBLICA'] : $b['CONTRIB_PRIV'] <=> $a['CONTRIB_PRIV'];
+        });
+        // ROUNDUP de Excel: redondea antes el ruido de punto flotante (2.000000002 -> 2)
+        $redondeoArriba = function ($x) { return (int) ceil(round($x, 6)); };
+        $total = array_sum(array_map(function ($r) { return $r['CAT_ACTUAL'] === 'L' ? 0 : $r['CONTRIB_PRIV']; }, $data));
+        $acum  = 0; $rank = 0;
+        $letra = [];
+        foreach ($data as $i => $r) {
+            if ($r['CAT_ACTUAL'] === 'L') {
+                continue;
+            }
+            $previo = $total != 0 ? $acum / $total : 1;
+            $acum  += $r['CONTRIB_PRIV'];
+            $letra[$i] = $previo < self::CORTE_A ? 'A'
+                : (($previo < self::CORTE_B || $r['CONTRIB_PRIV'] > self::MIN_CONTRIB_B) ? 'B' : 'C');
+            $data[$i]['RANK'] = ++$rank;
+        }
+
+        // Las hermanas toman la mejor letra del grupo; el sufijo CA es propio (vende a Cruz Azul)
+        $miembros = [];
+        foreach ($data as $i => $r) {
+            $miembros[$r['_GRUPO']][] = $i;
+        }
+        foreach ($letra as $i => $l) {
+            foreach ($miembros[$data[$i]['_GRUPO']] as $j) {
+                if (isset($letra[$j]) && $letra[$j] < $l) {
+                    $l = $letra[$j];
+                }
+            }
+            $data[$i]['CAT_ACTUAL'] = $l . ($data[$i]['PORC_CRUZ_AZUL'] > 0 ? 'CA' : '');
+        }
+
+        // Cobertura consolidada del grupo en unidades mínimas
+        foreach ($miembros as $idx) {
+            $tab = 0; $dem = 0;
+            foreach ($idx as $i) {
+                $tab += $data[$i]['TOTAL_DISP'] * $data[$i]['UNDS_EMPAQUE'];
+                $dem += $data[$i]['PROM_DEPURADO'] * $data[$i]['UNDS_EMPAQUE'];
+            }
+            foreach ($idx as $i) {
+                $otros = array_filter($idx, function ($j) use ($i) { return $j !== $i; });
+                $data[$i]['PAR_HERMANA']      = $otros ? implode(', ', array_map(function ($j) use ($data) {
+                    return 'Rk ' . ($data[$j]['RANK'] ?? '-');
+                }, $otros)) : null;
+                $data[$i]['TAB_DISP_GRUPO']   = $tab;
+                $data[$i]['DEMANDA_GRUPO']    = $dem;
+                $data[$i]['MESES_DISP_GRUPO'] = $dem != 0 ? $tab / $dem : null;
+            }
+        }
+
+        // Disparador y reorden por presentación (la compra del grupo se reparte según la demanda de cada una)
+        $proveedorOrdena = [];
+        foreach ($data as &$r) {
+            $l = $r['CAT_ACTUAL'] === 'L' ? 'L' : substr($r['CAT_ACTUAL'], 0, 1);
+            $r['DISPARADOR'] = $l === 'A' ? (self::$disparadorA[$r['ORIGEN']] ?? 7) : ($l === 'B' ? self::$disparadorB : null);
+
+            $relleno = $l === 'A' ? self::RELLENO_A : self::RELLENO_B;
+            $falta   = ($r['DEMANDA_GRUPO'] > 0)
+                ? $redondeoArriba(max(0, $relleno * $r['DEMANDA_GRUPO'] - $r['TAB_DISP_GRUPO']) * $r['PROM_DEPURADO'] / $r['DEMANDA_GRUPO'])
+                : 0;
+            $r['_FALTA'] = $falta;
+
+            $r['REORDEN_UNDS'] = ($r['MESES_DISP_GRUPO'] === null || $r['DISPARADOR'] === null || $r['PROM_DEPURADO'] == 0
+                || $r['MESES_DISP_GRUPO'] >= $r['DISPARADOR']) ? 0 : $falta;
+
+            $reo   = $r['REORDEN_UNDS'];
+            $costo = (float) $r['ULT_COSTO_LOC'];
+            if ($reo > 0) {
+                $grande = $reo * $costo > self::ORDEN_GRANDE_LOC || $reo / $r['PROM_DEPURADO'] > self::ORDEN_GRANDE_MES;
+                $r['N_DESPACHOS']     = $grande ? min(4, max(2, $redondeoArriba($reo / $r['PROM_DEPURADO'] / 6))) : 1;
+                $r['UNDS_X_DESPACHO'] = $redondeoArriba($reo / $r['N_DESPACHOS']);
+                $r['REORDEN_LOC']     = $costo != 0 ? $reo * $costo : null;
+                $r['LOC_X_DESPACHO']  = $r['REORDEN_LOC'] !== null ? $r['REORDEN_LOC'] / $r['N_DESPACHOS'] : null;
+                $r['REORDEN_USD']     = ($r['ULT_COSTO_USD'] !== null && $r['ULT_COSTO_USD'] > 0) ? $reo * $r['ULT_COSTO_USD']
+                    : (($r['REORDEN_LOC'] !== null && $tipoCambio) ? $r['REORDEN_LOC'] / $tipoCambio : null);
+                $proveedorOrdena[$r['FABRICANTE']] = true;
+            }
+        }
+        unset($r);
+
+        // Veredicto (en orden de prioridad) y notas
+        $catAnt   = $maestros['CAT_ANTERIOR'] ?? [];
+        $fechaAnt = $maestros['FECHA_ANTERIOR'] ?? null;
+        $etiqAnt  = $fechaAnt ? self::fechaCorta($fechaAnt, false) : null;
+        foreach ($data as &$r) {
+            $l = $r['CAT_ACTUAL'] === 'L' ? 'L' : substr($r['CAT_ACTUAL'], 0, 1);
+
+            $r['CONSOLIDAR_UNDS'] = ($r['REORDEN_UNDS'] == 0 && $r['DISPARADOR'] !== null && $r['MESES_DISP_GRUPO'] !== null
+                && $r['MESES_DISP_GRUPO'] <= $r['DISPARADOR'] + self::MARGEN_CONSOLIDAR
+                && isset($proveedorOrdena[$r['FABRICANTE']]) && $r['_FALTA'] > 0) ? $r['_FALTA'] : null;
+
+            $crec = $r['CREC_PRIV'];
+            if ($l === 'L')                                                        $v = 'SOLO LICITACIÓN';
+            elseif ($r['RIESGO_LOTE'] === 'SÍ')                                    $v = 'ALERTA VENCIMIENTO';
+            elseif ($r['REORDEN_UNDS'] > 0)                                        $v = 'REORDENAR';
+            elseif ($r['CONSOLIDAR_UNDS'] !== null)                                $v = 'CONSOLIDAR';
+            elseif ($r['CONTRIB_PRIV'] < 0)                                        $v = 'REVISAR PRECIO';
+            elseif ($r['MESES_DISP_GRUPO'] !== null && $r['MESES_DISP_GRUPO'] > self::SOBRE_STOCK) $v = 'SOBRE-STOCK';
+            elseif (in_array($l, ['A', 'B']) && $crec !== null && $crec < self::CAIDA_DEFENDER) $v = 'DEFENDER';
+            elseif ($l === 'C' && $crec !== null && $crec > self::SUBIR_CRECIMIENTO && $r['CONTRIB_PRIV'] > self::SUBIR_CONTRIB) $v = 'CANDIDATO A SUBIR';
+            elseif ($l === 'C')                                                    $v = 'NO REORDENAR';
+            else                                                                   $v = 'OK';
+            $r['VEREDICTO'] = $v;
+
+            $r['CAT_CAMBIO'] = ($r['CAT_ANTERIOR'] !== null && $r['CAT_ANTERIOR'] !== $r['CAT_ACTUAL']) ? '≠' : null;
+            $r['CAT_12OCT']  = $catAnt[$r['ARTICULO']] ?? null;
+
+            $n = [];
+            if ($l === 'L') {
+                $n[] = 'nicho público/licitación';
+            } elseif ($r['PORC_PUBLICO'] > self::L_MIN_PUBLICO) {
+                $n[] = round($r['PORC_PUBLICO'] * 100) . '% unds públicas: ranking y reorden usan SOLO lo privado';
+            }
+            if ($r['PAR_HERMANA']) {
+                $n[] = 'presentación hermana (' . $r['PAR_HERMANA'] . '): cobertura y reorden CONSOLIDADOS en tabletas';
+            }
+            if ($r['DISPARADOR'] !== null && $r['MESES_DISP_GRUPO'] !== null
+                && $r['MESES_DISP_GRUPO'] < $r['DISPARADOR'] - self::HOLGURA_LEAD_TIME) {
+                $n[] = '⚠ URGENTE: cobertura consolidada por debajo del lead time — evaluar embarque parcial aéreo o proveedor más rápido';
+            }
+            if ($r['CONSOLIDAR_UNDS'] !== null) {
+                $n[] = 'a ≤' . self::MARGEN_CONSOLIDAR . ' meses de su disparador consolidado: sumar ' . number_format($r['CONSOLIDAR_UNDS'])
+                    . ' cajas a la próxima orden de ' . trim($r['FABRICANTE']);
+            }
+            if ($crec !== null && $crec < self::CAIDA_DEFENDER) {
+                $n[] = 'caída privada >' . abs(self::CAIDA_DEFENDER * 100) . '% vs año ant.';
+            }
+            if ($r['N_CLIENTES'] <= self::NOTA_MAX_CLIENTES) {
+                $n[] = 'solo ' . $r['N_CLIENTES'] . ' clientes';
+            }
+            if ($r['PORC_CRUZ_AZUL'] > self::NOTA_CRUZ_AZUL) {
+                $n[] = 'Cruz Azul >' . (self::NOTA_CRUZ_AZUL * 100) . '% del SKU';
+            }
+            // Margen de reposición y venta intermitente solo aplican al ranking privado (no al bloque L)
+            if ($l !== 'L' && $r['DELTA_MARGEN'] !== null && $r['DELTA_MARGEN'] < self::NOTA_CAIDA_MARGEN) {
+                $n[] = 'margen de reposición cae >' . abs(self::NOTA_CAIDA_MARGEN * 100) . 'pp';
+            }
+            if ($l !== 'L' && $r['MESES_ACTIVOS'] <= self::MAX_MESES_INTERMITENTE) {
+                $n[] = 'venta privada intermitente (≤' . self::MAX_MESES_INTERMITENTE . ' meses activos)';
+            }
+            if ($r['PORC_BONIF'] > 0) {
+                $n[] = 'bonificación ' . round($r['PORC_BONIF'] * 100) . '%';
+            }
+            if ($r['REORDEN_UNDS'] > 0 && !$r['ULT_COSTO_LOC']) {
+                $n[] = '⚠ sin último costo registrado — valorar la orden con costo del proveedor';
+            }
+            if ($r['CAT_12OCT'] !== null && $r['CAT_12OCT'] !== $r['CAT_ACTUAL']) {
+                $n[] = 'cambió de categoría vs análisis ' . $etiqAnt . ' (' . $r['CAT_12OCT'] . ' → ' . $r['CAT_ACTUAL'] . ')';
+            }
+            $r['NOTAS'] = $n ? implode('; ', $n) : null;
+
+            unset($r['_GRUPO'], $r['_FALTA']);
+        }
+        unset($r);
+
+        return $data;
+    }
+
+    // 12-oct / 12-oct-2026
+    private static function fechaCorta($f, $conAnio = true)
+    {
+        $t = strtotime($f);
+        return date('j', $t) . '-' . strtolower(self::$nombreMes[date('n', $t) - 1]) . ($conAnio ? '-' . date('Y', $t) : '');
+    }
+
+    /**
+     * Una fila del análisis a partir de un registro de ContribucionPorCanales::getData().
+     * Ojo: canales devuelve las cantidades por canal ya formateadas ("1,234") y ARTICULO como enlace HTML.
+     */
+    private static function fila(array $row, $corte, $nMeses, $factor)
+    {
+        $num = function ($v) { return (float) str_replace(',', '', (string) $v); };
+
+        // Venta, costo y unidades de 12 meses: privado y público
+        $undsPriv = 0; $ventaPriv = 0; $costoPriv = 0;
+        foreach (self::$canalesPrivados as $campo) {
+            $undsPriv  += $num($row[$campo . '_CANTIDAD']);
+            $ventaPriv += (float) $row[$campo . '_VENTA'];
+            $costoPriv += (float) $row[$campo . '_COSTO'];
+        }
+        $undsPub = 0; $ventaPub = 0; $costoPub = 0;
+        foreach (self::$canalesPublicos as $campo) {
+            $undsPub  += $num($row[$campo . '_CANTIDAD']);
+            $ventaPub += (float) $row[$campo . '_VENTA'];
+            $costoPub += (float) $row[$campo . '_COSTO'];
+        }
+        $contribPriv = $ventaPriv - $costoPriv;
+
+        // Unidades privadas por mes, de enero al mes del corte
+        $mesCanal = (array) $row['MES_CANAL'];
+        $mensual  = array_fill(0, $nMeses, 0);
+        foreach (array_keys(self::$canalesPrivados) as $canal) {
+            for ($m = 0; $m < $nMeses; $m++) {
+                $mensual[$m] += (float) ($mesCanal[$canal]['U'][$m] ?? 0);
+            }
+        }
+        $ajustado = $mensual;
+        $ajustado[$nMeses - 1] *= $factor;
+        $activos  = count(array_filter($mensual, function ($u) { return $u > 0; }));
+
+        $promDep = $activos <= self::MAX_MESES_INTERMITENTE
+            ? $undsPriv / 12
+            : array_sum($ajustado) / $activos;
+        $ultimos  = array_slice($ajustado, -3);
+        $momentum = $promDep > 0 ? (array_sum($ultimos) / count($ultimos)) / $promDep : null;
+
+        // Año anterior (Ene-Dic) por canal
+        $antCanal = (array) $row['ANT_CANAL'];
+        $ventaAnt = 0;
+        foreach (array_keys(self::$canalesPrivados) as $canal) {
+            $ventaAnt += (float) ($antCanal[$canal]['V'] ?? 0);
+        }
+        $ventaCA    = (float) $row['CRUZ_AZUL_VENTA'];
+        $ventaAntCA = (float) ($antCanal['CRUZ_AZUL']['V'] ?? 0);
+
+        // Stock
+        $totalDisp = (float) $row['INVENTARIO'] + (float) $row['PEDIDO'] + (float) $row['TRANSITO'];
+        $mesesDisp = $promDep > 0 ? $totalDisp / $promDep : null;
+
+        // Lote (canales ya lo trae calculado: el de vencimiento más lejano) y última compra, de d/m/Y a Y-m-d
+        $fecha = function ($v) {
+            $f = $v ? \DateTime::createFromFormat('d/m/Y', $v) : false;
+            return $f ? $f->format('Y-m-d') : null;
+        };
+        $loteVence = $fecha($row['Lote_Mas_a_Vencer_PRIVADO_6_MESES']);
+        $cantLote  = (float) $row['Existencia_En_Lote_proximo_Vencer_6_MESES'];
+        $mesesVcto = $loteVence ? (strtotime($loteVence) - strtotime($corte)) / 86400 / self::DIAS_MES : null;
+        // El lote se consume con la demanda privada depurada más la pública mensual
+        $consumo   = $promDep + $undsPub / 12;
+        $mesesCons = ($loteVence && $cantLote > 0 && $consumo > 0) ? $cantLote / $consumo : null;
+
+        // Margen a costo de reposición: precio promedio privado contra el último costo de compra
+        $costoLoc   = $row['ULTIMO_COSTO_LOC'];
+        $precioPriv = $undsPriv > 0 ? $ventaPriv / $undsPriv : 0;
+        $ctbRepo    = ($costoLoc !== null && $precioPriv > 0) ? 1 - $costoLoc / $precioPriv : null;
+        $ctbPriv    = $ventaPriv != 0 ? $contribPriv / $ventaPriv : 0;
+
+        $r = [
+            'RANK'                => null,
+            'ARTICULO'            => (string) $row['ARTICULODESC'],
+            'DESCRIPCION'         => $row['DESCRIPCION'],
+            'FABRICANTE'          => trim($row['FABRICANTE']),
+            'PRESENTACION'        => null,
+            // La categoría de /canales es la del "reporte anterior"; la actual la calcula aplicarPolitica()
+            'CAT_ANTERIOR'        => trim((string) $row['CATEGORIA']) ?: null,
+            'CAT_ACTUAL'          => null,
+            'CAT_CAMBIO'          => null,
+            'CAT_12OCT'           => null,
+            'PAR_HERMANA'         => null,
+            'INVENTARIO'          => (float) $row['INVENTARIO'],
+            'PEDIDO'              => (float) $row['PEDIDO'],
+            'TRANSITO'            => (float) $row['TRANSITO'],
+            'TOTAL_DISP'          => $totalDisp,
+        ];
+        foreach ($mensual as $m => $u) {
+            $r[sprintf('M%02d', $m + 1)] = $u;
+        }
+
+        return $r + [
+            'MESES_ACTIVOS'       => $activos,
+            'PROM_SISTEMA'        => $row['PROM_NORMAL'] !== null ? (float) $row['PROM_NORMAL'] : null,
+            'UNDS_12M_PRIVADO'    => $undsPriv,
+            'UNDS_12M_PUBLICO'    => $undsPub,
+            'PORC_PUBLICO'        => ($undsPriv + $undsPub) > 0 ? $undsPub / ($undsPriv + $undsPub) : 0,
+            'PROM_DEPURADO'       => $promDep,
+            'MESES_DISP_PROPIO'   => $mesesDisp,
+            'UNDS_EMPAQUE'        => null,
+            'TAB_DISP_GRUPO'      => null,
+            'DEMANDA_GRUPO'       => null,
+            'MESES_DISP_GRUPO'    => null,
+            'VENTA_12M_PRIV'      => $ventaPriv,
+            'CONTRIB_PRIV'        => $contribPriv,
+            'PORC_CTB_PRIV'       => $ctbPriv,
+            'CONTRIB_PUBLICA'     => $ventaPub - $costoPub,
+            'VENTA_PRIV_ANT'      => $ventaAnt,
+            'CREC_PRIV'           => $ventaAnt != 0 ? $ventaPriv / $ventaAnt - 1 : null,
+            'CREC_CRUZ_AZUL'      => $ventaAntCA != 0 ? $ventaCA / $ventaAntCA - 1 : null,
+            'MOMENTUM'            => $momentum,
+            'LOTE_VENCE'          => $loteVence,
+            'MESES_A_VCTO'        => $mesesVcto,
+            'CANT_LOTE'           => $cantLote,
+            'MESES_P_CONSUMIR'    => $mesesCons,
+            'RIESGO_LOTE'         => ($mesesCons !== null && $mesesCons > $mesesVcto) ? 'SÍ' : null,
+            'N_CLIENTES'          => (int) $row['CLIENTES'],
+            'PORC_CRUZ_AZUL'      => $ventaPriv != 0 ? $ventaCA / $ventaPriv : 0,
+            'ULT_COMPRA'          => $fecha($row['ULTIMA_COMPRA']),
+            'ULT_COSTO_LOC'       => $costoLoc,
+            'ULT_COSTO_USD'       => $row['ULTIMO_COSTO_DOL'],
+            'PORC_CTB_REPOSICION' => $ctbRepo,
+            'DELTA_MARGEN'        => $ctbRepo !== null ? $ctbRepo - $ctbPriv : null,
+            'PORC_BONIF'          => $row['PORC_BONIFICADO'] !== null ? $row['PORC_BONIFICADO'] / 100 : 0,
+            'ORIGEN'              => null,
+            'DISPARADOR'          => null,
+            'REORDEN_UNDS'        => null,
+            'N_DESPACHOS'         => null,
+            'UNDS_X_DESPACHO'     => null,
+            'REORDEN_LOC'         => null,
+            'LOC_X_DESPACHO'      => null,
+            'REORDEN_USD'         => null,
+            'CONSOLIDAR_UNDS'     => null,
+            'VEREDICTO'           => null,
+            'NOTAS'               => null,
+        ];
+    }
+
+    private static function meta($ini, $corte, array $meses, $factor, $tipoCambio, $fechaAnterior)
+    {
+        $corta = function ($f) { return self::fechaCorta($f); };
+        $parcial = $factor != 1
+            ? ' ' . self::$nombreMes[count($meses) - 1] . ' es parcial (' . date('j', strtotime($corte)) . ' días): cuenta como mes activo y en el promedio depurado y el momentum se lleva a mes completo (×' . date('t', strtotime($corte)) . '/' . date('j', strtotime($corte)) . ').'
+            : '';
+
+        return [
+            'FECHA_CORTE' => $corte,
+            'PERIODO_INI' => $ini,
+            'PERIODO_FIN' => $corte,
+            'TIPO_CAMBIO' => $tipoCambio,
+            'POLITICA'    => 'v2.1',
+            'MESES'       => $meses,
+            'FUENTE'      => 'GUMA@NET · Contribución por canales',
+            'TITULO'      => 'ANÁLISIS DE DECISIÓN POR PRODUCTO — UNIMARK · 12 meses (' . $corta($ini) . ' a ' . $corta($corte) . ') · POLÍTICA DE REORDEN v2.1: cobertura CONSOLIDADA por producto'
+                . ($fechaAnterior ? ' · actualización del análisis del ' . $corta($fechaAnterior) : ''),
+            'NOTA'        => 'POLÍTICA v2.1 — mín/máx sobre DEMANDA PRIVADA depurada, evaluada por PRODUCTO CONSOLIDADO: las presentaciones hermanas (misma molécula/concentración, presentación privada) suman inventario+pedido+tránsito y demanda EN UNIDADES MÍNIMAS (tabletas/ampollas); el disparador se evalúa contra los MESES DISP. GRUPO y la compra se reparte entre presentaciones según su demanda. A dispara <6 m (India/por verificar: 7) rellena a 18 · B dispara <4 rellena a 12 · C/L compra cero. CONSOLIDAR = grupo a ≤2 meses del disparador con proveedor ya ordenando. Órdenes >C$1M o >8 meses → 2–4 despachos.' . $parcial . ' AMARILLO = A/ACA · VERDE = B/BCA · AZUL = L.',
+            'SEPARADOR_L' => '▼ BLOQUE NICHO LICITACIÓN (CATEGORÍA L) — sin ranking privado · comprar SOLO contra adjudicación · no entra en reorden',
+        ];
+    }
+
+    // Encabezados completos de la hoja Decision_x_Producto (los meses dependen del corte)
+    private static function headers(array $meses, $fechaAnterior)
+    {
+        $h = [
+            'RANK' => 'Rk#', 'ARTICULO' => 'ARTÍCULO', 'DESCRIPCION' => 'DESCRIPCIÓN', 'FABRICANTE' => 'FABRICANTE',
+            'PRESENTACION' => 'PRESENT.', 'CAT_ANTERIOR' => 'CAT. REPORTE ANT.', 'CAT_ACTUAL' => 'CAT. ACTUAL', 'CAT_CAMBIO' => 'Δ',
+            // CAT_12OCT conserva el nombre del campo del Excel original; es la categoría del análisis anterior
+            'CAT_12OCT' => 'CAT. ' . ($fechaAnterior ? self::fechaCorta($fechaAnterior, false) : 'ANÁLISIS ANT.'), 'PAR_HERMANA' => 'PAR (hermana)', 'INVENTARIO' => 'INVENTARIO', 'PEDIDO' => 'PEDIDO',
+            'TRANSITO' => 'TRÁNSITO', 'TOTAL_DISP' => 'TOTAL DISP.',
+        ];
+        foreach ($meses as $i => $m) {
+            $h[sprintf('M%02d', $i + 1)] = $m;
+        }
+        $ultimo = self::$nombreMes[count($meses) - 1];
+
+        return $h + [
+            'MESES_ACTIVOS' => 'MESES ACTIVOS (de ' . count($meses) . ')', 'PROM_SISTEMA' => 'PROM. SISTEMA',
+            'UNDS_12M_PRIVADO' => 'UNDS 12M PRIVADO', 'UNDS_12M_PUBLICO' => 'UNDS 12M PÚB.+LICIT', 'PORC_PUBLICO' => '% PÚBLICO',
+            'PROM_DEPURADO' => 'PROM. DEPURADO (privado; ' . $ultimo . ' a mes completo)', 'MESES_DISP_PROPIO' => 'MESES DISP. PROPIO',
+            'UNDS_EMPAQUE' => 'UNDS/EMPAQUE', 'TAB_DISP_GRUPO' => 'TABLETAS DISP. GRUPO', 'DEMANDA_GRUPO' => 'DEMANDA GRUPO (tab/mes)',
+            'MESES_DISP_GRUPO' => 'MESES DISP. GRUPO', 'VENTA_12M_PRIV' => 'VENTA 12M PRIVADA C$', 'CONTRIB_PRIV' => 'CONTRIB. PRIVADA C$',
+            'PORC_CTB_PRIV' => '% CTB PRIV.', 'CONTRIB_PUBLICA' => 'CONTRIB. PÚBLICA C$', 'VENTA_PRIV_ANT' => 'VENTA PRIV. AÑO ANT. C$',
+            'CREC_PRIV' => 'CRECIMIENTO PRIV. %', 'CREC_CRUZ_AZUL' => 'CREC. CRUZ AZUL %', 'MOMENTUM' => 'MOMENTUM (últimos 3 meses)',
+            'LOTE_VENCE' => 'LOTE VENCE', 'MESES_A_VCTO' => 'MESES A VCTO.', 'CANT_LOTE' => 'CANT. LOTE', 'MESES_P_CONSUMIR' => 'MESES P/CONSUMIR',
+            'RIESGO_LOTE' => 'RIESGO LOTE', 'N_CLIENTES' => 'N° CLIENTES', 'PORC_CRUZ_AZUL' => '% CRUZ AZUL (venta)',
+            'ULT_COMPRA' => 'ÚLT. COMPRA', 'ULT_COSTO_LOC' => 'ÚLT. COSTO C$', 'ULT_COSTO_USD' => 'ÚLT. COSTO US$',
+            'PORC_CTB_REPOSICION' => '% CTB A REPOSICIÓN', 'DELTA_MARGEN' => 'Δ MARGEN (pp)', 'PORC_BONIF' => '% BONIF.',
+            'ORIGEN' => 'ORIGEN PROVEEDOR', 'DISPARADOR' => 'DISPARADOR (meses)', 'REORDEN_UNDS' => 'REORDEN (unds)',
+            'N_DESPACHOS' => 'N° DESPACHOS', 'UNDS_X_DESPACHO' => 'UNDS POR DESPACHO', 'REORDEN_LOC' => 'REORDEN C$ TOTAL',
+            'LOC_X_DESPACHO' => 'C$ POR DESPACHO (1er pago)', 'REORDEN_USD' => 'REORDEN US$ TOTAL',
+            'CONSOLIDAR_UNDS' => 'CONSOLIDAR CON ORDEN (unds sugeridas)', 'VEREDICTO' => 'VEREDICTO', 'NOTAS' => 'NOTAS / BANDERAS',
+        ];
     }
 
     /**
      * Columnas de la hoja Decision_x_Producto en el mismo orden del Excel original:
-     * [campo, ancho, formato, centrado]
+     * [campo, ancho, formato, centrado]. Los meses van de enero al mes del corte.
      */
-    private static function columnasExcel()
+    private static function columnasExcel($nMeses)
     {
         $n  = '#,##0';
         $p  = '0.0%';
         $c0 = '"C$ "#,##0';
         $d  = 'dd/mm/yyyy';
 
-        return [
+        $meses = [];
+        for ($m = 1; $m <= $nMeses; $m++) {
+            $meses[] = [sprintf('M%02d', $m), 7, $n, false];
+        }
+
+        return array_merge([
             ['RANK', 5, null, true],            ['ARTICULO', 10, null, false],      ['DESCRIPCION', 54, null, false],
             ['FABRICANTE', 15, null, false],    ['PRESENTACION', 11, null, false],  ['CAT_ANTERIOR', 9, null, false],
             ['CAT_ACTUAL', 9, null, true],      ['CAT_CAMBIO', 4, null, true],      ['CAT_12OCT', 8, null, true],
             ['PAR_HERMANA', 12, null, false],   ['INVENTARIO', 10, $n, false],      ['PEDIDO', 8, $n, false],
             ['TRANSITO', 9, $n, false],         ['TOTAL_DISP', 10, $n, false],
-            ['M01', 7, $n, false], ['M02', 7, $n, false], ['M03', 7, $n, false], ['M04', 7, $n, false], ['M05', 7, $n, false],
-            ['M06', 7, $n, false], ['M07', 7, $n, false], ['M08', 7, $n, false], ['M09', 7, $n, false], ['M10', 7, $n, false],
+        ], $meses, [
             ['MESES_ACTIVOS', 8, '0', false],   ['PROM_SISTEMA', 9, $n, false],     ['UNDS_12M_PRIVADO', 10, $n, false],
             ['UNDS_12M_PUBLICO', 9, $n, false], ['PORC_PUBLICO', 8, $p, false],     ['PROM_DEPURADO', 10, '#,##0.0', false],
             ['MESES_DISP_PROPIO', 8, '0.0', false], ['UNDS_EMPAQUE', 9, $n, false], ['TAB_DISP_GRUPO', 12, $n, false],
@@ -56,7 +592,7 @@ class ReOrderPoint2 extends Model
             ['N_DESPACHOS', 9, '0', true],      ['UNDS_X_DESPACHO', 11, $n, false], ['REORDEN_LOC', 13, $c0, false],
             ['LOC_X_DESPACHO', 12, $c0, false], ['REORDEN_USD', 11, '\$#,##0', false], ['CONSOLIDAR_UNDS', 13, $n, false],
             ['VEREDICTO', 17, null, false],     ['NOTAS', 62, null, false],
-        ];
+        ]);
     }
 
     // Colores del Excel original: AMARILLO = A/ACA · VERDE = B/BCA · AZUL = L
@@ -82,7 +618,7 @@ class ReOrderPoint2 extends Model
      */
     public static function Excel(array $meta, array $headers, array $data)
     {
-        $columnas = self::columnasExcel();
+        $columnas = self::columnasExcel(count($meta['MESES'] ?? []) ?: 12);
         $letra    = function ($i) { return \PHPExcel_Cell::stringFromColumnIndex($i); };
         $ultCol   = $letra(count($columnas) - 1);
         $idx      = [];

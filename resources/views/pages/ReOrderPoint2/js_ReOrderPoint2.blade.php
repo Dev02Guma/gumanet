@@ -178,7 +178,8 @@ $(document).ready(function() {
         $('#tl_periodo').text(Fecha(meta.PERIODO_INI) + ' – ' + Fecha(meta.PERIODO_FIN));
         $('#tl_fecha_corte').text(Fecha(meta.FECHA_CORTE));
         $('#tl_tipo_cambio').text(meta.TIPO_CAMBIO ? 'C$ ' + numeral(meta.TIPO_CAMBIO).format('0,0.0000') : '-');
-        $('#badge_demo').toggle(/prueba/i.test(meta.FUENTE || '')).attr('title', meta.FUENTE || '');
+        // Aviso cuando faltan las tablas maestras del reorden en PRODUCCION
+        $('#badge_demo').toggle(!!meta.AVISO).text('Sin maestros').attr('title', meta.AVISO || '');
     }
 
     // Llena los selects sólo si la vista no trae opciones propias
