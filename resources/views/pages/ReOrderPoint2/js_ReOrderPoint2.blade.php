@@ -20,34 +20,25 @@ var VEREDICTOS = {
     'NO REORDENAR':       'noreordenar',
     'SOLO LICITACIÓN':    'licitacion'
 };
-
-// Grupos de columnas (encabezado de dos filas)
-var GRUPOS = {
-    stock:        ['INVENTARIO', 'PEDIDO', 'TRANSITO', 'TOTAL_DISP'],
-    demanda:      ['PROM_DEPURADO', 'MESES_ACTIVOS', 'MOMENTUM', 'UNDS_12M_PRIVADO', 'PORC_PUBLICO'],
-    cobertura:    ['MESES_DISP_GRUPO', 'DISPARADOR', 'ORIGEN'],
-    contribucion: ['VENTA_12M_PRIV', 'CONTRIB_PRIV', 'PORC_CTB_PRIV', 'CREC_PRIV', 'PORC_BONIF'],
-    lote:         ['LOTE_VENCE', 'MESES_A_VCTO', 'MESES_P_CONSUMIR', 'RIESGO_LOTE'],
-    costos:       ['ULT_COMPRA', 'ULT_COSTO_LOC', 'ULT_COSTO_USD', 'DELTA_MARGEN'],
-    reorden:      ['REORDEN_UNDS', 'N_DESPACHOS', 'REORDEN_LOC', 'REORDEN_USD', 'CONSOLIDAR_UNDS']
+// Totales del reorden (fila 3 del Excel); los montos suman solo valores positivos, igual que el Excel
+var TOTALES = {
+    REORDEN_UNDS:    { prefijo: '',    soloPositivos: false },
+    REORDEN_LOC:     { prefijo: 'C$ ', soloPositivos: true },
+    LOC_X_DESPACHO:  { prefijo: 'C$ ', soloPositivos: true },
+    REORDEN_USD:     { prefijo: '$',   soloPositivos: true },
+    CONSOLIDAR_UNDS: { prefijo: '',    soloPositivos: false }
 };
-var GRUPO_TITULO = {
-    stock: 'STOCK', demanda: 'DEMANDA', cobertura: 'COBERTURA', contribucion: 'CONTRIBUCIÓN',
-    lote: 'LOTE', costos: 'COSTOS', reorden: 'REORDEN'
-};
-
-// Títulos cortos para la tabla; el encabezado completo del Excel (HEADERS) va como tooltip
-var TITULO = {
-    INVENTARIO: 'INV.', PEDIDO: 'PEDIDO', TRANSITO: 'TRÁNSITO', TOTAL_DISP: 'TOTAL DISP.',
-    PROM_DEPURADO: 'PROM. DEP.', MESES_ACTIVOS: 'MESES ACT.', MOMENTUM: 'MOMENTUM',
-    UNDS_12M_PRIVADO: 'UNDS 12M PRIV.', PORC_PUBLICO: '% PÚB.',
-    MESES_DISP_GRUPO: 'COBERTURA (MESES)', DISPARADOR: 'DISPARADOR', ORIGEN: 'ORIGEN',
-    VENTA_12M_PRIV: 'VENTA 12M C$', CONTRIB_PRIV: 'CONTRIB. C$', PORC_CTB_PRIV: '% CTB',
-    CREC_PRIV: 'CREC.', PORC_BONIF: '% BONIF.',
-    LOTE_VENCE: 'LOTE VENCE', MESES_A_VCTO: 'MESES A VCTO.', MESES_P_CONSUMIR: 'MESES P/CONSUMIR', RIESGO_LOTE: 'RIESGO',
-    ULT_COMPRA: 'ÚLT. COMPRA', ULT_COSTO_LOC: 'COSTO C$', ULT_COSTO_USD: 'COSTO US$', DELTA_MARGEN: 'Δ MARGEN',
-    REORDEN_UNDS: 'REORDEN UNDS', N_DESPACHOS: 'DESP.', REORDEN_LOC: 'REORDEN C$', REORDEN_USD: 'REORDEN US$',
-    CONSOLIDAR_UNDS: 'CONSOLIDAR UNDS'
+// Relleno de la celda VEREDICTO, mismos colores que $colorVeredicto del Excel (OK sin color)
+var COLOR_VEREDICTO = {
+    'REORDENAR':          '#DDEBF7',
+    'CONSOLIDAR':         '#D6E4F0',
+    'DEFENDER':           '#FFF2CC',
+    'ALERTA VENCIMIENTO': '#FFC7CE',
+    'SOBRE-STOCK':        '#FFD9B3',
+    'CANDIDATO A SUBIR':  '#C6EFCE',
+    'NO REORDENAR':       '#EDEDED',
+    'REVISAR PRECIO':     '#FF9999',
+    'SOLO LICITACIÓN':    '#BDD7EE'
 };
 
 // Formato por campo: lo usan la tabla y el modal de detalle
@@ -61,7 +52,7 @@ var FORMATO = {
 };
 var TIPO_CAMPO = {
     INVENTARIO: 'entero', PEDIDO: 'entero', TRANSITO: 'entero', TOTAL_DISP: 'entero',
-    MESES_ACTIVOS: 'entero', PROM_SISTEMA: 'entero', PROM_DEPURADO: 'entero',
+    MESES_ACTIVOS: 'entero', PROM_SISTEMA: 'entero', PROM_DEPURADO: 'decimal',
     UNDS_12M_PRIVADO: 'entero', UNDS_12M_PUBLICO: 'entero', UNDS_EMPAQUE: 'entero',
     TAB_DISP_GRUPO: 'entero', DEMANDA_GRUPO: 'entero', CANT_LOTE: 'entero', N_CLIENTES: 'entero',
     DISPARADOR: 'entero', REORDEN_UNDS: 'entero', N_DESPACHOS: 'entero', UNDS_X_DESPACHO: 'entero',
@@ -75,8 +66,12 @@ var TIPO_CAMPO = {
     LOTE_VENCE: 'fecha', ULT_COMPRA: 'fecha'
 };
 var ESPECIAL = {
-    MOMENTUM:         function(v) { return Variacion(v, true); },
-    CREC_PRIV:        function(v) { return Variacion(v, false); },
+    // Razón (últimos 3 meses / promedio depurado), igual que el Excel: < 1 cae, > 1 sube
+    MOMENTUM:         function(v) {
+        var css = v > 1 ? 'text-success' : (v < 1 ? 'text-danger' : '');
+        return `<span class="${css}">${numeral(v).format('0.00')}</span>`;
+    },
+    CREC_PRIV:        function(v) { return Variacion(v); },
     DELTA_MARGEN:     function(v) {
         var css = v > 0 ? 'text-success' : (v < 0 ? 'text-danger' : '');
         return `<span class="${css}">${numeral(v * 100).format('+0.0')} pp</span>`;
@@ -85,11 +80,6 @@ var ESPECIAL = {
         return v === 'SÍ'
             ? '<span class="text-warning" title="El lote vence antes de consumirse"><i class="fas fa-exclamation-triangle"></i> SÍ</span>'
             : Esc(v);
-    },
-    MESES_DISP_GRUPO: function(v, r) {
-        return `<div class="d-flex align-items-center justify-content-end">
-                    <span class="mr-2">${FORMATO.decimal(v)}</span>${BarraCobertura(v, r.DISPARADOR)}
-                </div>`;
     }
 };
 
@@ -132,7 +122,7 @@ $(document).ready(function() {
     async function GetData() {
         Swal.fire({
             title: 'Cargando...',
-            html: 'Obteniendo la decisión por producto.',
+            html: 'Obteniendo el Reorder Point.',
             allowOutsideClick: false,
             allowEscapeKey: false,
             showConfirmButton: false,
@@ -170,7 +160,7 @@ $(document).ready(function() {
 
         } catch (error) {
             console.error('Error al obtener los datos:', error);
-            Swal.fire('Error', 'No se pudo cargar la decisión por producto.', 'error');
+            Swal.fire('Error', 'No se pudo cargar el Reorder Point.', 'error');
         }
     }
 
@@ -254,7 +244,7 @@ $(document).ready(function() {
 
         Swal.fire({
             title: 'Generando Excel...',
-            html: 'Preparando la decisión por producto, por favor espere.',
+            html: 'Preparando el Reorder Point, por favor espere.',
             allowOutsideClick: false,
             allowEscapeKey: false,
             showConfirmButton: false,
@@ -281,7 +271,7 @@ $(document).ready(function() {
             const blob = await response.blob();
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
-            link.download = 'Decision_x_Producto_' + ((_meta && _meta.FECHA_CORTE) || moment().format('YYYY-MM-DD')) + '.xlsx';
+            link.download = 'Reorder_Point_' + ((_meta && _meta.FECHA_CORTE) || moment().format('YYYY-MM-DD')) + '.xlsx';
             document.body.appendChild(link);
             link.click();
             link.remove();
@@ -305,53 +295,25 @@ $(document).ready(function() {
         }
         $(TABLA + ' thead').remove();
 
+        // Mismas columnas y en el mismo orden que la hoja Reorder_Point del Excel:
+        // HEADERS llega del servidor en ese orden (incluye los meses M01..Mnn del corte)
         var columnas = [
             { data: null, orderable: false, className: 'text-center', width: '20px',
-              render: function() { return '<i class="fas fa-search-plus text-primary" title="Ver detalle"></i>'; } },
-            { data: 'RANK', type: 'num', className: 'text-right',
-              render: function(d, type) {
-                  if (type === 'display') return d === null ? '-' : d;
-                  return d === null ? 999999 : d;
-              } },
-            { data: 'ARTICULO', className: 'text-left font-weight-bold' },
-            { data: 'DESCRIPCION', className: 'text-left',
-              render: function(d, type) {
-                  return type === 'display'
-                      ? `<span class="d-inline-block text-truncate align-middle" style="max-width:260px;" title="${Esc(d)}">${Esc(d)}</span>`
-                      : d;
-              } },
-            { data: 'CAT_ACTUAL', type: 'num', className: 'text-center',
-              render: function(d, type, r) {
-                  if (type === 'sort') return CATEGORIAS.indexOf(d);
-                  return type === 'display' ? BadgeCategoria(d) + MarcaCambio(r) : d;
-              } },
-            { data: 'VEREDICTO', className: 'text-center',
-              render: function(d, type) { return type === 'display' ? BadgeVeredicto(d) : d; } }
+              render: function() { return '<i class="fas fa-search-plus text-primary" title="Ver detalle"></i>'; } }
         ];
+        var encabezado = '<th></th>';
+        // Fila de totales sobre el encabezado, como la fila 3 del Excel
+        var totales = '<th class="rop2-total"></th>';
 
-        // Encabezado de dos filas: fijas con rowspan, grupos con colspan
-        var fila1 = ['', 'Rk#', 'ARTÍCULO', 'DESCRIPCIÓN', 'CAT. ACTUAL', 'VEREDICTO'].map(function(t, i) {
-            var campo = [null, 'RANK', 'ARTICULO', 'DESCRIPCION', 'CAT_ACTUAL', 'VEREDICTO'][i];
-            return `<th rowspan="2" title="${Esc(_headers[campo] || '')}">${t}</th>`;
-        }).join('');
-        var fila2 = '';
-
-        Object.keys(GRUPOS).forEach(function(grupo) {
-            fila1 += `<th colspan="${GRUPOS[grupo].length}" class="text-center rop2-th-grupo">${GRUPO_TITULO[grupo]}</th>`;
-
-            GRUPOS[grupo].forEach(function(campo) {
-                var texto = ['ORIGEN', 'LOTE_VENCE', 'ULT_COMPRA', 'RIESGO_LOTE'].indexOf(campo) !== -1;
-                fila2 += `<th title="${Esc(_headers[campo] || campo)}">${TITULO[campo] || campo}</th>`;
-                columnas.push({
-                    data: campo,
-                    type: texto ? 'string' : 'num',
-                    className: texto ? 'text-center' : 'text-right',
-                    render: function(d, type, r) { return type === 'display' ? Fmt(campo, d, r) : d; }
-                });
-            });
+        Object.keys(_headers).forEach(function(campo) {
+            encabezado += `<th title="${Esc(_headers[campo])}">${Esc(_headers[campo])}</th>`;
+            totales += TOTALES[campo]
+                ? `<th class="rop2-total text-right" data-total="${campo}"></th>`
+                : `<th class="rop2-total">${campo === 'DESCRIPCION' ? 'TOTALES' : ''}</th>`;
+            columnas.push(ColumnaTabla(campo));
         });
 
-        $(TABLA).prepend(`<thead><tr>${fila1}</tr><tr>${fila2}</tr></thead>`);
+        $(TABLA).prepend(`<thead><tr>${totales}</tr><tr>${encabezado}</tr></thead>`);
 
         $(TABLA).DataTable({
             data: data,
@@ -361,11 +323,24 @@ $(document).ready(function() {
             info: true,
             searching: true,
             ordering: true,
-            scrollX: true,
+            // Sin scrollX: DataTables separaría el encabezado en otra tabla y se desalinea con los valores;
+            // el scroll horizontal lo da #rop2-tabla
             autoWidth: false,
             dom: 'rt<"d-flex flex-wrap justify-content-between align-items-center mt-2"ip>',
             order: [[1, 'asc']],
             columns: columnas,
+            // Los totales siguen los filtros: suman solo los productos que quedan en la tabla
+            drawCallback: function() {
+                var filas = this.api().rows({ search: 'applied' }).data().toArray();
+                Object.keys(TOTALES).forEach(function(campo) {
+                    var t = TOTALES[campo];
+                    var suma = filas.reduce(function(a, r) {
+                        var v = parseFloat(r[campo]) || 0;
+                        return a + ((t.soloPositivos && v <= 0) ? 0 : v);
+                    }, 0);
+                    $(TABLA + ' thead th[data-total="' + campo + '"]').text(t.prefijo + numeral(suma).format('0,0'));
+                });
+            },
             createdRow: function(tr, r) {
                 $(tr).css('cursor', 'pointer');
                 if (/URGENTE/i.test(r.NOTAS || '')) $(tr).addClass('rop2-row-urgente');
@@ -380,6 +355,50 @@ $(document).ready(function() {
                 paginate: { first: 'Primero', last: 'Último', next: 'Siguiente', previous: 'Anterior' }
             }
         });
+    }
+
+    // Definición de DataTables para un campo de HEADERS
+    function ColumnaTabla(campo) {
+        var truncar = { DESCRIPCION: 260, FABRICANTE: 160, PAR_HERMANA: 120, NOTAS: 320 };
+
+        if (campo === 'RANK') {
+            return { data: 'RANK', type: 'num', className: 'text-right',
+                render: function(d, type) {
+                    if (type === 'display') return d === null ? '-' : d;
+                    return d === null ? 999999 : d;
+                } };
+        }
+        if (campo === 'ARTICULO') return { data: 'ARTICULO', className: 'text-left font-weight-bold' };
+        if (campo === 'CAT_ACTUAL') {
+            return { data: 'CAT_ACTUAL', type: 'num', className: 'text-center',
+                render: function(d, type, r) {
+                    if (type === 'sort') return CATEGORIAS.indexOf(d);
+                    return type === 'display' ? BadgeCategoria(d) + MarcaCambio(r) : d;
+                } };
+        }
+        if (campo === 'VEREDICTO') {
+            // Igual que el Excel: se pinta la celda, el texto queda en negrita sin badge
+            return { data: 'VEREDICTO', className: 'text-left font-weight-bold rop2-td-veredicto',
+                render: function(d, type) { return type === 'display' ? Esc(d || '-') : d; },
+                createdCell: function(td, d) {
+                    if (COLOR_VEREDICTO[d]) td.style.setProperty('background-color', COLOR_VEREDICTO[d], 'important');
+                } };
+        }
+        if (truncar[campo]) {
+            return { data: campo, className: 'text-left',
+                render: function(d, type) {
+                    return type === 'display'
+                        ? `<span class="d-inline-block text-truncate align-middle" style="max-width:${truncar[campo]}px;" title="${Esc(d || '')}">${Esc(d || '')}</span>`
+                        : (d || '');
+                } };
+        }
+
+        // Numéricos: los de TIPO_CAMPO, los de formato especial y los meses (M01..Mnn)
+        var numero = /^M\d{2}$/.test(campo)
+            || (TIPO_CAMPO[campo] && TIPO_CAMPO[campo] !== 'fecha')
+            || (ESPECIAL[campo] && campo !== 'RIESGO_LOTE');
+        return { data: campo, type: numero ? 'num' : 'string', className: numero ? 'text-right' : 'text-center',
+            render: function(d, type, r) { return type === 'display' ? Fmt(campo, d, r) : d; } };
     }
 
     // ---------- Detalle ----------
@@ -478,29 +497,12 @@ $(document).ready(function() {
     function Fmt(campo, v, r) {
         if (v === null || v === undefined || v === '') return '-';
         if (ESPECIAL[campo]) return ESPECIAL[campo](v, r || {});
-        return FORMATO[TIPO_CAMPO[campo] || 'texto'](v);
+        return FORMATO[TIPO_CAMPO[campo] || (/^M\d{2}$/.test(campo) ? 'entero' : 'texto')](v);
     }
 
-    function Variacion(v, flecha) {
+    function Variacion(v) {
         var css = v > 0 ? 'text-success' : (v < 0 ? 'text-danger' : 'text-muted');
-        var icono = !flecha ? '' : (v > 0 ? '<i class="fas fa-arrow-up"></i> ' : (v < 0 ? '<i class="fas fa-arrow-down"></i> ' : ''));
-        return `<span class="${css}">${icono}${numeral(v).format(flecha ? '0.0%' : '+0.0%')}</span>`;
-    }
-
-    // Escala de 0 a 24 meses; rojo bajo el disparador, verde cubierto, gris azulado sobre-stock (> 36)
-    function BarraCobertura(meses, disparador) {
-        if (meses === null || meses === undefined) return '';
-        var escala = 24;
-        var estado = meses > 36 ? 'sobre' : ((disparador && meses < disparador) ? 'bajo' : 'ok');
-        var color  = { sobre: '#90a4ae', bajo: '#dc3545', ok: '#28a745' }[estado];
-        var ancho  = Math.min(Math.max(meses, 0), escala) / escala * 100;
-        var marca  = disparador
-            ? `<div class="rop2-cov-trigger" style="left:${Math.min(disparador / escala * 100, 100).toFixed(1)}%"></div>`
-            : '';
-        var titulo = numeral(meses).format('0,0.0') + ' meses' + (disparador ? ' · disparador ' + disparador : '');
-        return `<div class="rop2-cov rop2-cov-${estado}" title="${titulo}">
-                    <div class="rop2-cov-fill" style="width:${ancho.toFixed(1)}%;background:${color};"></div>${marca}
-                </div>`;
+        return `<span class="${css}">${numeral(v).format('+0.0%')}</span>`;
     }
 
     function BadgeVeredicto(v) {
