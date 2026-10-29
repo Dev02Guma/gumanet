@@ -46,7 +46,7 @@ class ReOrderPoint2Controller extends Controller
         $objPHPExcel = ReOrderPoint2::Excel($meta, $res['HEADERS'] ?? [], $data);
 
         header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        header('Content-Disposition: attachment;filename="Decision_x_Producto_' . $fecha . '.xlsx"');
+        header('Content-Disposition: attachment;filename="Reorder_Point_' . $fecha . '.xlsx"');
         header('Cache-Control: max-age=0');
 
         // PHPExcel (abandonado) escribe el autofiltro con count(bool), que en PHP 7.2+ lanza un warning:
@@ -56,5 +56,11 @@ class ReOrderPoint2Controller extends Controller
         $objWriter->save('php://output');
         error_reporting($nivel);
         exit;
+    }
+
+    public function SendReOrderPoint(Request $request)
+    {
+        $res = ReOrderPoint2::SendReOrderPoint($request->all());
+        return response()->json($res);
     }
 }

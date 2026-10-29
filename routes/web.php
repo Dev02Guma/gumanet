@@ -430,3 +430,4 @@ Route::get('ExportRevalorizacion', 'RevalorizacionController@ExportRevalorizacio
 Route::get('ReOrderPoint2', 'ReOrderPoint2Controller@index')->name('ReOrderPoint2');
 Route::post('getReOrderPoint2', 'ReOrderPoint2Controller@getData')->name('getReOrderPoint2');
 Route::post('ExportReOrderPoint2', 'ReOrderPoint2Controller@ExportReOrderPoint2')->name('ExportReOrderPoint2');
+Route::post('SendReOrderPoint', 'ReOrderPoint2Controller@SendReOrderPoint')->name('SendReOrderPoint');

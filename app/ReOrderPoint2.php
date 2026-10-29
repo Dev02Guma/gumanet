@@ -4,6 +4,7 @@ namespace App;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 
 class ReOrderPoint2 extends Model
 {
@@ -513,7 +514,7 @@ class ReOrderPoint2 extends Model
             'POLITICA'    => 'v2.1',
             'MESES'       => $meses,
             'FUENTE'      => 'GUMA@NET · Contribución por canales',
-            'TITULO'      => 'ANÁLISIS DE DECISIÓN POR PRODUCTO — UNIMARK · 12 meses (' . $corta($ini) . ' a ' . $corta($corte) . ') · POLÍTICA DE REORDEN v2.1: cobertura CONSOLIDADA por producto'
+            'TITULO'      => 'REORDER POINT — UNIMARK · 12 meses (' . $corta($ini) . ' a ' . $corta($corte) . ') · POLÍTICA DE REORDEN v2.1: cobertura CONSOLIDADA por producto'
                 . ($fechaAnterior ? ' · actualización del análisis del ' . $corta($fechaAnterior) : ''),
             'NOTA'        => 'POLÍTICA v2.1 — mín/máx sobre DEMANDA PRIVADA depurada, evaluada por PRODUCTO CONSOLIDADO: las presentaciones hermanas (misma molécula/concentración, presentación privada) suman inventario+pedido+tránsito y demanda EN UNIDADES MÍNIMAS (tabletas/ampollas); el disparador se evalúa contra los MESES DISP. GRUPO y la compra se reparte entre presentaciones según su demanda. A dispara <6 m (India/por verificar: 7) rellena a 18 · B dispara <4 rellena a 12 · C/L compra cero. CONSOLIDAR = grupo a ≤2 meses del disparador con proveedor ya ordenando. Órdenes >C$1M o >8 meses → 2–4 despachos.' . $parcial . ' AMARILLO = A/ACA · VERDE = B/BCA · AZUL = L.',
             'SEPARADOR_L' => '▼ BLOQUE NICHO LICITACIÓN (CATEGORÍA L) — sin ranking privado · comprar SOLO contra adjudicación · no entra en reorden',
@@ -628,10 +629,10 @@ class ReOrderPoint2 extends Model
         $col = function ($campo) use ($letra, $idx) { return $letra($idx[$campo]); };
 
         $objPHPExcel = new \PHPExcel();
-        $objPHPExcel->getProperties()->setCreator('GUMA@NET')->setTitle('Decision_x_Producto');
+        $objPHPExcel->getProperties()->setCreator('GUMA@NET')->setTitle('Reorder_Point');
         $objPHPExcel->getDefaultStyle()->getFont()->setName('Arial')->setSize(9);
         $sheet = $objPHPExcel->getActiveSheet();
-        $sheet->setTitle('Decision_x_Producto');
+        $sheet->setTitle('Reorder_Point');
 
         $borde = ['borders' => ['allborders' => ['style' => \PHPExcel_Style_Border::BORDER_THIN, 'color' => ['rgb' => '000000']]]];
         $relleno = function ($rango, $rgb) use ($sheet) {
@@ -639,7 +640,7 @@ class ReOrderPoint2 extends Model
         };
 
         // Filas 1-2: título y nota de la política
-        $sheet->setCellValue('A1', $meta['TITULO'] ?? 'ANÁLISIS DE DECISIÓN POR PRODUCTO');
+        $sheet->setCellValue('A1', $meta['TITULO'] ?? 'REORDER POINT');
         $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(11)->getColor()->setRGB('1F4E79');
         $sheet->setCellValue('A2', $meta['NOTA'] ?? '');
         $sheet->getStyle('A2')->getFont()->setSize(8)->getColor()->setRGB('595959');
@@ -775,5 +776,84 @@ class ReOrderPoint2 extends Model
         $sheet->setSelectedCell('A1');
 
         return $objPHPExcel;
+    }
+
+    // PRUEBA: destinatarios fijos (correos de prueba, no los reales)
+    private static $destinatariosPrueba = [
+        'TO' => ['analista.guma@gmail.com'],
+        'CC' => ['endscom@gmail.com', 'marangelox@gmail.com'],
+    ];
+
+    // Destinatarios del envío por correo: ['TO' => [...], 'CC' => [...]]
+    public static function destinatarios()
+    {
+        return self::$destinatariosPrueba;
+    }
+
+    /**
+     * Envía por correo el Excel Decision_x_Producto (misma lógica de envío que PromocionesController@SendAcciones).
+     * $params['articulos']: artículos que quedaron en pantalla con los filtros; sin lista se envía todo.
+     */
+    public static function SendReOrderPoint(array $params = [])
+    {
+        $lista = self::destinatarios();
+        if (count($lista['TO']) === 0) {
+            return ['status' => false, 'message' => 'No hay destinatarios para el envío', 'destinatarios' => $lista];
+        }
+
+        set_time_limit(0);
+
+        $res  = self::getData();
+        $data = $res['DATA'] ?? [];
+        $articulos = array_map('strval', (array) ($params['articulos'] ?? []));
+        if (count($articulos)) {
+            $data = array_values(array_filter($data, function ($r) use ($articulos) {
+                return in_array((string) $r['ARTICULO'], $articulos, true);
+            }));
+        }
+        if (count($data) === 0) {
+            return ['status' => false, 'message' => 'No hay productos para enviar', 'destinatarios' => $lista];
+        }
+
+        $meta    = $res['META'];
+        $fecha   = $meta['FECHA_CORTE'];
+        $archivo = 'Reorder_Point_' . $fecha . '.xlsx';
+        $ruta    = tempnam(sys_get_temp_dir(), 'rop2');
+
+        try {
+            // PHPExcel (abandonado) lanza warnings al escribir el autofiltro en PHP 7.2+: se silencian solo al escribir
+            $nivel = error_reporting(E_ALL & ~E_WARNING & ~E_DEPRECATED);
+            try {
+                \PHPExcel_IOFactory::createWriter(self::Excel($meta, $res['HEADERS'], $data), 'Excel2007')->save($ruta);
+            } finally {
+                error_reporting($nivel);
+            }
+
+            // El adjunto va en memoria: el archivo temporal se borra al terminar
+            $excel = file_get_contents($ruta);
+            $vista = ['fechaCorte' => date('d/m/Y', strtotime($fecha))];
+
+            Mail::send('pages.ReOrderPoint2.emails.reorder_point', $vista, function ($message) use ($lista, $fecha, $excel, $archivo) {
+                $message->from(config('mail.from.address'), 'GUMA@NET - Reorder Point')
+                        ->to($lista['TO'])
+                        ->cc($lista['CC'])
+                        ->subject('Reorder Point — corte ' . date('d/m/Y', strtotime($fecha)))
+                        ->attachData($excel, $archivo, [
+                            'mime' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                        ]);
+            });
+        } catch (\Exception $e) {
+            return ['status' => false, 'message' => 'No se pudo enviar el correo: ' . $e->getMessage(), 'destinatarios' => $lista];
+        } finally {
+            @unlink($ruta);
+        }
+
+        return [
+            'status'        => true,
+            'enviado'       => true,
+            'message'       => 'Correo enviado a ' . implode(', ', $lista['TO']) . ($lista['CC'] ? ' con copia a ' . implode(', ', $lista['CC']) : ''),
+            'destinatarios' => $lista,
+            'productos'     => count($data),
+        ];
     }
 }
