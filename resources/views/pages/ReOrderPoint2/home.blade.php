@@ -192,7 +192,7 @@
                 <div class="flex-grow-1">
                     <h5 class="mb-0 font-weight-bold text-umk">
                         Reorder Point · Reorden v2.1
-                        <span class="badge badge-warning align-middle ml-1" id="badge_demo" style="font-size:.65rem;">Datos de prueba</span>
+                        <span class="badge badge-warning align-middle ml-1" id="badge_demo" style="font-size:.65rem; display:none;">Sin maestros</span>
                     </h5>
                     <p class="text-muted mb-0 small">
                         Periodo: <span id="tl_periodo" class="font-weight-bold text-umk">-</span>
