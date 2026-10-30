@@ -100,10 +100,13 @@
         #tbl_decision tbody tr:nth-child(even) > td { background-color: #fafbfd; }
         #tbl_decision tbody tr:hover > td { background-color: #eef3fb; }
         #tbl_decision td.rop2-td-veredicto { color: #000; }
+        #tbl_decision th.rop2-col-rank, #tbl_decision td.rop2-col-rank { min-width: 0; width: 36px; max-width: 36px; }
         /* Fila de totales sobre el encabezado */
         #tbl_decision thead th.rop2-total {
-            background-color: #e2e5ea;
-            border-bottom: 1px solid #c9d1e0;
+            background-color: #273b7a;
+            color: #fff;
+            border-right-color: #3a4f91;
+            border-bottom: 1px solid #1c2b5c;
             font-size: .75rem;
             font-weight: 700;
             white-space: nowrap;
@@ -288,12 +291,6 @@
 
     <!-- Tabla de decisión -->
     <div class="card border-0 shadow-sm mb-4">
-        <div class="card-header bg-innova text-white">
-            <div>
-                <h6 class="mb-0 font-weight-bold">REORDER POINT</h6>
-                <small class="text-white-50" id="tl_registros">-</small>
-            </div>
-        </div>
         <div class="card-body p-0">
             <div id="rop2-vacio">
                 <div class="d-flex flex-column align-items-center justify-content-center text-muted py-5">
@@ -349,7 +346,7 @@
                     <h6>2. Cómo recalcular /canales correctamente</h6>
                     <ul>
                         <li>El período debe ser de <strong>12 meses exactos</strong>. Con más meses se inflan unidades, contribución y crecimiento, y cambian el ranking y las categorías.</li>
-                        <li>El botón <em>Calcular</em> de /canales <strong>no incluye el día de la fecha fin</strong>. Para incluir hasta el 26, la fecha fin debe ser el 27.</li>
+                        <li>En /canales basta con elegir la <strong>fecha fin</strong> (el día de corte, incluido completo): la fecha inicio se ajusta sola a 12 meses. Ej.: fin 26/10/2026 → inicio 27/10/2025. Si se cambia a mano y no da 12 meses, <em>Calcular</em> lo advierte antes de confirmar.</li>
                         <li>Mientras /canales se recalcula, este reporte puede mostrar datos incompletos. Ábrelo cuando el cálculo termine.</li>
                         <li>El envío automático del día 1 recalcula /canales con los 12 meses completos anteriores y no envía el correo si el cálculo no llegó al último día del mes anterior.</li>
                     </ul>
@@ -430,7 +427,7 @@
                     <div class="row">
                         <div class="col-lg-8 mb-3">
                             <div class="card border-0 shadow-sm h-100 rop2-mdl-card">
-                                <div class="card-header">Demanda mensual</div>
+                                <div class="card-header">Demanda Anual</div>
                                 <div class="card-body">
                                     <!-- Highcharts y Chart.js están cargados en layouts.main -->
                                     <div id="mdl_chart" style="height:260px;"></div>

@@ -154,7 +154,6 @@ $(document).ready(function() {
             LlenarSelects(_data);
             TablaDecision(_data);
             _filtros = LeerFiltros();
-            RenderRegistros();
             $('#btn_exportar').prop('disabled', _data.length === 0);
             Swal.close();
 
@@ -218,7 +217,6 @@ $(document).ready(function() {
     function AplicarFiltros() {
         _filtros = LeerFiltros();
         if ($.fn.DataTable.isDataTable(TABLA)) $(TABLA).DataTable().draw();
-        RenderRegistros();
     }
 
     function LimpiarFiltros() {
@@ -226,11 +224,6 @@ $(document).ready(function() {
         $('#sel_categoria, #sel_veredicto, #sel_origen').val([]).selectpicker('refresh');
         $('#chk_solo_reorden').prop('checked', false);
         AplicarFiltros();
-    }
-
-    function RenderRegistros() {
-        var n = _data.filter(function(r) { return CumpleFiltros(r, _filtros); }).length;
-        $('#tl_registros').text(numeral(n).format('0,0') + ' de ' + numeral(_data.length).format('0,0') + ' productos');
     }
 
     // Excel con la estructura de la hoja Decision_x_Producto, solo con los productos que dejan los filtros
@@ -297,16 +290,15 @@ $(document).ready(function() {
 
         // Mismas columnas y en el mismo orden que la hoja Reorder_Point del Excel:
         // HEADERS llega del servidor en ese orden (incluye los meses M01..Mnn del corte)
-        var columnas = [
-            { data: null, orderable: false, className: 'text-center', width: '20px',
-              render: function() { return '<i class="fas fa-search-plus text-primary" title="Ver detalle"></i>'; } }
-        ];
-        var encabezado = '<th></th>';
+        // El detalle se abre con clic en la fila
+        var columnas = [];
+        var encabezado = '';
         // Fila de totales sobre el encabezado, como la fila 3 del Excel
-        var totales = '<th class="rop2-total"></th>';
+        var totales = '';
 
         Object.keys(_headers).forEach(function(campo) {
-            encabezado += `<th title="${Esc(_headers[campo])}">${Esc(_headers[campo])}</th>`;
+            var css = campo === 'RANK' ? ' class="rop2-col-rank"' : '';
+            encabezado += `<th${css} title="${Esc(_headers[campo])}">${Esc(_headers[campo])}</th>`;
             totales += TOTALES[campo]
                 ? `<th class="rop2-total text-right" data-total="${campo}"></th>`
                 : `<th class="rop2-total">${campo === 'DESCRIPCION' ? 'TOTALES' : ''}</th>`;
@@ -327,7 +319,7 @@ $(document).ready(function() {
             // el scroll horizontal lo da #rop2-tabla
             autoWidth: false,
             dom: 'rt<"d-flex flex-wrap justify-content-between align-items-center mt-2"ip>',
-            order: [[1, 'asc']],
+            order: [[0, 'asc']],
             columns: columnas,
             // Los totales siguen los filtros: suman solo los productos que quedan en la tabla
             drawCallback: function() {
@@ -362,7 +354,7 @@ $(document).ready(function() {
         var truncar = { DESCRIPCION: 260, FABRICANTE: 160, PAR_HERMANA: 120, NOTAS: 320 };
 
         if (campo === 'RANK') {
-            return { data: 'RANK', type: 'num', className: 'text-right',
+            return { data: 'RANK', type: 'num', className: 'text-right rop2-col-rank',
                 render: function(d, type) {
                     if (type === 'display') return d === null ? '-' : d;
                     return d === null ? 999999 : d;
@@ -471,8 +463,8 @@ $(document).ready(function() {
                 }
             },
             series: [
-                { type: 'column', name: 'Unds privadas', data: valores },
-                { type: 'line', name: 'Prom. depurado', color: '#dc3545', dashStyle: 'ShortDash',
+                { type: 'column', name: 'UNDS PRIVADAS', data: valores },
+                { type: 'line', name: 'PROM. DEPURADO', color: '#dc3545', dashStyle: 'ShortDash',
                   marker: { enabled: false }, data: meses.map(function() { return r.PROM_DEPURADO || 0; }) }
             ]
         });
