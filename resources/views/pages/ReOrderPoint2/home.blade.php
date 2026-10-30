@@ -113,6 +113,22 @@
             vertical-align: middle;
         }
         #tbl_decision tbody tr { cursor: pointer; }
+        /* Skeleton de carga (igual al de /canales) mientras se calcula el reporte */
+        .rop2-skeleton { padding: 16px; min-height: 420px; background: #fff; }
+        .rop2-skeleton .rop2-sk-titulo { font-size: .85rem; color: #6c757d; margin-bottom: 12px; }
+        .rop2-sk-fila { display: flex; gap: 12px; margin-bottom: 14px; }
+        .rop2-sk-fila.rop2-sk-head { margin-bottom: 20px; }
+        .rop2-sk-bar {
+            height: 14px; border-radius: 4px;
+            background: linear-gradient(90deg, #eceff1 25%, #f6f7f8 37%, #eceff1 63%);
+            background-size: 400% 100%;
+            animation: rop2-shimmer 1.4s ease infinite;
+        }
+        .rop2-sk-head .rop2-sk-bar { height: 22px; background-color: #dfe3e6; }
+        @keyframes rop2-shimmer {
+            0%   { background-position: 100% 50%; }
+            100% { background-position: 0 50%; }
+        }
         .rop2-row-urgente > td { background-color: rgba(220, 53, 69, .07) !important; }
         .rop2-row-urgente > td:first-child { box-shadow: inset 3px 0 0 #dc3545; }
 
@@ -292,13 +308,21 @@
     <!-- Tabla de decisión -->
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-body p-0">
-            <div id="rop2-vacio">
-                <div class="d-flex flex-column align-items-center justify-content-center text-muted py-5">
-                    <div class="rounded-circle bg-light d-flex align-items-center justify-content-center mb-3" style="width:64px; height:64px;">
-                        <i class="fas fa-boxes text-secondary" style="font-size:26px;"></i>
-                    </div>
-                    <div class="font-weight-bold text-dark mb-1">Cargando datos...</div>
+            {{-- Skeleton visible mientras getReOrderPoint2 calcula (mismo efecto que /canales); el JS lo oculta al llegar los datos --}}
+            <div id="rop2-vacio" class="rop2-skeleton">
+                <div class="rop2-sk-titulo"><i class="fas fa-spinner fa-spin mr-1"></i> Cargando Reorder Point…</div>
+                <div class="rop2-sk-fila rop2-sk-head">
+                    <div class="rop2-sk-bar" style="width: 12%"></div><div class="rop2-sk-bar" style="width: 28%"></div>
+                    <div class="rop2-sk-bar" style="width: 14%"></div><div class="rop2-sk-bar" style="width: 46%"></div>
                 </div>
+                @for ($i = 0; $i < 8; $i++)
+                <div class="rop2-sk-fila">
+                    <div class="rop2-sk-bar" style="width: 10%"></div>
+                    <div class="rop2-sk-bar" style="width: {{ [30, 24, 34, 27][$i % 4] }}%"></div>
+                    <div class="rop2-sk-bar" style="width: 14%"></div>
+                    <div class="rop2-sk-bar" style="width: {{ [42, 48, 36, 45][$i % 4] }}%"></div>
+                </div>
+                @endfor
             </div>
             <div id="rop2-tabla" style="display:none">
                 <table id="tbl_decision" class="table table-sm table-hover" style="width:100%"></table>

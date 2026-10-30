@@ -119,16 +119,8 @@ $(document).ready(function() {
     GetData();
 });
 
+    // Mientras carga se ve el skeleton de #rop2-vacio (sin modal que bloquee la pantalla)
     async function GetData() {
-        Swal.fire({
-            title: 'Cargando...',
-            html: 'Obteniendo el Reorder Point.',
-            allowOutsideClick: false,
-            allowEscapeKey: false,
-            showConfirmButton: false,
-            didOpen: function() { Swal.showLoading(); }
-        });
-
         try {
             const response = await fetch('getReOrderPoint2', {
                 method: 'POST',
@@ -155,10 +147,11 @@ $(document).ready(function() {
             TablaDecision(_data);
             _filtros = LeerFiltros();
             $('#btn_exportar').prop('disabled', _data.length === 0);
-            Swal.close();
 
         } catch (error) {
             console.error('Error al obtener los datos:', error);
+            $('#rop2-vacio .rop2-sk-titulo').html('<i class="fas fa-exclamation-triangle text-danger mr-1"></i> No se pudo cargar el Reorder Point.');
+            $('#rop2-vacio .rop2-sk-bar').css('animation', 'none');
             Swal.fire('Error', 'No se pudo cargar el Reorder Point.', 'error');
         }
     }
@@ -280,7 +273,7 @@ $(document).ready(function() {
     // ---------- Tabla ----------
 
     function TablaDecision(data) {
-        $('#rop2-vacio').hide();
+        $('#rop2-vacio').fadeOut(200);
         $('#rop2-tabla').show();
 
         if ($.fn.DataTable.isDataTable(TABLA)) {
