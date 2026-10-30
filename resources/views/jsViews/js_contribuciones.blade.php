@@ -798,12 +798,37 @@ $(document).ready(function () {
         location.href = "ExportToExcelCanales";
     })
 
+    // Periodo de 12 meses exactos que termina en la fecha fin (incluida): del día siguiente, un año antes
+    function inicioDoceMeses(fin) {
+        return moment(fin, 'YYYY-MM-DD').subtract(1, 'year').add(1, 'day').format('YYYY-MM-DD');
+    }
+
+    // Al elegir la fecha fin se ajusta la fecha inicio a 12 meses
+    $('#f2').on('apply.daterangepicker change', function() {
+        var fin = moment($(this).val(), 'YYYY-MM-DD', true);
+        if (!fin.isValid()) return;
+        var ini = inicioDoceMeses(fin.format('YYYY-MM-DD'));
+        var picker = $('#f1').data('daterangepicker');
+        if (picker) { picker.setStartDate(ini); picker.setEndDate(ini); }
+        $('#f1').val(ini);
+    });
+
     $("#BtnClick").click(function() {
         fechaIni = $("#f1").val();
         fechaEnd = $("#f2").val();
-        
+
+        // Aviso si el periodo no es de 12 meses exactos (el Reorder Point lo necesita así)
+        var doceMeses = fechaIni === inicioDoceMeses(fechaEnd);
+        var detalle = 'Del <b>' + moment(fechaIni).format('DD/MM/YYYY') + '</b> al <b>'
+            + moment(fechaEnd).format('DD/MM/YYYY') + '</b> (ambos días incluidos).'
+            + (doceMeses ? ''
+                : '<br><span class="text-danger">El periodo no es de 12 meses exactos. Para 12 meses la fecha inicio debe ser '
+                  + moment(inicioDoceMeses(fechaEnd)).format('DD/MM/YYYY') + '.</span>');
+
         Swal.fire({
             title: "Recalcular contribución de canales",
+            html: detalle,
+            icon: doceMeses ? undefined : 'warning',
             inputAttributes: {
                 autocapitalize: "off"
             },
