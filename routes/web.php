@@ -343,7 +343,7 @@ Route::post('getImportacion', 'ImportacionController@getImportacion')->name('get
 // FINAL RUTAS PARA EL DASHBOARD DE IMPORTACION
 
 //RUTAS PARA REORDER POINT REVISION Y APROBACION 2
-Route::get('ReOrderPoint', 'ReOrderPointController@ReOrderPoint')->name('ReOrderPoint');
+//Route::get('ReOrderPoint', 'ReOrderPointController@ReOrderPoint')->name('ReOrderPoint');
 Route::get('ReOrder', 'ReOrderPointController@ReorderPointView')->name('ReOrder');
 Route::post('getReorderPoint', 'ReOrderPointController@getReorderPoint')->name('getReorderPoint');
 Route::post('getCalcular', 'ReOrderPointController@getCalcular')->name('getCalcular');
@@ -427,7 +427,7 @@ Route::post('getRevalorizacion', 'RevalorizacionController@getRevalorizacion')->
 Route::get('ExportRevalorizacion', 'RevalorizacionController@ExportRevalorizacion')->name('ExportRevalorizacion');
 
 // RUTAS PARA REORDER POINT 2 (POLITICA DE REORDEN v2.1 - DECISION POR PRODUCTO)
-Route::get('ReOrderPoint2', 'ReOrderPoint2Controller@index')->name('ReOrderPoint2');
+Route::get('ReOrderPoint', 'ReOrderPoint2Controller@index')->name('ReOrderPoint');
 Route::post('getReOrderPoint2', 'ReOrderPoint2Controller@getData')->name('getReOrderPoint2');
 Route::post('ExportReOrderPoint2', 'ReOrderPoint2Controller@ExportReOrderPoint2')->name('ExportReOrderPoint2');
 Route::post('SendReOrderPoint', 'ReOrderPoint2Controller@SendReOrderPoint')->name('SendReOrderPoint');
