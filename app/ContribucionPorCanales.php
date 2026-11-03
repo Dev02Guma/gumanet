@@ -392,6 +392,10 @@ class ContribucionPorCanales extends Model
 
     public static function calcularCanales($fechaIni, $fechaEnd)
     {
+        // Fecha fin sin hora = ese día completo (si no, FECHA > 'YYYY-MM-DD' deja fuera el último día)
+        if (strlen(trim($fechaEnd)) === 10) {
+            $fechaEnd = trim($fechaEnd) . ' 23:59:59';
+        }
 
         DB::connection('sqlsrv')->statement("SET NOCOUNT ON ; EXEC PRODUCCION.dbo.pr_calcular_canal_contribucion"); 
         
@@ -425,7 +429,8 @@ class ContribucionPorCanales extends Model
         $result = DB::connection('sqlsrv')->select("SELECT MIN(fecha) AS primera_fecha, MAX(fecha) AS ultima_fecha FROM PRODUCCION.dbo.tbl_contribucion_canales");
         $anterior = ContribucionPorCanales::periodoAnterior($result[0]->ultima_fecha);
         return [
-            'primera_fecha' => date('Y-m-01', strtotime($result[0]->primera_fecha)),
+            // Fecha exacta del inicio calculado (antes se redondeaba al día 01 del mes)
+            'primera_fecha' => $result[0]->primera_fecha ? date('Y-m-d', strtotime($result[0]->primera_fecha)) : null,
             'ultima_fecha' => $result[0]->ultima_fecha,
             'fechaIni' => $FechaIni,
             'fechaEnd' => $FechaEnd,
